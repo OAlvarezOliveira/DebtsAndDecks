@@ -1,0 +1,109 @@
+package com.debtsdecks.core.enemies
+
+import com.debtsdecks.core.enemies.IntentType.ATTACK
+import com.debtsdecks.core.enemies.IntentType.BUFF
+import com.debtsdecks.core.enemies.IntentType.DEBUFF
+import com.debtsdecks.core.enemies.IntentType.MULTI_ATTACK
+import kotlin.random.Random
+
+class EnemyInstance(
+    val definition: EnemyDefinition,
+    val instanceId: String = java.util.UUID.randomUUID().toString()
+) {
+    var hp: Int = definition.hp
+    var maxHp: Int = definition.hp
+    var block: Int = 0
+    var strength: Int = 0
+    private var patternIndex = 0
+
+    val id: String
+        get() = instanceId
+
+    val name: String
+        get() = definition.name
+
+    fun currentIntent(): Intent {
+        val step = definition.intentPattern[patternIndex % definition.intentPattern.size]
+        return Intent(step.type, step.damage, step.param)
+    }
+
+    fun advanceIntent() {
+        patternIndex++
+    }
+
+    fun takeDamage(amount: Int): Int {
+        val actualDamage = maxOf(0, amount - block)
+        block = maxOf(0, block - amount)
+        hp = maxOf(0, hp - actualDamage)
+        return actualDamage
+    }
+
+    fun heal(amount: Int) {
+        hp = minOf(maxHp, hp + amount)
+    }
+
+    fun gainBlock(amount: Int) {
+        block += amount
+    }
+
+    fun gainStrength(amount: Int) {
+        strength += amount
+    }
+
+    fun isDead(): Boolean = hp <= 0
+
+    data class Intent(
+        val type: IntentType,
+        val damage: Int,
+        val param: Int
+    ) {
+        val displayName: String
+            get() = when (type) {
+                ATTACK -> "Attack $damage"
+                BUFF -> "Buff Strength +$param"
+                DEBUFF -> "Debuff Weak $param"
+                MULTI_ATTACK -> "Multi Attack $damage x$param"
+            }
+
+        val iconName: String
+            get() = when (type) {
+                ATTACK -> "intent_attack"
+                BUFF -> "intent_buff"
+                DEBUFF -> "intent_debuff"
+                MULTI_ATTACK -> "intent_multi"
+            }
+    }
+}
+
+class EnemyAI(private val enemy: EnemyInstance) {
+    fun executeIntent(player: PlayerState, allEnemies: List<EnemyInstance>): List<CombatLogEntry> {
+        val intent = enemy.currentIntent()
+        val log = mutableListOf<CombatLogEntry>()
+
+        when (intent.type) {
+            ATTACK -> {
+                val dmg = intent.damage + enemy.strength
+                val actual = player.takeDamage(dmg)
+                log.add(CombatLogEntry("${enemy.name} attacks for $actual damage!"))
+            }
+            BUFF -> {
+                enemy.gainStrength(intent.param)
+                log.add(CombatLogEntry("${enemy.name} gains ${intent.param} Strength!"))
+            }
+            DEBUFF -> {
+                player.applyWeak(intent.param)
+                log.add(CombatLogEntry("${enemy.name} applies Weak (${intent.param})!"))
+            }
+            MULTI_ATTACK -> {
+                repeat(intent.param) {
+                    val dmg = intent.damage + enemy.strength
+                    val actual = player.takeDamage(dmg)
+                    log.add(CombatLogEntry("${enemy.name} attacks for $actual damage!"))
+                }
+            }
+        }
+
+        enemy.advanceIntent()
+        return log
+    }
+}

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "thug",
+    "name": "Thug",
+    "hp": 24,
+    "intentPattern": [
+      { "type": "ATTACK", "damage": 6 },
+      { "type": "ATTACK", "damage": 6 },
+      { "type": "BUFF", "param": 3 }
+    ],
+    "rewards": { "gold": 10, "cardChoices": 3 }
+  },
+  {
+    "id": "loan_shark",
+    "name": "Loan Shark",
+    "hp": 40,
+    "intentPattern": [
+      { "type": "ATTACK", "damage": 8 },
+      { "type": "BUFF", "param": 3 },
+      { "type": "ATTACK", "damage": 8 },
+      { "type": "DEBUFF", "param": 1 }
+    ],
+    "rewards": { "gold": 15, "cardChoices": 3 }
+  },
+  {
+    "id": "collector",
+    "name": "Collector",
+    "hp": 56,
+    "intentPattern": [
+      { "type": "ATTACK", "damage": 10 },
+      { "type": "MULTI_ATTACK", "damage": 7, "param": 2 },
+      { "type": "BUFF", "param": 4 },
+      { "type": "DEBUFF", "param": 2 }
+    ],
+    "rewards": { "gold": 25, "cardChoices": 3 }
+  }
+]
