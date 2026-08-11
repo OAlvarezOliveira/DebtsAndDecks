@@ -54,7 +54,9 @@
 - Created CONVENTIONS (this file)
 - Created ADR/0001-use-libgdx.md
 - Set up directory structure
-**Next:** Gradle project setup with LibGDX
+- Initialized Git repo with initial commit (feat: initial project foundation)
+- Created develop branch
+**Next:** Gradle project setup with LibGDX - verify build works
 
 ---
 
