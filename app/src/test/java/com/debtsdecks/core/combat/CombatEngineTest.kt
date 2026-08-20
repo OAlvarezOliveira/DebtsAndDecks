@@ -354,6 +354,20 @@ class CombatEngineTest {
 
     // --- Debt / Gold card-effect wiring (debt-resource-mechanic, Phase 4 follow-up) ---
 
+    // --- Player HP persistence across combats (combat-progression-and-i18n, Phase 1) ---
+
+    @Test
+    fun `starting combat with a carried-over HP value uses it as the player's starting HP`() {
+        val thug = standardThug()
+        engine.startCombat(
+            listOf(thug),
+            listOf("strike", "strike", "defend", "defend", "strike"),
+            startingHp = 33
+        )
+
+        assertEquals(33, engine.getState().player.hp)
+    }
+
     @Test
     fun `playing a card tagged escrow_shield_activate wires CardResolver's effect through to activateEscrowShield`() {
         registerEscrowShieldCard()

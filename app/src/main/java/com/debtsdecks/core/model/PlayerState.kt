@@ -2,6 +2,12 @@ package com.debtsdecks.core.model
 
 import kotlinx.serialization.Serializable
 
+/**
+ * @property hp Current player HP. Persists across encounters within a run: [CombatEngine.startCombat]
+ * threads it in via its `startingHp` parameter (mirroring the existing Gold/Debt carry-over pattern)
+ * instead of resetting it to [maxHp] on every new encounter. Only [RunManager.beginRun] resets it back
+ * to full, at the start of a fresh run.
+ */
 @Serializable
 data class PlayerState(
     var hp: Int = 50,

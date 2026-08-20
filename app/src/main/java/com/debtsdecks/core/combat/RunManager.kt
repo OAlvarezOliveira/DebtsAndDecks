@@ -3,6 +3,7 @@ package com.debtsdecks.core.combat
 import com.debtsdecks.core.cards.CardRegistry
 import com.debtsdecks.core.enemies.EnemyDefinition
 import com.debtsdecks.core.model.CardDefinition
+import com.debtsdecks.core.model.PlayerState
 import com.debtsdecks.core.model.TurnPhase
 import kotlin.random.Random
 
@@ -32,6 +33,10 @@ class RunManager(
     var gold: Int = 0
         private set
 
+    /** Run-persistent player HP, mirrored from [combatEngine] on every [refresh] while in combat. */
+    var hp: Int = PlayerState().maxHp
+        private set
+
     /**
      * One-shot flag: set when [debt] first crosses [DebtConfig.BREAK_THRESHOLD] during this run,
      * consumed by the next [chooseReward] call to force the "collector" encounter. Per spec, this
@@ -54,6 +59,7 @@ class RunManager(
         val state = combatEngine.getState()
         debt = state.debt
         gold = state.gold
+        hp = state.player.hp
         if (!breakEncounterUsedThisRun && debt >= DebtConfig.BREAK_THRESHOLD) {
             pendingBreakEncounter = true
             breakEncounterUsedThisRun = true
@@ -97,11 +103,12 @@ class RunManager(
                 listOf(enemyDefinitions.first { it.id == "collector" }),
                 deck,
                 gold,
-                debt
+                debt,
+                hp
             )
         } else {
             encounterIndex++
-            combatEngine.startCombat(listOf(enemyDefinitions[encounterIndex]), deck, gold, debt)
+            combatEngine.startCombat(listOf(enemyDefinitions[encounterIndex]), deck, gold, debt, hp)
         }
     }
 
@@ -116,6 +123,7 @@ class RunManager(
         phase = Phase.COMBAT
         debt = 0
         gold = 0
+        hp = PlayerState().maxHp
         pendingBreakEncounter = false
         breakEncounterUsedThisRun = false
         combatEngine.startCombat(listOf(enemyDefinitions[encounterIndex]), deck)

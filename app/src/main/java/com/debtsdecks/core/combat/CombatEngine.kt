@@ -51,18 +51,27 @@ class CombatEngine(
         )
     }
 
+    /**
+     * Begins a new encounter. [startingGold] and [startingDebt] carry Gold/Debt forward from the
+     * previous encounter (0 for a fresh run). A single compounding interest tick is applied to
+     * [startingDebt] here, at the encounter boundary, per the debt-resource-mechanic design.
+     * [startingHp] carries the player's HP forward from the previous encounter (full [PlayerState.maxHp]
+     * for a fresh run) as a 100% raw value — no healing, no decay, mirroring the same threading
+     * pattern as Gold/Debt.
+     */
     fun startCombat(
         enemyDefinitions: List<EnemyDefinition>,
         starterDeck: List<String>,
         startingGold: Int = 0,
-        startingDebt: Int = 0
+        startingDebt: Int = 0,
+        startingHp: Int = PlayerState().maxHp
     ) {
         // Create enemies
         enemies = enemyDefinitions.map { EnemyInstance(it) }.toMutableList()
         enemyAIs = enemies.associateBy({ it.id }, { EnemyAI(it) })
 
         // Create player
-        player = PlayerState()
+        player = PlayerState(hp = startingHp)
 
         // Build draw pile from starter deck
         drawPile = ArrayDeque(starterDeck.map { cardId ->

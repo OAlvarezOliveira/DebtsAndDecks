@@ -334,6 +334,47 @@ class RunManagerTest {
         assertEquals("Loan Shark", engine.getState().enemies[0].name) // normal progression, not a 2nd forced Collector
     }
 
+    // --- Player HP persistence across combats (combat-progression-and-i18n, Phase 1) ---
+
+    @Test
+    fun `hp mirrors the combat engine's player state after refresh, reflecting damage taken`() {
+        combatEngine.endPlayerTurn() // no card played: the Thug's attack lands in full
+        runManager.refresh()
+
+        val expectedHp = combatEngine.getState().player.hp
+        assertTrue(expectedHp < 50)
+        assertEquals(expectedHp, runManager.hp)
+    }
+
+    @Test
+    fun `hp carries over exactly into the next encounter when a reward is chosen`() {
+        combatEngine.endPlayerTurn() // take one hit before finishing off the Thug
+        runManager.refresh()
+        killCurrentEnemy()
+
+        assertEquals(RunManager.Phase.REWARD, runManager.phase)
+        val hpAtRewardScreen = runManager.hp
+        assertTrue(hpAtRewardScreen < 50)
+
+        runManager.chooseReward(runManager.rewardChoices.first())
+        runManager.refresh()
+
+        assertEquals(hpAtRewardScreen, combatEngine.getState().player.hp)
+        assertEquals(hpAtRewardScreen, runManager.hp)
+    }
+
+    @Test
+    fun `restarting the run resets hp back to full`() {
+        combatEngine.endPlayerTurn()
+        runManager.refresh()
+        assertTrue(runManager.hp < 50)
+
+        runManager.restartRun()
+
+        assertEquals(50, runManager.hp)
+        assertEquals(50, combatEngine.getState().player.hp)
+    }
+
     @Test
     fun `restarting the run resets debt, gold, and the pending break flag`() {
         val registry = CardRegistry.create(makeStarterCards(surviveCost = 60) + rewardCards)
