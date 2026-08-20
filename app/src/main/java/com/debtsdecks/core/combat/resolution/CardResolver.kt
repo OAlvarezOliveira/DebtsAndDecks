@@ -100,7 +100,9 @@ class CardResolver(private val bundle: I18NBundle) {
                     )
                 }
                 if (repeatCount <= 0) {
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.card_fizzles", card.name), state.turnNumber))
+                    logEntries.add(
+                        CombatLogEntry.create(bundle.format("log.card_fizzles", bundle.get(card.name)), state.turnNumber)
+                    )
                 }
 
                 if (card.baseWeakApply > 0) {

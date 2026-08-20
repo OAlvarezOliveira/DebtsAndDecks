@@ -24,13 +24,15 @@ import com.debtsdecks.core.model.TurnPhase
  * for HUD/in-combat-screen strings (labels, status readouts, buttons, turn/pile indicators).
  * Phase 4b-ii consumes it for [renderReward]'s header/cost text and [renderRunEnd]'s victory/
  * defeat/restart text; [renderRunEnd] no longer takes a caller-supplied `message` — it derives the
- * outcome text itself from `won: Boolean` via two distinct bundle keys. Card/enemy name/
- * description text (including [renderReward]'s per-card `card.name`/`card.description`) remains
- * literal pending Phase 4b-iv's JSON key-ification. `TurnPhase`/`CardType` enum `.name` values
- * rendered as raw debug-style readouts (e.g. the turn-phase indicator's argument, the reward-card
- * type indicator) are deliberately left untranslated — they are internal identifiers, not authored
- * player-facing copy, and localizing them would need a separate enum-to-bundle-key mapping outside
- * this slice's scope.
+ * outcome text itself from `won: Boolean` via two distinct bundle keys. As of Phase 4b-iv,
+ * `EnemyState.name`/`CardDefinition.name`/`CardDefinition.description` (including [renderReward]'s
+ * per-card name/description) hold `card.<id>.name`/`card.<id>.description`/`enemy.<id>.name` bundle
+ * keys sourced from `assets/cards/all.json` / `assets/enemies/all.json`, resolved here via
+ * `bundle.get(...)` at each draw call. `TurnPhase`/`CardType` enum `.name` values rendered as raw
+ * debug-style readouts (e.g. the turn-phase indicator's argument, the reward-card type indicator)
+ * are deliberately left untranslated — they are internal identifiers, not authored player-facing
+ * copy, and localizing them would need a separate enum-to-bundle-key mapping outside this slice's
+ * scope.
  */
 class CombatRenderer(private val bundle: I18NBundle) {
     private val shapeRenderer = ShapeRenderer()
@@ -183,7 +185,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
 
             // Enemy name
             batch.begin()
-            font.draw(batch, enemy.name, x + 10f, y + h - 10f)
+            font.draw(batch, bundle.get(enemy.name), x + 10f, y + h - 10f)
             batch.end()
 
             // HP bar
@@ -369,14 +371,15 @@ class CombatRenderer(private val bundle: I18NBundle) {
             // Cost
             font.draw(batch, card.cost.toString(), x + 10f, y + cardHeight - 10f)
             // Name
-            font.draw(batch, card.name, x + 10f, y + cardHeight - 40f)
+            font.draw(batch, bundle.get(card.name), x + 10f, y + cardHeight - 40f)
             // Description (wrapped)
             val descY = y + 80f
             val descWidth = cardWidth - 20f
-            smallFont.draw(batch, card.description, x + 10f, descY, descWidth, Align.left, true)
+            val cardDescription = bundle.get(card.description)
+            smallFont.draw(batch, cardDescription, x + 10f, descY, descWidth, Align.left, true)
             // Type indicator — positioned below the wrapped description so multi-line
             // descriptions (longer new cards) don't collide with a fixed offset
-            val descLayout = GlyphLayout(smallFont, card.description, Color.WHITE, descWidth, Align.left, true)
+            val descLayout = GlyphLayout(smallFont, cardDescription, Color.WHITE, descWidth, Align.left, true)
             val typeY = (descY - descLayout.height - 10f).coerceAtLeast(y + 10f)
             smallFont.draw(batch, card.type.name, x + 10f, typeY)
             batch.end()
@@ -494,9 +497,9 @@ class CombatRenderer(private val bundle: I18NBundle) {
 
             batch.begin()
             font.setColor(Color.BLACK)
-            font.draw(batch, card.name, bounds.x + 15f, bounds.y + bounds.height - 20f)
+            font.draw(batch, bundle.get(card.name), bounds.x + 15f, bounds.y + bounds.height - 20f)
             smallFont.setColor(Color.BLACK)
-            smallFont.draw(batch, card.description, bounds.x + 15f, bounds.y + bounds.height - 60f, bounds.width - 30f, Align.left, true)
+            smallFont.draw(batch, bundle.get(card.description), bounds.x + 15f, bounds.y + bounds.height - 60f, bounds.width - 30f, Align.left, true)
             smallFont.draw(batch, bundle.format("reward.cost", card.cost), bounds.x + 15f, bounds.y + 30f)
             font.setColor(Color.WHITE)
             smallFont.setColor(Color.WHITE)
