@@ -85,7 +85,7 @@ class RunManager(
             rewardChoices = cardRegistry.all()
                 .filter { REWARD_EXCLUDED_TAGS.none { tag -> tag in it.tags } }
                 .shuffled(rng)
-                .take(3)
+                .take(enemyDefinitions[encounterIndex].rewards.cardChoices)
             Phase.REWARD
         }
     }

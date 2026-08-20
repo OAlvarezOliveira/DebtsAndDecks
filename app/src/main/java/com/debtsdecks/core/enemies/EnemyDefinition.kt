@@ -8,7 +8,9 @@ data class EnemyDefinition(
     val name: String,
     val hp: Int,
     val intentPattern: List<IntentStep>,
-    val rewards: EnemyRewards
+    val rewards: EnemyRewards,
+    val tier: EnemyTier = EnemyTier.NORMAL,
+    val tags: Set<String> = emptySet()
 )
 
 @Serializable
@@ -25,3 +27,5 @@ data class EnemyRewards(
 )
 
 enum class IntentType { ATTACK, BUFF, DEBUFF, MULTI_ATTACK }
+
+enum class EnemyTier { NORMAL, ELITE, BOSS }

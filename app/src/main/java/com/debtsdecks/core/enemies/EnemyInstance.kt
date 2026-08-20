@@ -19,6 +19,7 @@ class EnemyInstance(
     var vulnerable: Int = 0
     var poison: Int = 0
     private var patternIndex = 0
+    private var hasEnraged = false
 
     val id: String
         get() = instanceId
@@ -39,7 +40,17 @@ class EnemyInstance(
         val actualDamage = maxOf(0, amount - block)
         block = maxOf(0, block - amount)
         hp = maxOf(0, hp - actualDamage)
+        maybeEnrage()
         return actualDamage
+    }
+
+    /** Tag-driven, one-shot: grants Strength the first time HP drops to <=50%. */
+    private fun maybeEnrage() {
+        if (hasEnraged) return
+        if (TAG_ENRAGE_BELOW_HALF !in definition.tags) return
+        if (maxHp <= 0 || hp.toFloat() / maxHp > ENRAGE_HP_THRESHOLD) return
+        gainStrength(ENRAGE_STRENGTH_BONUS)
+        hasEnraged = true
     }
 
     fun heal(amount: Int) {
@@ -55,10 +66,12 @@ class EnemyInstance(
     }
 
     fun applyWeak(turns: Int) {
+        if (TAG_DEBUFF_RESIST in definition.tags) return
         weak += turns
     }
 
     fun applyVulnerable(turns: Int) {
+        if (TAG_DEBUFF_RESIST in definition.tags) return
         vulnerable += turns
     }
 
@@ -82,6 +95,16 @@ class EnemyInstance(
     }
 
     fun isDead(): Boolean = hp <= 0
+
+    companion object {
+        /** [EnemyDefinition.tags] value that triggers [maybeEnrage]. */
+        const val TAG_ENRAGE_BELOW_HALF = "enrage_below_half"
+        private const val ENRAGE_HP_THRESHOLD = 0.5f
+        private const val ENRAGE_STRENGTH_BONUS = 3
+
+        /** [EnemyDefinition.tags] value that no-ops [applyWeak] and [applyVulnerable]. */
+        const val TAG_DEBUFF_RESIST = "debuff_resist"
+    }
 
     data class Intent(
         val type: IntentType,

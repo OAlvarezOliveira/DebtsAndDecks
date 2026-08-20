@@ -1,6 +1,7 @@
 package com.debtsdecks.core.model
 
 import com.debtsdecks.core.enemies.EnemyInstance
+import com.debtsdecks.core.enemies.EnemyTier
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -19,7 +20,8 @@ data class EnemyState(
     val intentDamage: Int,
     val intentParam: Int,
     val intentDisplayName: String,
-    val intentIconName: String
+    val intentIconName: String,
+    val tier: EnemyTier = EnemyTier.NORMAL
 ) {
     companion object {
         fun fromInstance(enemy: EnemyInstance): EnemyState {
@@ -39,7 +41,8 @@ data class EnemyState(
                 intentDamage = intent.damage,
                 intentParam = intent.param,
                 intentDisplayName = intent.displayName,
-                intentIconName = intent.iconName
+                intentIconName = intent.iconName,
+                tier = enemy.definition.tier
             )
         }
     }

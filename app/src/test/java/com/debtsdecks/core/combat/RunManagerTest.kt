@@ -35,12 +35,12 @@ class RunManagerTest {
         EnemyDefinition(
             id = "loan_shark", name = "Loan Shark", hp = 5,
             intentPattern = listOf(IntentStep(IntentType.ATTACK, 8)),
-            rewards = EnemyRewards(gold = 15, cardChoices = 3)
+            rewards = EnemyRewards(gold = 15, cardChoices = 4)
         ),
         EnemyDefinition(
             id = "collector", name = "Collector", hp = 5,
             intentPattern = listOf(IntentStep(IntentType.ATTACK, 10)),
-            rewards = EnemyRewards(gold = 25, cardChoices = 3)
+            rewards = EnemyRewards(gold = 25, cardChoices = 5)
         )
     )
 
@@ -373,6 +373,19 @@ class RunManagerTest {
 
         assertEquals(50, runManager.hp)
         assertEquals(50, combatEngine.getState().player.hp)
+    }
+
+    // --- Enemy tiers: reward count wired to the defeated enemy's cardChoices (combat-progression-and-i18n, Phase 3) ---
+
+    @Test
+    fun `reward choice count matches the defeated enemy's cardChoices, not a hardcoded three`() {
+        killCurrentEnemy() // Thug: cardChoices = 3
+        assertEquals(3, runManager.rewardChoices.size)
+
+        runManager.chooseReward(runManager.rewardChoices.first())
+        killCurrentEnemy() // Loan Shark: cardChoices = 4
+
+        assertEquals(4, runManager.rewardChoices.size)
     }
 
     @Test
