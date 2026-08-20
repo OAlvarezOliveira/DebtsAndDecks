@@ -81,6 +81,20 @@ class EnemyInstanceTest {
     }
 
     @Test
+    fun `intentDisplayName reflects the enemy's current intent`() {
+        val enemy = enemyWithTags() // default pattern: ATTACK, damage 5
+
+        assertEquals("Attack 5", enemy.intentDisplayName())
+    }
+
+    @Test
+    fun `intentIconName reflects the enemy's current intent`() {
+        val enemy = enemyWithTags() // default pattern: ATTACK, damage 5
+
+        assertEquals("intent_attack", enemy.intentIconName())
+    }
+
+    @Test
     fun `EnemyState fromInstance sources tier from the enemy's definition`() {
         val elite = EnemyInstance(
             EnemyDefinition(

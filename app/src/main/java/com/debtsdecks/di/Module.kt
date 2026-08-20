@@ -1,7 +1,9 @@
 package com.debtsdecks.di
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.OrthographicCamera
+import com.badlogic.gdx.utils.I18NBundle
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.badlogic.gdx.utils.viewport.Viewport
 import com.debtsdecks.core.cards.CardRegistry
@@ -21,14 +23,19 @@ val coreModule = module {
     single<CardRegistry> { DataLoader.createCardRegistry(androidContext()) }
     single<Random> { Random(System.currentTimeMillis()) }
     single<List<EnemyDefinition>> { DataLoader.loadEnemies(androidContext()) }
-    single { CombatEngine(get(), get()) }
+    single { CombatEngine(get(), get(), get()) }
     single { RunManager(get(), get(), get(), get()) }
 }
 
 val gdxModule = module {
     single<Camera> { OrthographicCamera() }
     single<Viewport> { FitViewport(1280f, 720f, get()) }
-    single { CombatRenderer() }
+    // Lazy (default Koin `single` behavior, not `createdAtStart`): Gdx.files is only valid after
+    // AndroidApplication.initialize() runs in MainActivity, which happens after
+    // DebtsAndDecksApp.onCreate()'s startKoin{} call. Lazy resolution defers the actual
+    // Gdx.files.internal(...) call until GameApp.create() first triggers container.get().
+    single { I18NBundle.createBundle(Gdx.files.internal("i18n/strings")) }
+    single { CombatRenderer(get()) }
     single { SoundManager() }
     factory { CombatInputHandler(get(), get(), get(), get(), get()) }
     factory { GameScreen(get(), get(), get(), get(), get()) }

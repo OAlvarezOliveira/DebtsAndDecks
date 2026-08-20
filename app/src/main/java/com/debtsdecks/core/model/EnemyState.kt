@@ -40,8 +40,8 @@ data class EnemyState(
                 intentType = intent.type.name,
                 intentDamage = intent.damage,
                 intentParam = intent.param,
-                intentDisplayName = intent.displayName,
-                intentIconName = intent.iconName,
+                intentDisplayName = enemy.intentDisplayName(),
+                intentIconName = enemy.intentIconName(),
                 tier = enemy.definition.tier
             )
         }

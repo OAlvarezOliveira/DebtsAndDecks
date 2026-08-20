@@ -2,6 +2,7 @@ package com.debtsdecks.core.combat.resolution
 
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.combat.DebtConfig
+import com.debtsdecks.core.i18n.testI18nBundle
 import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.model.CardType
 import com.debtsdecks.core.model.CombatState
@@ -23,7 +24,7 @@ import org.junit.jupiter.api.Test
  */
 class CardResolverTest {
 
-    private val resolver = CardResolver()
+    private val resolver = CardResolver(testI18nBundle())
 
     private fun testEnemy(id: String = "enemy-1", vulnerable: Int = 0) = EnemyState(
         id = id,

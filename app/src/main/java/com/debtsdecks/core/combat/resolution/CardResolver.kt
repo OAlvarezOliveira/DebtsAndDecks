@@ -1,5 +1,6 @@
 package com.debtsdecks.core.combat.resolution
 
+import com.badlogic.gdx.utils.I18NBundle
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.combat.DebtConfig
 import com.debtsdecks.core.model.CombatLogEntry
@@ -8,7 +9,12 @@ import com.debtsdecks.core.model.PlayerState
 import com.debtsdecks.core.model.EnemyState
 import com.debtsdecks.core.model.TargetType
 
-class CardResolver {
+/**
+ * [bundle] is wired in this constructor for the combat-progression-and-i18n Phase 4a DI slice but
+ * not yet consumed: the log strings below remain literal English pending the Phase 4b-iii string
+ * migration, which replaces them with `bundle.get()`/`bundle.format()` lookups.
+ */
+class CardResolver(private val bundle: I18NBundle) {
     data class ResolutionResult(
         val effects: List<Effect>,
         val logEntries: List<CombatLogEntry>

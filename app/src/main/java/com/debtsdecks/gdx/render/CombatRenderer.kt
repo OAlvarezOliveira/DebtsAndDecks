@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.utils.Align
+import com.badlogic.gdx.utils.I18NBundle
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.combat.DebtConfig
 import com.debtsdecks.core.model.CardDefinition
@@ -18,7 +19,12 @@ import com.debtsdecks.core.model.CombatState
 import com.debtsdecks.core.model.EnemyState
 import com.debtsdecks.core.model.TurnPhase
 
-class CombatRenderer {
+/**
+ * [bundle] is wired in this constructor for the combat-progression-and-i18n Phase 4a DI slice but
+ * not yet consumed: the literal UI strings below remain unchanged pending the Phase 4b-i/4b-ii
+ * string migration, which replaces them with `bundle.get()` lookups.
+ */
+class CombatRenderer(private val bundle: I18NBundle) {
     private val shapeRenderer = ShapeRenderer()
     private val font = BitmapFont() // Default 15pt Arial
     private val smallFont = BitmapFont()

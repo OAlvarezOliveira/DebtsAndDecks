@@ -1,5 +1,6 @@
 package com.debtsdecks.core.combat
 
+import com.badlogic.gdx.utils.I18NBundle
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.cards.CardRegistry
 import com.debtsdecks.core.combat.resolution.CardResolver
@@ -16,6 +17,7 @@ import kotlin.random.Random
 
 class CombatEngine(
     private val cardRegistry: CardRegistry,
+    private val bundle: I18NBundle,
     private val rng: Random = Random(System.currentTimeMillis())
 ) {
     private var player: PlayerState = PlayerState()
@@ -38,7 +40,7 @@ class CombatEngine(
 
     /** Per-combat flag (see [activateEscrowShield]) that halves Debt added from a shortfall while active. */
     private var escrowShieldActive: Boolean = false
-    private val cardResolver = CardResolver()
+    private val cardResolver = CardResolver(bundle)
     private var enemyAIs: Map<String, EnemyAI> = emptyMap()
 
     val HAND_SIZE = 5
@@ -68,7 +70,7 @@ class CombatEngine(
     ) {
         // Create enemies
         enemies = enemyDefinitions.map { EnemyInstance(it) }.toMutableList()
-        enemyAIs = enemies.associateBy({ it.id }, { EnemyAI(it) })
+        enemyAIs = enemies.associateBy({ it.id }, { EnemyAI(it, bundle) })
 
         // Create player
         player = PlayerState(hp = startingHp)

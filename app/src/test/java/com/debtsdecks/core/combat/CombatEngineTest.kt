@@ -1,6 +1,7 @@
 package com.debtsdecks.core.combat
 
 import com.debtsdecks.core.cards.CardRegistry
+import com.debtsdecks.core.i18n.testI18nBundle
 import com.debtsdecks.core.enemies.EnemyDefinition
 import com.debtsdecks.core.enemies.EnemyRewards
 import com.debtsdecks.core.enemies.IntentStep
@@ -45,7 +46,7 @@ class CombatEngineTest {
         )
         cardRegistry = CardRegistry.create(listOf(strike, defend))
 
-        engine = CombatEngine(cardRegistry, rng)
+        engine = CombatEngine(cardRegistry, testI18nBundle(), rng)
     }
 
     @Test
@@ -172,7 +173,7 @@ class CombatEngineTest {
             rarity = Rarity.BASIC
         )
         cardRegistry = CardRegistry.create(cardRegistry.all() + bash)
-        engine = CombatEngine(cardRegistry, rng)
+        engine = CombatEngine(cardRegistry, testI18nBundle(), rng)
 
         val thug = EnemyDefinition(
             id = "thug",
@@ -214,7 +215,7 @@ class CombatEngineTest {
             rarity = Rarity.BASIC
         )
         cardRegistry = CardRegistry.create(cardRegistry.all() + pricey)
-        engine = CombatEngine(cardRegistry, rng)
+        engine = CombatEngine(cardRegistry, testI18nBundle(), rng)
         return pricey
     }
 
@@ -225,7 +226,7 @@ class CombatEngineTest {
             rarity = Rarity.UNCOMMON, tags = setOf("escrow_shield_activate")
         )
         cardRegistry = CardRegistry.create(cardRegistry.all() + escrowShield)
-        engine = CombatEngine(cardRegistry, rng)
+        engine = CombatEngine(cardRegistry, testI18nBundle(), rng)
         return escrowShield
     }
 

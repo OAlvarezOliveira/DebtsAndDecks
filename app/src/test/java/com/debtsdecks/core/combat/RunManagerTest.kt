@@ -1,6 +1,7 @@
 package com.debtsdecks.core.combat
 
 import com.debtsdecks.core.cards.CardRegistry
+import com.debtsdecks.core.i18n.testI18nBundle
 import com.debtsdecks.core.enemies.EnemyDefinition
 import com.debtsdecks.core.enemies.EnemyRewards
 import com.debtsdecks.core.enemies.IntentStep
@@ -95,7 +96,7 @@ class RunManagerTest {
     @BeforeEach
     fun setup() {
         cardRegistry = CardRegistry.create(makeStarterCards() + rewardCards)
-        combatEngine = CombatEngine(cardRegistry, rng)
+        combatEngine = CombatEngine(cardRegistry, testI18nBundle(), rng)
         runManager = RunManager(combatEngine, cardRegistry, enemies, rng)
     }
 
@@ -232,7 +233,7 @@ class RunManagerTest {
     @Test
     fun `debt and gold carry across encounters, with an interest tick applied at the next encounter start`() {
         val registry = CardRegistry.create(makeStarterCards(surviveCost = 6) + rewardCards)
-        val engine = CombatEngine(registry, rng)
+        val engine = CombatEngine(registry, testI18nBundle(), rng)
         val rm = RunManager(engine, registry, enemies, rng)
 
         playSelfCardWhenDrawn(engine, rm, "survive")
@@ -260,7 +261,7 @@ class RunManagerTest {
     @Test
     fun `garnishment splits a gold reward at encounter end, reducing debt and crediting net gold`() {
         val registry = CardRegistry.create(makeStarterCards(surviveCost = 20) + rewardCards)
-        val engine = CombatEngine(registry, rng)
+        val engine = CombatEngine(registry, testI18nBundle(), rng)
         val rm = RunManager(engine, registry, enemies, rng)
 
         playSelfCardWhenDrawn(engine, rm, "survive")
@@ -280,7 +281,7 @@ class RunManagerTest {
     @Test
     fun `crossing the break threshold forces the collector encounter next, without desyncing encounterIndex`() {
         val registry = CardRegistry.create(makeStarterCards(surviveCost = 60) + rewardCards)
-        val engine = CombatEngine(registry, rng)
+        val engine = CombatEngine(registry, testI18nBundle(), rng)
         val rm = RunManager(engine, registry, enemies, rng)
 
         playSelfCardWhenDrawn(engine, rm, "survive")
@@ -309,7 +310,7 @@ class RunManagerTest {
     @Test
     fun `the break encounter does not re-trigger after it has already fired once this run`() {
         val registry = CardRegistry.create(makeStarterCards(surviveCost = 60) + rewardCards)
-        val engine = CombatEngine(registry, rng)
+        val engine = CombatEngine(registry, testI18nBundle(), rng)
         val rm = RunManager(engine, registry, enemies, rng)
 
         playSelfCardWhenDrawn(engine, rm, "survive")
@@ -391,7 +392,7 @@ class RunManagerTest {
     @Test
     fun `restarting the run resets debt, gold, and the pending break flag`() {
         val registry = CardRegistry.create(makeStarterCards(surviveCost = 60) + rewardCards)
-        val engine = CombatEngine(registry, rng)
+        val engine = CombatEngine(registry, testI18nBundle(), rng)
         val rm = RunManager(engine, registry, enemies, rng)
 
         playSelfCardWhenDrawn(engine, rm, "survive")

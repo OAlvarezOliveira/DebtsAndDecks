@@ -1,5 +1,6 @@
 package com.debtsdecks.core.enemies
 
+import com.badlogic.gdx.utils.I18NBundle
 import com.debtsdecks.core.enemies.IntentType.ATTACK
 import com.debtsdecks.core.enemies.IntentType.BUFF
 import com.debtsdecks.core.enemies.IntentType.DEBUFF
@@ -31,6 +32,26 @@ class EnemyInstance(
         val step = definition.intentPattern[patternIndex % definition.intentPattern.size]
         return Intent(step.type, step.damage, step.param)
     }
+
+    /** Human-readable label for [currentIntent], e.g. for [com.debtsdecks.core.model.EnemyState]. */
+    fun intentDisplayName(): String {
+        val intent = currentIntent()
+        return when (intent.type) {
+            ATTACK -> "Attack ${intent.damage}"
+            BUFF -> "Buff Strength +${intent.param}"
+            DEBUFF -> "Debuff Weak ${intent.param}"
+            MULTI_ATTACK -> "Multi Attack ${intent.damage} x${intent.param}"
+        }
+    }
+
+    /** Icon asset key for [currentIntent], e.g. for [com.debtsdecks.core.model.EnemyState]. */
+    fun intentIconName(): String =
+        when (currentIntent().type) {
+            ATTACK -> "intent_attack"
+            BUFF -> "intent_buff"
+            DEBUFF -> "intent_debuff"
+            MULTI_ATTACK -> "intent_multi"
+        }
 
     fun advanceIntent() {
         patternIndex++
@@ -110,26 +131,15 @@ class EnemyInstance(
         val type: IntentType,
         val damage: Int,
         val param: Int
-    ) {
-        val displayName: String
-            get() = when (type) {
-                ATTACK -> "Attack $damage"
-                BUFF -> "Buff Strength +$param"
-                DEBUFF -> "Debuff Weak $param"
-                MULTI_ATTACK -> "Multi Attack $damage x$param"
-            }
-
-        val iconName: String
-            get() = when (type) {
-                ATTACK -> "intent_attack"
-                BUFF -> "intent_buff"
-                DEBUFF -> "intent_debuff"
-                MULTI_ATTACK -> "intent_multi"
-            }
-    }
+    )
 }
 
-class EnemyAI(private val enemy: EnemyInstance) {
+/**
+ * [bundle] is wired in this constructor for the combat-progression-and-i18n Phase 4a DI slice but
+ * not yet consumed: the combat-log strings below remain literal English pending the Phase 4b-iii
+ * string migration, which replaces them with `bundle.get()`/`bundle.format()` lookups.
+ */
+class EnemyAI(private val enemy: EnemyInstance, private val bundle: I18NBundle) {
     fun executeIntent(player: PlayerState, allEnemies: List<EnemyInstance>, turn: Int): List<CombatLogEntry> {
         val intent = enemy.currentIntent()
         val log = mutableListOf<CombatLogEntry>()
