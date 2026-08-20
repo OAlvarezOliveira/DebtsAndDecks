@@ -22,8 +22,9 @@ import java.util.Locale
  * explicit `Locale.ENGLISH` request can otherwise resolve to the Spanish properties file. Pinning
  * makes this test hermetic and independent of the machine it runs on.
  *
- * Only the seed key needed to prove the DI-wired bundle resolves both locales is covered here;
- * the full string migration (card/enemy/log/UI text) lands in later slices (Phase 4b-i..iv).
+ * Covers the seed key (Phase 4a) plus every HUD/in-combat-screen key CombatRenderer's Phase 4b-i
+ * migration references. Reward/end-screen, core-domain log, and JSON-sourced strings remain out
+ * of scope here and land in later slices (Phase 4b-ii..iv).
  */
 class I18nBundleTest {
 
@@ -53,5 +54,78 @@ class I18nBundleTest {
         val bundle = I18NBundle.createBundle(bundleBase, Locale("es"))
 
         assertEquals("Deudas y Cartas", bundle.get("app.name"))
+    }
+
+    // --- Phase 4b-i: CombatRenderer HUD/combat strings ---
+    // Purely structural key-value data (no branching logic to triangulate beyond MessageFormat
+    // interpolation, already proven correct by Phase 4a's fallback-locale fix). Coverage below
+    // exercises every key CombatRenderer's HUD/combat migration references, in both locales, with
+    // distinct numeric argument sets per call so a hardcoded/copy-pasted key would be caught.
+
+    @Test
+    fun `English HUD bundle resolves non-parameterized labels and buttons`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+
+        assertEquals("PLAYER", bundle.get("hud.player.label"))
+        assertEquals("END TURN", bundle.get("hud.button.end_turn"))
+        assertEquals("REPAY GOLD", bundle.get("hud.button.repay_gold"))
+        assertEquals("REPAY CARD", bundle.get("hud.button.repay_card"))
+        assertEquals("CANCEL", bundle.get("hud.button.cancel"))
+        assertEquals("Tap a card to discard it and repay Debt", bundle.get("hud.repay_discard_hint"))
+        assertEquals("COMBAT LOG", bundle.get("hud.combat_log_header"))
+    }
+
+    @Test
+    fun `English HUD bundle formats status and resource placeholders with real interpolation`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+
+        assertEquals("HP: 42/60", bundle.format("hud.player.hp", 42, 60))
+        assertEquals("HP: 5/50", bundle.format("hud.player.hp", 5, 50))
+        assertEquals("Block: 7", bundle.format("hud.status.block", 7))
+        assertEquals("Str: 3", bundle.format("hud.status.strength", 3))
+        assertEquals("Weak: 2", bundle.format("hud.status.weak", 2))
+        assertEquals("Vuln: 1", bundle.format("hud.status.vulnerable", 1))
+        assertEquals("Poison: 4", bundle.format("hud.status.poison", 4))
+        assertEquals("Thorns: 6", bundle.format("hud.status.thorns", 6))
+        assertEquals("Regen: 8", bundle.format("hud.status.regen", 8))
+        assertEquals("CREDIT: 3/5", bundle.format("hud.credit", 3, 5))
+        assertEquals("DEBT: 10 | GOLD: 20", bundle.format("hud.debt_gold", 10, 20))
+        assertEquals("DEBT: 0 | GOLD: 0", bundle.format("hud.debt_gold", 0, 0))
+        assertEquals("Phase: PLAYER_ACTION", bundle.format("hud.turn_phase", "PLAYER_ACTION"))
+        assertEquals("Turn: 3", bundle.format("hud.turn_number", 3))
+        assertEquals("Deck: 15 | Discard: 4 | Exhaust: 1", bundle.format("hud.pile_counts", 15, 4, 1))
+    }
+
+    @Test
+    fun `Spanish HUD bundle resolves non-parameterized labels and buttons with neutral thematic translations`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale("es"))
+
+        assertEquals("JUGADOR", bundle.get("hud.player.label"))
+        assertEquals("TERMINAR TURNO", bundle.get("hud.button.end_turn"))
+        assertEquals("PAGAR CON ORO", bundle.get("hud.button.repay_gold"))
+        assertEquals("PAGAR CON CARTA", bundle.get("hud.button.repay_card"))
+        assertEquals("CANCELAR", bundle.get("hud.button.cancel"))
+        assertEquals("Toca una carta para descartarla y pagar la Deuda", bundle.get("hud.repay_discard_hint"))
+        assertEquals("REGISTRO DE COMBATE", bundle.get("hud.combat_log_header"))
+    }
+
+    @Test
+    fun `Spanish HUD bundle formats status and resource placeholders with real interpolation`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale("es"))
+
+        assertEquals("PS: 42/60", bundle.format("hud.player.hp", 42, 60))
+        assertEquals("PS: 5/50", bundle.format("hud.player.hp", 5, 50))
+        assertEquals("Bloqueo: 7", bundle.format("hud.status.block", 7))
+        assertEquals("Fue: 3", bundle.format("hud.status.strength", 3))
+        assertEquals("Débil: 2", bundle.format("hud.status.weak", 2))
+        assertEquals("Vul: 1", bundle.format("hud.status.vulnerable", 1))
+        assertEquals("Veneno: 4", bundle.format("hud.status.poison", 4))
+        assertEquals("Espinas: 6", bundle.format("hud.status.thorns", 6))
+        assertEquals("Reg: 8", bundle.format("hud.status.regen", 8))
+        assertEquals("CRÉDITO: 3/5", bundle.format("hud.credit", 3, 5))
+        assertEquals("DEUDA: 10 | ORO: 20", bundle.format("hud.debt_gold", 10, 20))
+        assertEquals("Fase: PLAYER_ACTION", bundle.format("hud.turn_phase", "PLAYER_ACTION"))
+        assertEquals("Turno: 3", bundle.format("hud.turn_number", 3))
+        assertEquals("Mazo: 15 | Descarte: 4 | Agotados: 1", bundle.format("hud.pile_counts", 15, 4, 1))
     }
 }

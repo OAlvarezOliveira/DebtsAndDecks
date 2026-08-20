@@ -20,9 +20,14 @@ import com.debtsdecks.core.model.EnemyState
 import com.debtsdecks.core.model.TurnPhase
 
 /**
- * [bundle] is wired in this constructor for the combat-progression-and-i18n Phase 4a DI slice but
- * not yet consumed: the literal UI strings below remain unchanged pending the Phase 4b-i/4b-ii
- * string migration, which replaces them with `bundle.get()` lookups.
+ * [bundle] was wired in the combat-progression-and-i18n Phase 4a DI slice. Phase 4b-i consumes it
+ * for HUD/in-combat-screen strings only (labels, status readouts, buttons, turn/pile indicators).
+ * Reward/end-screen strings ([renderReward], [renderRunEnd]) remain literal English pending
+ * Phase 4b-ii; card/enemy name/description text remains literal pending Phase 4b-iv's JSON
+ * key-ification. `TurnPhase`/`CardType` enum `.name` values rendered as raw debug-style readouts
+ * (e.g. the turn-phase indicator's argument) are deliberately left untranslated in this slice —
+ * they are internal identifiers, not authored player-facing copy, and localizing them would need
+ * a separate enum-to-bundle-key mapping outside this slice's scope.
  */
 class CombatRenderer(private val bundle: I18NBundle) {
     private val shapeRenderer = ShapeRenderer()
@@ -188,7 +193,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
                 shapeRenderer.rect(x, y - 55f, w, 20f)
                 shapeRenderer.end()
                 batch.begin()
-                font.draw(batch, "Block: ${enemy.block}", x + 10f, y - 40f)
+                font.draw(batch, bundle.format("hud.status.block", enemy.block), x + 10f, y - 40f)
                 batch.end()
             }
 
@@ -199,25 +204,25 @@ class CombatRenderer(private val bundle: I18NBundle) {
             var statusY = y - 80f
             if (enemy.strength > 0) {
                 batch.begin()
-                font.draw(batch, "Str: ${enemy.strength}", x + 10f, statusY)
+                font.draw(batch, bundle.format("hud.status.strength", enemy.strength), x + 10f, statusY)
                 batch.end()
                 statusY -= 20f
             }
             if (enemy.weak > 0) {
                 batch.begin()
-                smallFont.draw(batch, "Weak: ${enemy.weak}", x + 10f, statusY)
+                smallFont.draw(batch, bundle.format("hud.status.weak", enemy.weak), x + 10f, statusY)
                 batch.end()
                 statusY -= 20f
             }
             if (enemy.vulnerable > 0) {
                 batch.begin()
-                smallFont.draw(batch, "Vuln: ${enemy.vulnerable}", x + 10f, statusY)
+                smallFont.draw(batch, bundle.format("hud.status.vulnerable", enemy.vulnerable), x + 10f, statusY)
                 batch.end()
                 statusY -= 20f
             }
             if (enemy.poison > 0) {
                 batch.begin()
-                smallFont.draw(batch, "Poison: ${enemy.poison}", x + 10f, statusY)
+                smallFont.draw(batch, bundle.format("hud.status.poison", enemy.poison), x + 10f, statusY)
                 batch.end()
             }
         }
@@ -258,8 +263,8 @@ class CombatRenderer(private val bundle: I18NBundle) {
 
         // HP
         batch.begin()
-        font.draw(batch, "PLAYER", x + 10f, y + h - 10f)
-        font.draw(batch, "HP: ${state.player.hp}/${state.player.maxHp}", x + 10f, y + h - 40f)
+        font.draw(batch, bundle.get("hud.player.label"), x + 10f, y + h - 10f)
+        font.draw(batch, bundle.format("hud.player.hp", state.player.hp, state.player.maxHp), x + 10f, y + h - 40f)
         batch.end()
 
         // HP bar
@@ -272,7 +277,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
             shapeRenderer.rect(x, y + h - 80f, w, 20f)
             shapeRenderer.end()
             batch.begin()
-            font.draw(batch, "Block: ${state.player.block}", x + 10f, y + h - 65f)
+            font.draw(batch, bundle.format("hud.status.block", state.player.block), x + 10f, y + h - 65f)
             batch.end()
         }
 
@@ -280,37 +285,37 @@ class CombatRenderer(private val bundle: I18NBundle) {
         var statusY = y + 10f
         if (state.player.strength != 0) {
             batch.begin()
-            font.draw(batch, "Str: ${state.player.strength}", x + 10f, statusY)
+            font.draw(batch, bundle.format("hud.status.strength", state.player.strength), x + 10f, statusY)
             batch.end()
             statusY += 25f
         }
         if (state.player.weak > 0) {
             batch.begin()
-            smallFont.draw(batch, "Weak: ${state.player.weak}", x + 10f, statusY)
+            smallFont.draw(batch, bundle.format("hud.status.weak", state.player.weak), x + 10f, statusY)
             batch.end()
             statusY += 20f
         }
         if (state.player.vulnerable > 0) {
             batch.begin()
-            smallFont.draw(batch, "Vuln: ${state.player.vulnerable}", x + 10f, statusY)
+            smallFont.draw(batch, bundle.format("hud.status.vulnerable", state.player.vulnerable), x + 10f, statusY)
             batch.end()
             statusY += 20f
         }
         if (state.player.poison > 0) {
             batch.begin()
-            smallFont.draw(batch, "Poison: ${state.player.poison}", x + 10f, statusY)
+            smallFont.draw(batch, bundle.format("hud.status.poison", state.player.poison), x + 10f, statusY)
             batch.end()
             statusY += 20f
         }
         if (state.player.thorns > 0) {
             batch.begin()
-            smallFont.draw(batch, "Thorns: ${state.player.thorns}", x + 10f, statusY)
+            smallFont.draw(batch, bundle.format("hud.status.thorns", state.player.thorns), x + 10f, statusY)
             batch.end()
             statusY += 20f
         }
         if (state.player.regen > 0) {
             batch.begin()
-            smallFont.draw(batch, "Regen: ${state.player.regen}", x + 10f, statusY)
+            smallFont.draw(batch, bundle.format("hud.status.regen", state.player.regen), x + 10f, statusY)
             batch.end()
         }
     }
@@ -382,7 +387,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         // Credit — HUD label only; the backing field stays `energy`/`maxEnergy` (Money→Credit
         // rename decision, design.md), refilled each turn, gates card play.
         batch.begin()
-        font.draw(batch, "CREDIT: ${state.energy}/${state.maxEnergy}", energyX, energyY)
+        font.draw(batch, bundle.format("hud.credit", state.energy, state.maxEnergy), energyX, energyY)
         batch.end()
 
         // R9: Debt/Gold HUD readout, flagged in a distinct at-risk color once Debt reaches the
@@ -390,7 +395,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         val debtAtRisk = state.debt >= DebtConfig.BREAK_THRESHOLD
         batch.begin()
         font.setColor(if (debtAtRisk) Color.RED else Color.WHITE)
-        font.draw(batch, "DEBT: ${state.debt} | GOLD: ${state.gold}", energyX, debtGoldY)
+        font.draw(batch, bundle.format("hud.debt_gold", state.debt, state.gold), energyX, debtGoldY)
         font.setColor(Color.WHITE)
         batch.end()
 
@@ -406,17 +411,17 @@ class CombatRenderer(private val bundle: I18NBundle) {
         shapeRenderer.end()
 
         batch.begin()
-        font.draw(batch, "END TURN", endTurnBtnX + 20f, endTurnBtnY + 40f)
+        font.draw(batch, bundle.get("hud.button.end_turn"), endTurnBtnX + 20f, endTurnBtnY + 40f)
         batch.end()
 
         // R6: REPAY controls — only drawn "live" (colored, not GRAY) during PLAYER_ACTION, the
         // same phase gate CombatInputHandler enforces before it will ever route a tap to either
         // button; see that file's handlePlayerAction for the enforcement side of this decision.
         val canRepayGold = canAct && state.debt > 0 && state.gold > 0
-        drawRepayButton(repayGoldBtnX, repayGoldBtnY, repayBtnW, repayBtnH, "REPAY GOLD", canRepayGold, false, batch)
+        drawRepayButton(repayGoldBtnX, repayGoldBtnY, repayBtnW, repayBtnH, bundle.get("hud.button.repay_gold"), canRepayGold, false, batch)
 
         val canRepayDiscard = canAct && state.debt > 0 && state.hand.isNotEmpty()
-        val discardLabel = if (repayDiscardModeActive) "CANCEL" else "REPAY CARD"
+        val discardLabel = if (repayDiscardModeActive) bundle.get("hud.button.cancel") else bundle.get("hud.button.repay_card")
         drawRepayButton(
             repayDiscardBtnX, repayDiscardBtnY, repayBtnW, repayBtnH,
             discardLabel, canRepayDiscard || repayDiscardModeActive, repayDiscardModeActive, batch
@@ -425,16 +430,21 @@ class CombatRenderer(private val bundle: I18NBundle) {
         if (repayDiscardModeActive) {
             batch.begin()
             smallFont.setColor(borrowTintColor)
-            smallFont.draw(batch, "Tap a card to discard it and repay Debt", 300f, 690f)
+            smallFont.draw(batch, bundle.get("hud.repay_discard_hint"), 300f, 690f)
             smallFont.setColor(Color.WHITE)
             batch.end()
         }
 
-        // Turn phase indicator
+        // Turn phase indicator. state.currentTurn.name/pile counts are numeric/enum data, not
+        // authored copy — see the class KDoc for why the enum identifier itself stays untranslated.
         batch.begin()
-        smallFont.draw(batch, "Phase: ${state.currentTurn.name}", 50f, 680f)
-        smallFont.draw(batch, "Turn: ${state.turnNumber}", 50f, 660f)
-        smallFont.draw(batch, "Deck: ${state.drawPileCount} | Discard: ${state.discardPileCount} | Exhaust: ${state.exhaustPileCount}", 50f, 640f)
+        smallFont.draw(batch, bundle.format("hud.turn_phase", state.currentTurn.name), 50f, 680f)
+        smallFont.draw(batch, bundle.format("hud.turn_number", state.turnNumber), 50f, 660f)
+        smallFont.draw(
+            batch,
+            bundle.format("hud.pile_counts", state.drawPileCount, state.discardPileCount, state.exhaustPileCount),
+            50f, 640f
+        )
         batch.end()
     }
 
@@ -523,7 +533,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         shapeRenderer.end()
 
         batch.begin()
-        smallFont.draw(batch, "COMBAT LOG", x + 10f, y + h - 10f)
+        smallFont.draw(batch, bundle.get("hud.combat_log_header"), x + 10f, y + h - 10f)
 
         var lineY = y + h - 35f
         log.reversed().take(20).forEach { entry ->
