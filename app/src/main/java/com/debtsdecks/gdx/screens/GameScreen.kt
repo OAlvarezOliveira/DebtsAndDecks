@@ -40,8 +40,8 @@ class GameScreen(
         when (runManager.phase) {
             RunManager.Phase.COMBAT -> renderer.render(combatEngine.getState(), batch)
             RunManager.Phase.REWARD -> renderer.renderReward(runManager.rewardChoices, batch)
-            RunManager.Phase.VICTORY -> renderer.renderRunEnd(batch, "YOU CLEARED YOUR DEBTS!", won = true)
-            RunManager.Phase.DEFEAT -> renderer.renderRunEnd(batch, "REPOSSESSED...", won = false)
+            RunManager.Phase.VICTORY -> renderer.renderRunEnd(batch, won = true)
+            RunManager.Phase.DEFEAT -> renderer.renderRunEnd(batch, won = false)
         }
     }
 

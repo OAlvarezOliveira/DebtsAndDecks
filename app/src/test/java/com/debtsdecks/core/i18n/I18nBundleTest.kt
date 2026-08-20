@@ -22,9 +22,10 @@ import java.util.Locale
  * explicit `Locale.ENGLISH` request can otherwise resolve to the Spanish properties file. Pinning
  * makes this test hermetic and independent of the machine it runs on.
  *
- * Covers the seed key (Phase 4a) plus every HUD/in-combat-screen key CombatRenderer's Phase 4b-i
- * migration references. Reward/end-screen, core-domain log, and JSON-sourced strings remain out
- * of scope here and land in later slices (Phase 4b-ii..iv).
+ * Covers the seed key (Phase 4a), every HUD/in-combat-screen key CombatRenderer's Phase 4b-i
+ * migration references, and every reward/end-screen key CombatRenderer's Phase 4b-ii migration
+ * references. Core-domain log and JSON-sourced strings remain out of scope here and land in later
+ * slices (Phase 4b-iii..iv).
  */
 class I18nBundleTest {
 
@@ -127,5 +128,33 @@ class I18nBundleTest {
         assertEquals("Fase: PLAYER_ACTION", bundle.format("hud.turn_phase", "PLAYER_ACTION"))
         assertEquals("Turno: 3", bundle.format("hud.turn_number", 3))
         assertEquals("Mazo: 15 | Descarte: 4 | Agotados: 1", bundle.format("hud.pile_counts", 15, 4, 1))
+    }
+
+    // --- Phase 4b-ii: CombatRenderer reward/end-screen + GameScreen strings ---
+    // renderRunEnd() drops its `message` param entirely in this slice; victory/defeat text is
+    // derived from the `won: Boolean` parameter via two distinct bundle keys instead.
+
+    @Test
+    fun `English reward and run-end bundle resolves header, cost, and outcome text`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+
+        assertEquals("CHOOSE A CARD", bundle.get("reward.header"))
+        assertEquals("Cost: 3", bundle.format("reward.cost", 3))
+        assertEquals("Cost: 0", bundle.format("reward.cost", 0))
+        assertEquals("YOU CLEARED YOUR DEBTS!", bundle.get("run_end.victory"))
+        assertEquals("REPOSSESSED...", bundle.get("run_end.defeat"))
+        assertEquals("Tap to restart", bundle.get("run_end.restart_hint"))
+    }
+
+    @Test
+    fun `Spanish reward and run-end bundle resolves header, cost, and outcome text with neutral thematic translations`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale("es"))
+
+        assertEquals("ELIGE UNA CARTA", bundle.get("reward.header"))
+        assertEquals("Coste: 3", bundle.format("reward.cost", 3))
+        assertEquals("Coste: 0", bundle.format("reward.cost", 0))
+        assertEquals("¡HAS SALDADO TU DEUDA!", bundle.get("run_end.victory"))
+        assertEquals("EMBARGADO...", bundle.get("run_end.defeat"))
+        assertEquals("Toca para reiniciar", bundle.get("run_end.restart_hint"))
     }
 }

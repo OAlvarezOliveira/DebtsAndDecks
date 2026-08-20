@@ -20,14 +20,17 @@ import com.debtsdecks.core.model.EnemyState
 import com.debtsdecks.core.model.TurnPhase
 
 /**
- * [bundle] was wired in the combat-progression-and-i18n Phase 4a DI slice. Phase 4b-i consumes it
- * for HUD/in-combat-screen strings only (labels, status readouts, buttons, turn/pile indicators).
- * Reward/end-screen strings ([renderReward], [renderRunEnd]) remain literal English pending
- * Phase 4b-ii; card/enemy name/description text remains literal pending Phase 4b-iv's JSON
- * key-ification. `TurnPhase`/`CardType` enum `.name` values rendered as raw debug-style readouts
- * (e.g. the turn-phase indicator's argument) are deliberately left untranslated in this slice —
- * they are internal identifiers, not authored player-facing copy, and localizing them would need
- * a separate enum-to-bundle-key mapping outside this slice's scope.
+ * [bundle] was wired in the combat-progression-and-i18n Phase 4a DI slice. Phase 4b-i consumed it
+ * for HUD/in-combat-screen strings (labels, status readouts, buttons, turn/pile indicators).
+ * Phase 4b-ii consumes it for [renderReward]'s header/cost text and [renderRunEnd]'s victory/
+ * defeat/restart text; [renderRunEnd] no longer takes a caller-supplied `message` — it derives the
+ * outcome text itself from `won: Boolean` via two distinct bundle keys. Card/enemy name/
+ * description text (including [renderReward]'s per-card `card.name`/`card.description`) remains
+ * literal pending Phase 4b-iv's JSON key-ification. `TurnPhase`/`CardType` enum `.name` values
+ * rendered as raw debug-style readouts (e.g. the turn-phase indicator's argument, the reward-card
+ * type indicator) are deliberately left untranslated — they are internal identifiers, not authored
+ * player-facing copy, and localizing them would need a separate enum-to-bundle-key mapping outside
+ * this slice's scope.
  */
 class CombatRenderer(private val bundle: I18NBundle) {
     private val shapeRenderer = ShapeRenderer()
@@ -475,7 +478,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         drawBackground()
 
         batch.begin()
-        font.draw(batch, "CHOOSE A CARD", 50f, 680f)
+        font.draw(batch, bundle.get("reward.header"), 50f, 680f)
         batch.end()
 
         choices.forEachIndexed { index, card ->
@@ -494,16 +497,19 @@ class CombatRenderer(private val bundle: I18NBundle) {
             font.draw(batch, card.name, bounds.x + 15f, bounds.y + bounds.height - 20f)
             smallFont.setColor(Color.BLACK)
             smallFont.draw(batch, card.description, bounds.x + 15f, bounds.y + bounds.height - 60f, bounds.width - 30f, Align.left, true)
-            smallFont.draw(batch, "Cost: ${card.cost}", bounds.x + 15f, bounds.y + 30f)
+            smallFont.draw(batch, bundle.format("reward.cost", card.cost), bounds.x + 15f, bounds.y + 30f)
             font.setColor(Color.WHITE)
             smallFont.setColor(Color.WHITE)
             batch.end()
         }
     }
 
-    fun renderRunEnd(batch: SpriteBatch, message: String, won: Boolean) {
+    fun renderRunEnd(batch: SpriteBatch, won: Boolean) {
         shapeRenderer.projectionMatrix = batch.projectionMatrix
         drawBackground()
+
+        val message = bundle.get(if (won) "run_end.victory" else "run_end.defeat")
+        val restartHint = bundle.get("run_end.restart_hint")
 
         batch.begin()
         font.getData().setScale(3f)
@@ -512,7 +518,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         font.draw(batch, message, (screenWidth - bounds.width) / 2, (screenHeight + bounds.height) / 2)
         font.getData().setScale(1f)
         font.setColor(Color.WHITE)
-        smallFont.draw(batch, "Tap to restart", (screenWidth - 120f) / 2, (screenHeight - bounds.height) / 2 - 50f)
+        smallFont.draw(batch, restartHint, (screenWidth - 120f) / 2, (screenHeight - bounds.height) / 2 - 50f)
         batch.end()
     }
 
