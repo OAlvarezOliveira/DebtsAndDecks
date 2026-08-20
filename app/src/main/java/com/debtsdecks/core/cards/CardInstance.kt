@@ -45,10 +45,33 @@ class CardInstance(
     val baseVulnerableApply: Int
         get() = definition.vulnerableApply
 
+    val baseSelfDamage: Int
+        get() = definition.selfDamage
+
+    val basePoisonApply: Int
+        get() = definition.poisonApply
+
+    val baseThornsGain: Int
+        get() = definition.thornsGain
+
+    val baseRegenGain: Int
+        get() = definition.regenGain
+
+    val baseHits: Int
+        get() = definition.hits
+
     val description: String
         get() = definition.description
 
-    fun canPlay(energy: Int): Boolean = !exhausted && cost <= energy
+    /**
+     * Whether this card can be played at all. Cost no longer gates playability — any Credit
+     * shortfall converts to Debt instead (see [shortfall]) — so the only remaining gate is
+     * whether the card was already spent this combat.
+     */
+    fun isPlayable(): Boolean = !exhausted
+
+    /** How much [credit] falls short of this card's [cost], or 0 if [credit] fully covers it. */
+    fun shortfall(credit: Int): Int = maxOf(0, cost - credit)
 
     fun createModifiedCopy(newCost: Int? = null, newExhausted: Boolean? = null): CardInstance {
         val copy = CardInstance(definition, instanceId).apply {

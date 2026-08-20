@@ -3,6 +3,7 @@ package com.debtsdecks
 import android.app.Application
 import com.debtsdecks.di.coreModule
 import com.debtsdecks.di.gdxModule
+import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
@@ -19,6 +20,6 @@ class DebtsAndDecksApp : Application() {
     }
 
     companion object {
-        val container = org.koin.core.context.GlobalContext.getOrCreate()
+        val container by lazy { org.koin.core.context.GlobalContext.get() }
     }
 }

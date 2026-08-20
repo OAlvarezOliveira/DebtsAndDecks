@@ -2,16 +2,16 @@ package com.debtsdecks
 
 import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
-import com.debtsdecks.di.container
 import com.debtsdecks.gdx.GameScreen
+import com.debtsdecks.gdx.audio.SoundManager
 
 class GameApp : ApplicationAdapter() {
     private lateinit var screen: GameScreen
 
     override fun create() {
-        screen = container.get()
+        screen = DebtsAndDecksApp.container.get()
         Gdx.input.inputProcessor = screen.inputProcessor
-        setScreen(screen)
+        screen.show()
     }
 
     override fun render() {
@@ -21,6 +21,7 @@ class GameApp : ApplicationAdapter() {
 
     override fun dispose() {
         screen.dispose()
+        DebtsAndDecksApp.container.get<SoundManager>().dispose()
     }
 
     override fun pause() {

@@ -1,67 +1,56 @@
 package com.debtsdecks.gdx
 
-import com.badlogic.gdx.Game
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.Screen
 import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.math.Vector3
-import com.debtsdecks.core.cards.CardInstance
+import com.badlogic.gdx.utils.viewport.Viewport
 import com.debtsdecks.core.combat.CombatEngine
-import com.debtsdecks.core.enemies.EnemyDefinition
-import com.debtsdecks.core.model.CombatState
-import com.debtsdecks.core.model.TurnPhase
+import com.debtsdecks.core.combat.RunManager
+import com.debtsdecks.gdx.input.CombatInputHandler
+import com.debtsdecks.gdx.render.CombatRenderer
 
 class GameScreen(
     private val combatEngine: CombatEngine,
+    private val viewport: Viewport,
     private val renderer: CombatRenderer,
-    private val inputHandler: CombatInputHandler
+    private val inputHandler: CombatInputHandler,
+    private val runManager: RunManager
 ) : Screen {
 
-    private val camera = OrthographicCamera()
     private val batch = SpriteBatch()
-    private val viewportWidth = 1280f
-    private val viewportHeight = 720f
 
     var inputProcessor: InputProcessor = inputHandler
 
     override fun show() {
-        camera.setToOrtho(false, viewportWidth, viewportHeight)
-        camera.update()
+        viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
     }
 
     override fun render(delta: Float) {
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.15f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
-        camera.update()
-        batch.projectionMatrix = camera.combined
+        viewport.apply()
+        batch.projectionMatrix = viewport.camera.combined
 
-        val state = combatEngine.getState()
-
-        batch.begin()
-        renderer.render(state, batch, camera)
-        batch.end()
-
-        // Handle input
-        inputHandler.update(state)
+        // NOTE: CombatRenderer's draw methods manage their own batch.begin()/end() pairs
+        // (interleaved with ShapeRenderer calls), so this must NOT wrap them in an outer
+        // begin()/end() - SpriteBatch throws IllegalStateException on a nested begin().
+        when (runManager.phase) {
+            RunManager.Phase.COMBAT -> renderer.render(combatEngine.getState(), batch)
+            RunManager.Phase.REWARD -> renderer.renderReward(runManager.rewardChoices, batch)
+            RunManager.Phase.VICTORY -> renderer.renderRunEnd(batch, "YOU CLEARED YOUR DEBTS!", won = true)
+            RunManager.Phase.DEFEAT -> renderer.renderRunEnd(batch, "REPOSSESSED...", won = false)
+        }
     }
 
     override fun resize(width: Int, height: Int) {
-        val aspectRatio = viewportWidth / viewportHeight
-        val screenAspectRatio = width.toFloat() / height
-
-        if (screenAspectRatio > aspectRatio) {
-            val newWidth = (height * aspectRatio).toInt()
-            val offset = (width - newWidth) / 2
-            Gdx.gl.glViewport(offset, 0, newWidth, height)
-        } else {
-            val newHeight = (width / aspectRatio).toInt()
-            val offset = (height - newHeight) / 2
-            Gdx.gl.glViewport(0, offset, width, newHeight)
-        }
+        // Viewport.update() letterboxes to preserve the 1280x720 aspect ratio AND
+        // records the actual on-screen viewport rect, which CombatInputHandler needs
+        // for correct touch-to-world unprojection (a manual glViewport call does not
+        // expose that rect, so unproject() silently assumes the full screen instead).
+        viewport.update(width, height, true)
     }
 
     override fun pause() {}

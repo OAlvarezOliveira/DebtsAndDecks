@@ -4,7 +4,8 @@ import com.debtsdecks.core.enemies.IntentType.ATTACK
 import com.debtsdecks.core.enemies.IntentType.BUFF
 import com.debtsdecks.core.enemies.IntentType.DEBUFF
 import com.debtsdecks.core.enemies.IntentType.MULTI_ATTACK
-import kotlin.random.Random
+import com.debtsdecks.core.model.CombatLogEntry
+import com.debtsdecks.core.model.PlayerState
 
 class EnemyInstance(
     val definition: EnemyDefinition,
@@ -14,6 +15,9 @@ class EnemyInstance(
     var maxHp: Int = definition.hp
     var block: Int = 0
     var strength: Int = 0
+    var weak: Int = 0
+    var vulnerable: Int = 0
+    var poison: Int = 0
     private var patternIndex = 0
 
     val id: String
@@ -50,6 +54,33 @@ class EnemyInstance(
         strength += amount
     }
 
+    fun applyWeak(turns: Int) {
+        weak += turns
+    }
+
+    fun applyVulnerable(turns: Int) {
+        vulnerable += turns
+    }
+
+    fun applyPoison(amount: Int) {
+        poison += amount
+    }
+
+    /** Applies at the start of this enemy's turn, before it acts. Returns the damage dealt. */
+    fun tickPoison(): Int {
+        if (poison <= 0) return 0
+        val dmg = poison
+        hp = maxOf(0, hp - dmg)
+        poison--
+        return dmg
+    }
+
+    fun endTurnReset() {
+        block = 0
+        if (weak > 0) weak--
+        if (vulnerable > 0) vulnerable--
+    }
+
     fun isDead(): Boolean = hp <= 0
 
     data class Intent(
@@ -76,34 +107,42 @@ class EnemyInstance(
 }
 
 class EnemyAI(private val enemy: EnemyInstance) {
-    fun executeIntent(player: PlayerState, allEnemies: List<EnemyInstance>): List<CombatLogEntry> {
+    fun executeIntent(player: PlayerState, allEnemies: List<EnemyInstance>, turn: Int): List<CombatLogEntry> {
         val intent = enemy.currentIntent()
         val log = mutableListOf<CombatLogEntry>()
 
         when (intent.type) {
             ATTACK -> {
-                val dmg = intent.damage + enemy.strength
+                val dmg = ((intent.damage + enemy.strength) * if (enemy.weak > 0) 0.75 else 1.0).toInt()
                 val actual = player.takeDamage(dmg)
-                log.add(CombatLogEntry("${enemy.name} attacks for $actual damage!"))
+                log.add(CombatLogEntry.create("${enemy.name} attacks for $actual damage!", turn))
+                reflectThorns(player, turn, log)
             }
             BUFF -> {
                 enemy.gainStrength(intent.param)
-                log.add(CombatLogEntry("${enemy.name} gains ${intent.param} Strength!"))
+                log.add(CombatLogEntry.create("${enemy.name} gains ${intent.param} Strength!", turn))
             }
             DEBUFF -> {
                 player.applyWeak(intent.param)
-                log.add(CombatLogEntry("${enemy.name} applies Weak (${intent.param})!"))
+                log.add(CombatLogEntry.create("${enemy.name} applies Weak (${intent.param})!", turn))
             }
             MULTI_ATTACK -> {
                 repeat(intent.param) {
-                    val dmg = intent.damage + enemy.strength
+                    val dmg = ((intent.damage + enemy.strength) * if (enemy.weak > 0) 0.75 else 1.0).toInt()
                     val actual = player.takeDamage(dmg)
-                    log.add(CombatLogEntry("${enemy.name} attacks for $actual damage!"))
+                    log.add(CombatLogEntry.create("${enemy.name} attacks for $actual damage!", turn))
+                    reflectThorns(player, turn, log)
                 }
             }
         }
 
         enemy.advanceIntent()
         return log
+    }
+
+    private fun reflectThorns(player: PlayerState, turn: Int, log: MutableList<CombatLogEntry>) {
+        if (player.thorns <= 0) return
+        val reflected = enemy.takeDamage(player.thorns)
+        log.add(CombatLogEntry.create("${enemy.name} takes $reflected Thorns damage!", turn))
     }
 }

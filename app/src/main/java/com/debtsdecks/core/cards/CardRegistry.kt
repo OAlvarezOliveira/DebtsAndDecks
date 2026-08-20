@@ -1,5 +1,8 @@
 package com.debtsdecks.core.cards
 
+import com.debtsdecks.core.model.CardDefinition
+import com.debtsdecks.core.model.Rarity
+
 class CardRegistry(private val definitions: List<CardDefinition>) {
     private val byId = definitions.associateBy { it.id }
 

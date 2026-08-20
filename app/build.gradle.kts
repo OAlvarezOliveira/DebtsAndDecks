@@ -52,6 +52,12 @@ android {
             excludes += "/META-INF/*.kotlin_module"
         }
     }
+
+    sourceSets {
+        getByName("main") {
+            jniLibs.srcDirs("libs")
+        }
+    }
 }
 
 val gdxVersion = "1.12.1"
@@ -62,13 +68,15 @@ val kotlinxCoroutinesVersion = "1.7.3"
 val junitVersion = "5.10.2"
 val mockkVersion = "1.13.13"
 
+val natives by configurations.creating
+
 dependencies {
     implementation("com.badlogicgames.gdx:gdx:$gdxVersion")
     implementation("com.badlogicgames.gdx:gdx-backend-android:$gdxVersion")
-    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a")
-    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a")
-    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86")
-    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
+    natives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a")
+    natives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a")
+    natives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86")
+    natives("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
 
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
 
@@ -92,12 +100,40 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }
 
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
     }
 }
 
-tasks.named("test") {
+tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+}
+
+val copyAndroidNatives by tasks.registering {
+    val abiDirs = mapOf(
+        "natives-armeabi-v7a.jar" to "armeabi-v7a",
+        "natives-arm64-v8a.jar" to "arm64-v8a",
+        "natives-x86.jar" to "x86",
+        "natives-x86_64.jar" to "x86_64"
+    )
+
+    doFirst {
+        abiDirs.values.forEach { abi -> file("libs/$abi").mkdirs() }
+
+        natives.files.forEach { jar ->
+            val abi = abiDirs.entries.firstOrNull { jar.name.endsWith(it.key) }?.value
+            if (abi != null) {
+                copy {
+                    from(zipTree(jar))
+                    into(file("libs/$abi"))
+                    include("*.so")
+                }
+            }
+        }
+    }
+}
+
+tasks.named("preBuild") {
+    dependsOn(copyAndroidNatives)
 }

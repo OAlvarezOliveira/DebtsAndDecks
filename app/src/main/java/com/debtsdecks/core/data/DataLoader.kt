@@ -1,8 +1,8 @@
 package com.debtsdecks.core.data
 
 import android.content.Context
-import com.debtsdecks.core.cards.CardDefinition
 import com.debtsdecks.core.cards.CardRegistry
+import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.enemies.EnemyDefinition
 import kotlinx.serialization.json.Json
 

@@ -14,6 +14,17 @@ data class CardDefinition(
     val strengthGain: Int = 0,
     val weakApply: Int = 0,
     val vulnerableApply: Int = 0,
+    val selfDamage: Int = 0,
+    val poisonApply: Int = 0,
+    val thornsGain: Int = 0,
+    val regenGain: Int = 0,
+    /** Flat Debt reduction this card applies (debt-resource-mechanic). See [CardResolver] for
+     *  how ATTACK-type cards (e.g. Collections Call) apply this once per landed hit rather than
+     *  once per play. */
+    val debtRepay: Int = 0,
+    /** Flat Gold granted once per play, regardless of card type or hit count (debt-resource-mechanic). */
+    val goldGain: Int = 0,
+    val hits: Int = 1,
     val targetType: TargetType,
     val description: String,
     val rarity: Rarity,
