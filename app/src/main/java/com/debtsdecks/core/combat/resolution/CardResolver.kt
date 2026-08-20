@@ -10,9 +10,8 @@ import com.debtsdecks.core.model.EnemyState
 import com.debtsdecks.core.model.TargetType
 
 /**
- * [bundle] is wired in this constructor for the combat-progression-and-i18n Phase 4a DI slice but
- * not yet consumed: the log strings below remain literal English pending the Phase 4b-iii string
- * migration, which replaces them with `bundle.get()`/`bundle.format()` lookups.
+ * [bundle] was wired in this constructor in the combat-progression-and-i18n Phase 4a DI slice and
+ * is consumed as of Phase 4b-iii: all log strings below resolve via `bundle.get()`/`bundle.format()`.
  */
 class CardResolver(private val bundle: I18NBundle) {
     data class ResolutionResult(
@@ -72,7 +71,10 @@ class CardResolver(private val bundle: I18NBundle) {
                 }
 
                 if (targets.isEmpty()) {
-                    return ResolutionResult(emptyList(), listOf(CombatLogEntry.create("No valid target!", state.turnNumber)))
+                    return ResolutionResult(
+                        emptyList(),
+                        listOf(CombatLogEntry.create(bundle.get("log.no_valid_target"), state.turnNumber))
+                    )
                 }
 
                 val repeatCount = if (card.definition.tags.contains("x_cost")) xValue else maxOf(1, card.baseHits)
@@ -92,36 +94,36 @@ class CardResolver(private val bundle: I18NBundle) {
                     repeat(landedHits) { effects.add(Effect.RepayDebt(card.definition.debtRepay)) }
                     logEntries.add(
                         CombatLogEntry.create(
-                            "Repaid ${card.definition.debtRepay} Debt per hit ($landedHits hit(s))!",
+                            bundle.format("log.repay_per_hit", card.definition.debtRepay, landedHits),
                             state.turnNumber
                         )
                     )
                 }
                 if (repeatCount <= 0) {
-                    logEntries.add(CombatLogEntry.create("${card.name} fizzles with no energy to spend!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.card_fizzles", card.name), state.turnNumber))
                 }
 
                 if (card.baseWeakApply > 0) {
                     targets.forEach { effects.add(Effect.WeakApply(it, card.baseWeakApply)) }
-                    logEntries.add(CombatLogEntry.create("Applied Weak (${card.baseWeakApply})!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.applied_weak", card.baseWeakApply), state.turnNumber))
                 }
                 if (card.baseVulnerableApply > 0) {
                     targets.forEach { effects.add(Effect.VulnerableApply(it, card.baseVulnerableApply)) }
-                    logEntries.add(CombatLogEntry.create("Applied Vulnerable (${card.baseVulnerableApply})!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.applied_vulnerable", card.baseVulnerableApply), state.turnNumber))
                 }
                 if (card.basePoisonApply > 0) {
                     targets.forEach { effects.add(Effect.PoisonApply(it, card.basePoisonApply)) }
-                    logEntries.add(CombatLogEntry.create("Applied Poison (${card.basePoisonApply})!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.applied_poison", card.basePoisonApply), state.turnNumber))
                 }
             }
             com.debtsdecks.core.model.CardType.SKILL, com.debtsdecks.core.model.CardType.POWER -> {
                 if (card.baseBlock > 0) {
                     effects.add(Effect.Block(card.baseBlock))
-                    logEntries.add(CombatLogEntry.create("Gained ${card.baseBlock} Block!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.gained_block", card.baseBlock), state.turnNumber))
                 }
                 if (card.baseDraw > 0) {
                     effects.add(Effect.Draw(card.baseDraw))
-                    logEntries.add(CombatLogEntry.create("Drew ${card.baseDraw} card(s)!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.drew_cards", card.baseDraw), state.turnNumber))
                 }
                 // Compound Interest scales Strength off current Debt instead of a flat amount:
                 // 1 Strength per 10 Debt, floor-rounded. Replaces the flat baseStrengthGain path
@@ -131,36 +133,36 @@ class CardResolver(private val bundle: I18NBundle) {
                     if (scaledAmount > 0) {
                         effects.add(Effect.StrengthGain(player.hashCode().toString(), scaledAmount))
                         logEntries.add(
-                            CombatLogEntry.create("Debt fuels your resolve: gained $scaledAmount Strength!", state.turnNumber)
+                            CombatLogEntry.create(bundle.format("log.debt_fuels_resolve", scaledAmount), state.turnNumber)
                         )
                     }
                 } else if (card.baseStrengthGain > 0) {
                     effects.add(Effect.StrengthGain(player.hashCode().toString(), card.baseStrengthGain))
-                    logEntries.add(CombatLogEntry.create("Gained ${card.baseStrengthGain} Strength!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.gained_strength", card.baseStrengthGain), state.turnNumber))
                 }
                 if (card.definition.debtRepay > 0) {
                     effects.add(Effect.RepayDebt(card.definition.debtRepay))
-                    logEntries.add(CombatLogEntry.create("Repaid ${card.definition.debtRepay} Debt!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.repaid_debt", card.definition.debtRepay), state.turnNumber))
                 }
                 if (card.baseThornsGain > 0) {
                     effects.add(Effect.ThornsGain(card.baseThornsGain))
-                    logEntries.add(CombatLogEntry.create("Gained ${card.baseThornsGain} Thorns!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.gained_thorns", card.baseThornsGain), state.turnNumber))
                 }
                 if (card.baseRegenGain > 0) {
                     effects.add(Effect.RegenGain(card.baseRegenGain))
-                    logEntries.add(CombatLogEntry.create("Gained ${card.baseRegenGain} Regen!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.gained_regen", card.baseRegenGain), state.turnNumber))
                 }
                 if (card.baseWeakApply > 0 && targetId != null) {
                     effects.add(Effect.WeakApply(targetId, card.baseWeakApply))
-                    logEntries.add(CombatLogEntry.create("Applied Weak (${card.baseWeakApply})!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.applied_weak", card.baseWeakApply), state.turnNumber))
                 }
                 if (card.baseVulnerableApply > 0 && targetId != null) {
                     effects.add(Effect.VulnerableApply(targetId, card.baseVulnerableApply))
-                    logEntries.add(CombatLogEntry.create("Applied Vulnerable (${card.baseVulnerableApply})!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.applied_vulnerable", card.baseVulnerableApply), state.turnNumber))
                 }
                 if (card.basePoisonApply > 0 && targetId != null) {
                     effects.add(Effect.PoisonApply(targetId, card.basePoisonApply))
-                    logEntries.add(CombatLogEntry.create("Applied Poison (${card.basePoisonApply})!", state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(bundle.format("log.applied_poison", card.basePoisonApply), state.turnNumber))
                 }
             }
         }
@@ -174,21 +176,21 @@ class CardResolver(private val bundle: I18NBundle) {
         }
         if (selfDamageAmount > 0) {
             effects.add(Effect.SelfDamage(selfDamageAmount))
-            logEntries.add(CombatLogEntry.create("Lost $selfDamageAmount HP!", state.turnNumber))
+            logEntries.add(CombatLogEntry.create(bundle.format("log.lost_hp", selfDamageAmount), state.turnNumber))
         }
 
         if (card.definition.goldGain > 0) {
             effects.add(Effect.GainGold(card.definition.goldGain))
-            logEntries.add(CombatLogEntry.create("Gained ${card.definition.goldGain} Gold!", state.turnNumber))
+            logEntries.add(CombatLogEntry.create(bundle.format("log.gained_gold", card.definition.goldGain), state.turnNumber))
         }
 
         if (card.definition.tags.contains("wipe_debt")) {
             effects.add(Effect.WipeDebt)
-            logEntries.add(CombatLogEntry.create("All Debt wiped clean!", state.turnNumber))
+            logEntries.add(CombatLogEntry.create(bundle.get("log.debt_wiped"), state.turnNumber))
         }
         if (card.definition.tags.contains("escrow_shield_activate")) {
             effects.add(Effect.EscrowShieldActivate)
-            logEntries.add(CombatLogEntry.create("Escrow Shield active: Debt from borrowing is halved this combat!", state.turnNumber))
+            logEntries.add(CombatLogEntry.create(bundle.get("log.escrow_shield_active"), state.turnNumber))
         }
 
         if (card.definition.tags.contains("exhaust")) {

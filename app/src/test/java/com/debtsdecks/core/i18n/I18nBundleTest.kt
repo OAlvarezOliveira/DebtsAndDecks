@@ -23,9 +23,10 @@ import java.util.Locale
  * makes this test hermetic and independent of the machine it runs on.
  *
  * Covers the seed key (Phase 4a), every HUD/in-combat-screen key CombatRenderer's Phase 4b-i
- * migration references, and every reward/end-screen key CombatRenderer's Phase 4b-ii migration
- * references. Core-domain log and JSON-sourced strings remain out of scope here and land in later
- * slices (Phase 4b-iii..iv).
+ * migration references, every reward/end-screen key CombatRenderer's Phase 4b-ii migration
+ * references, and every core-domain log/intent key CombatEngine/CardResolver/EnemyAI/EnemyInstance's
+ * Phase 4b-iii migration references. JSON-sourced card/enemy strings remain out of scope here and
+ * land in Phase 4b-iv.
  */
 class I18nBundleTest {
 
@@ -156,5 +157,125 @@ class I18nBundleTest {
         assertEquals("¡HAS SALDADO TU DEUDA!", bundle.get("run_end.victory"))
         assertEquals("EMBARGADO...", bundle.get("run_end.defeat"))
         assertEquals("Toca para reiniciar", bundle.get("run_end.restart_hint"))
+    }
+
+    // --- Phase 4b-iii: Core-domain log strings (CombatEngine/CardResolver/EnemyAI) + intent
+    // display text (EnemyInstance.intentDisplayName(), relocated structurally in Phase 4a, content
+    // swapped here). intentIconName()'s asset-lookup keys (intent_attack/etc.) are internal
+    // identifiers, not player-facing text, and are deliberately NOT bundle keys.
+
+    @Test
+    fun `English CombatEngine and EnemyAI log strings resolve with real interpolation`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+
+        assertEquals("Repaid 12 Debt with Gold.", bundle.format("log.repay_gold", 12))
+        assertEquals("Discarded Strike to repay 3 Debt.", bundle.format("log.repay_discard", "Strike", 3))
+        assertEquals("Poison deals 4 damage to Thug!", bundle.format("log.poison_damage_enemy", 4, "Thug"))
+        assertEquals("Poison deals 2 damage to you!", bundle.format("log.poison_damage_player", 2))
+        assertEquals("Regen heals you for 5!", bundle.format("log.regen_heal_player", 5))
+        assertEquals("--- Turn 7 ---", bundle.format("log.turn_header", 7))
+        assertEquals("Reshuffled discard pile!", bundle.get("log.reshuffle_discard"))
+        assertEquals("Dealt 9 damage to Loan Shark!", bundle.format("log.dealt_damage", 9, "Loan Shark"))
+        assertEquals("VICTORY!", bundle.get("log.victory"))
+        assertEquals("DEFEAT!", bundle.get("log.defeat"))
+        assertEquals("Thug attacks for 6 damage!", bundle.format("log.enemy_attacks", "Thug", 6))
+        assertEquals("Collector attacks for 11 damage!", bundle.format("log.enemy_attacks", "Collector", 11))
+        assertEquals("Loan Shark gains 3 Strength!", bundle.format("log.enemy_gains_strength", "Loan Shark", 3))
+        assertEquals("Thug applies Weak (2)!", bundle.format("log.enemy_applies_weak", "Thug", 2))
+        assertEquals("Collector takes 4 Thorns damage!", bundle.format("log.enemy_takes_thorns", "Collector", 4))
+    }
+
+    @Test
+    fun `Spanish CombatEngine and EnemyAI log strings resolve with real interpolation and thematic translations`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale("es"))
+
+        assertEquals("Pagaste 12 de Deuda con Oro.", bundle.format("log.repay_gold", 12))
+        assertEquals("Descartaste Strike para pagar 3 de Deuda.", bundle.format("log.repay_discard", "Strike", 3))
+        assertEquals("¡El Veneno causa 4 de daño a Thug!", bundle.format("log.poison_damage_enemy", 4, "Thug"))
+        assertEquals("¡El Veneno te causa 2 de daño!", bundle.format("log.poison_damage_player", 2))
+        assertEquals("¡La Regeneración te cura 5!", bundle.format("log.regen_heal_player", 5))
+        assertEquals("--- Turno 7 ---", bundle.format("log.turn_header", 7))
+        assertEquals("¡Se rebarajó la pila de descarte!", bundle.get("log.reshuffle_discard"))
+        assertEquals("¡Causaste 9 de daño a Loan Shark!", bundle.format("log.dealt_damage", 9, "Loan Shark"))
+        assertEquals("¡VICTORIA!", bundle.get("log.victory"))
+        assertEquals("¡DERROTA!", bundle.get("log.defeat"))
+        assertEquals("¡Thug ataca causando 6 de daño!", bundle.format("log.enemy_attacks", "Thug", 6))
+        assertEquals("¡Loan Shark gana 3 de Fuerza!", bundle.format("log.enemy_gains_strength", "Loan Shark", 3))
+        assertEquals("¡Thug aplica Debilidad (2)!", bundle.format("log.enemy_applies_weak", "Thug", 2))
+        assertEquals("¡Collector recibe 4 de daño por Espinas!", bundle.format("log.enemy_takes_thorns", "Collector", 4))
+    }
+
+    @Test
+    fun `English CardResolver log strings resolve with real interpolation`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+
+        assertEquals("No valid target!", bundle.get("log.no_valid_target"))
+        assertEquals("Repaid 2 Debt per hit (3 hit(s))!", bundle.format("log.repay_per_hit", 2, 3))
+        assertEquals("Bash fizzles with no energy to spend!", bundle.format("log.card_fizzles", "Bash"))
+        assertEquals("Applied Weak (2)!", bundle.format("log.applied_weak", 2))
+        assertEquals("Applied Vulnerable (3)!", bundle.format("log.applied_vulnerable", 3))
+        assertEquals("Applied Poison (4)!", bundle.format("log.applied_poison", 4))
+        assertEquals("Gained 5 Block!", bundle.format("log.gained_block", 5))
+        assertEquals("Drew 2 card(s)!", bundle.format("log.drew_cards", 2))
+        assertEquals("Debt fuels your resolve: gained 3 Strength!", bundle.format("log.debt_fuels_resolve", 3))
+        assertEquals("Gained 1 Strength!", bundle.format("log.gained_strength", 1))
+        assertEquals("Repaid 6 Debt!", bundle.format("log.repaid_debt", 6))
+        assertEquals("Gained 2 Thorns!", bundle.format("log.gained_thorns", 2))
+        assertEquals("Gained 1 Regen!", bundle.format("log.gained_regen", 1))
+        assertEquals("Lost 3 HP!", bundle.format("log.lost_hp", 3))
+        assertEquals("Gained 10 Gold!", bundle.format("log.gained_gold", 10))
+        assertEquals("All Debt wiped clean!", bundle.get("log.debt_wiped"))
+        assertEquals(
+            "Escrow Shield active: Debt from borrowing is halved this combat!",
+            bundle.get("log.escrow_shield_active")
+        )
+    }
+
+    @Test
+    fun `Spanish CardResolver log strings resolve with real interpolation and thematic translations`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale("es"))
+
+        assertEquals("¡Sin objetivo válido!", bundle.get("log.no_valid_target"))
+        assertEquals("¡Pagaste 2 de Deuda por golpe (3 golpe(s))!", bundle.format("log.repay_per_hit", 2, 3))
+        assertEquals("¡Bash falla, sin Crédito que gastar!", bundle.format("log.card_fizzles", "Bash"))
+        assertEquals("¡Debilidad aplicada (2)!", bundle.format("log.applied_weak", 2))
+        assertEquals("¡Vulnerable aplicado (3)!", bundle.format("log.applied_vulnerable", 3))
+        assertEquals("¡Veneno aplicado (4)!", bundle.format("log.applied_poison", 4))
+        assertEquals("¡Ganaste 5 de Bloqueo!", bundle.format("log.gained_block", 5))
+        assertEquals("¡Robaste 2 carta(s)!", bundle.format("log.drew_cards", 2))
+        assertEquals("¡La Deuda alimenta tu determinación: ganaste 3 de Fuerza!", bundle.format("log.debt_fuels_resolve", 3))
+        assertEquals("¡Ganaste 1 de Fuerza!", bundle.format("log.gained_strength", 1))
+        assertEquals("¡Pagaste 6 de Deuda!", bundle.format("log.repaid_debt", 6))
+        assertEquals("¡Ganaste 2 de Espinas!", bundle.format("log.gained_thorns", 2))
+        assertEquals("¡Ganaste 1 de Regeneración!", bundle.format("log.gained_regen", 1))
+        assertEquals("¡Perdiste 3 de PS!", bundle.format("log.lost_hp", 3))
+        assertEquals("¡Ganaste 10 de Oro!", bundle.format("log.gained_gold", 10))
+        assertEquals("¡Toda la Deuda quedó saldada!", bundle.get("log.debt_wiped"))
+        assertEquals(
+            "¡Escudo de Garantía activo: la Deuda por préstamos se reduce a la mitad este combate!",
+            bundle.get("log.escrow_shield_active")
+        )
+    }
+
+    @Test
+    fun `English intent display keys resolve with real interpolation`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+
+        assertEquals("Attack 5", bundle.format("intent.attack", 5))
+        assertEquals("Attack 12", bundle.format("intent.attack", 12))
+        assertEquals("Buff Strength +3", bundle.format("intent.buff", 3))
+        assertEquals("Debuff Weak 2", bundle.format("intent.debuff", 2))
+        assertEquals("Multi Attack 4 x3", bundle.format("intent.multi_attack", 4, 3))
+    }
+
+    @Test
+    fun `Spanish intent display keys resolve with real interpolation and thematic translations`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale("es"))
+
+        assertEquals("Ataque 5", bundle.format("intent.attack", 5))
+        assertEquals("Ataque 12", bundle.format("intent.attack", 12))
+        assertEquals("Mejora: Fuerza +3", bundle.format("intent.buff", 3))
+        assertEquals("Perjuicio: Debilidad 2", bundle.format("intent.debuff", 2))
+        assertEquals("Ataque Múltiple 4 x3", bundle.format("intent.multi_attack", 4, 3))
     }
 }

@@ -69,7 +69,7 @@ class CombatEngine(
         startingHp: Int = PlayerState().maxHp
     ) {
         // Create enemies
-        enemies = enemyDefinitions.map { EnemyInstance(it) }.toMutableList()
+        enemies = enemyDefinitions.map { EnemyInstance(it, bundle) }.toMutableList()
         enemyAIs = enemies.associateBy({ it.id }, { EnemyAI(it, bundle) })
 
         // Create player
@@ -220,7 +220,7 @@ class CombatEngine(
                 val amount = minOf(gold, debt)
                 gold -= amount
                 debt -= amount
-                log.add(CombatLogEntry.create("Repaid $amount Debt with Gold.", turnNumber))
+                log.add(CombatLogEntry.create(bundle.format("log.repay_gold", amount), turnNumber))
                 RepayResult(true, "Repaid $amount Debt", amount)
             }
             RepayMode.DISCARD -> {
@@ -232,7 +232,7 @@ class CombatEngine(
                 discardPile.add(card)
                 val amount = minOf(DebtConfig.REPAY_DISCARD_VALUE, debt)
                 debt -= amount
-                log.add(CombatLogEntry.create("Discarded ${card.name} to repay $amount Debt.", turnNumber))
+                log.add(CombatLogEntry.create(bundle.format("log.repay_discard", card.name, amount), turnNumber))
                 RepayResult(true, "Repaid $amount Debt", amount)
             }
         }
@@ -256,7 +256,7 @@ class CombatEngine(
         for (enemy in enemies.filter { !it.isDead() }) {
             val poisonDmg = enemy.tickPoison()
             if (poisonDmg > 0) {
-                enemyLog.add(CombatLogEntry.create("Poison deals $poisonDmg damage to ${enemy.name}!", turnNumber))
+                enemyLog.add(CombatLogEntry.create(bundle.format("log.poison_damage_enemy", poisonDmg, enemy.name), turnNumber))
             }
             if (enemy.isDead()) continue
             val ai = enemyAIs[enemy.id]!!
@@ -296,8 +296,8 @@ class CombatEngine(
         val poisonBefore = player.poison
         val regenBefore = player.regen
         player.tickTurnStart()
-        if (poisonBefore > 0) log.add(CombatLogEntry.create("Poison deals $poisonBefore damage to you!", turnNumber))
-        if (regenBefore > 0) log.add(CombatLogEntry.create("Regen heals you for $regenBefore!", turnNumber))
+        if (poisonBefore > 0) log.add(CombatLogEntry.create(bundle.format("log.poison_damage_player", poisonBefore), turnNumber))
+        if (regenBefore > 0) log.add(CombatLogEntry.create(bundle.format("log.regen_heal_player", regenBefore), turnNumber))
         if (player.isDead()) {
             endCombat(victory = false)
             return
@@ -308,7 +308,7 @@ class CombatEngine(
 
         currentPhase = TurnPhase.PLAYER_ACTION
 
-        log.add(CombatLogEntry.create("--- Turn $turnNumber ---", turnNumber))
+        log.add(CombatLogEntry.create(bundle.format("log.turn_header", turnNumber), turnNumber))
     }
 
     private fun drawCards(count: Int) {
@@ -318,7 +318,7 @@ class CombatEngine(
                 // Shuffle discard into draw
                 drawPile.addAll(discardPile.shuffled(rng))
                 discardPile.clear()
-                log.add(CombatLogEntry.create("Reshuffled discard pile!", turnNumber))
+                log.add(CombatLogEntry.create(bundle.get("log.reshuffle_discard"), turnNumber))
             }
             if (hand.size < HAND_SIZE) {
                 val card = drawPile.removeFirst()
@@ -334,7 +334,7 @@ class CombatEngine(
                     val enemy = enemies.find { it.id == effect.targetId }
                     if (enemy != null) {
                         val actualDamage = enemy.takeDamage(effect.amount)
-                        log.add(CombatLogEntry.create("Dealt $actualDamage damage to ${enemy.name}!", turnNumber))
+                        log.add(CombatLogEntry.create(bundle.format("log.dealt_damage", actualDamage, enemy.name), turnNumber))
                     }
                 }
                 is CardResolver.Effect.Block -> {
@@ -391,7 +391,7 @@ class CombatEngine(
 
     private fun endCombat(victory: Boolean) {
         currentPhase = TurnPhase.COMBAT_END
-        log.add(CombatLogEntry.create(if (victory) "VICTORY!" else "DEFEAT!", turnNumber))
+        log.add(CombatLogEntry.create(bundle.get(if (victory) "log.victory" else "log.defeat"), turnNumber))
     }
 
     data class PlayResult(val success: Boolean, val message: String)

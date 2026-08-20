@@ -1,5 +1,6 @@
 package com.debtsdecks.core.enemies
 
+import com.debtsdecks.core.i18n.testI18nBundle
 import com.debtsdecks.core.model.EnemyState
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -20,7 +21,8 @@ class EnemyInstanceTest {
             intentPattern = listOf(IntentStep(IntentType.ATTACK, 5)),
             rewards = EnemyRewards(gold = 0, cardChoices = 3),
             tags = tags
-        )
+        ),
+        testI18nBundle()
     )
 
     @Test
@@ -84,7 +86,7 @@ class EnemyInstanceTest {
     fun `intentDisplayName reflects the enemy's current intent`() {
         val enemy = enemyWithTags() // default pattern: ATTACK, damage 5
 
-        assertEquals("Attack 5", enemy.intentDisplayName())
+        assertEquals(testI18nBundle().format("intent.attack", 5), enemy.intentDisplayName())
     }
 
     @Test
@@ -102,7 +104,8 @@ class EnemyInstanceTest {
                 intentPattern = listOf(IntentStep(IntentType.ATTACK, 5)),
                 rewards = EnemyRewards(gold = 0, cardChoices = 3),
                 tier = EnemyTier.ELITE
-            )
+            ),
+            testI18nBundle()
         )
         val normal = enemyWithTags()
 

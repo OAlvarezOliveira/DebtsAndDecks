@@ -10,6 +10,7 @@ import com.debtsdecks.core.model.PlayerState
 
 class EnemyInstance(
     val definition: EnemyDefinition,
+    private val bundle: I18NBundle,
     val instanceId: String = java.util.UUID.randomUUID().toString()
 ) {
     var hp: Int = definition.hp
@@ -37,10 +38,10 @@ class EnemyInstance(
     fun intentDisplayName(): String {
         val intent = currentIntent()
         return when (intent.type) {
-            ATTACK -> "Attack ${intent.damage}"
-            BUFF -> "Buff Strength +${intent.param}"
-            DEBUFF -> "Debuff Weak ${intent.param}"
-            MULTI_ATTACK -> "Multi Attack ${intent.damage} x${intent.param}"
+            ATTACK -> bundle.format("intent.attack", intent.damage)
+            BUFF -> bundle.format("intent.buff", intent.param)
+            DEBUFF -> bundle.format("intent.debuff", intent.param)
+            MULTI_ATTACK -> bundle.format("intent.multi_attack", intent.damage, intent.param)
         }
     }
 
@@ -135,9 +136,8 @@ class EnemyInstance(
 }
 
 /**
- * [bundle] is wired in this constructor for the combat-progression-and-i18n Phase 4a DI slice but
- * not yet consumed: the combat-log strings below remain literal English pending the Phase 4b-iii
- * string migration, which replaces them with `bundle.get()`/`bundle.format()` lookups.
+ * [bundle] was wired in this constructor in the combat-progression-and-i18n Phase 4a DI slice and
+ * is consumed as of Phase 4b-iii: all combat-log strings below resolve via `bundle.format()`.
  */
 class EnemyAI(private val enemy: EnemyInstance, private val bundle: I18NBundle) {
     fun executeIntent(player: PlayerState, allEnemies: List<EnemyInstance>, turn: Int): List<CombatLogEntry> {
@@ -148,22 +148,22 @@ class EnemyAI(private val enemy: EnemyInstance, private val bundle: I18NBundle) 
             ATTACK -> {
                 val dmg = ((intent.damage + enemy.strength) * if (enemy.weak > 0) 0.75 else 1.0).toInt()
                 val actual = player.takeDamage(dmg)
-                log.add(CombatLogEntry.create("${enemy.name} attacks for $actual damage!", turn))
+                log.add(CombatLogEntry.create(bundle.format("log.enemy_attacks", enemy.name, actual), turn))
                 reflectThorns(player, turn, log)
             }
             BUFF -> {
                 enemy.gainStrength(intent.param)
-                log.add(CombatLogEntry.create("${enemy.name} gains ${intent.param} Strength!", turn))
+                log.add(CombatLogEntry.create(bundle.format("log.enemy_gains_strength", enemy.name, intent.param), turn))
             }
             DEBUFF -> {
                 player.applyWeak(intent.param)
-                log.add(CombatLogEntry.create("${enemy.name} applies Weak (${intent.param})!", turn))
+                log.add(CombatLogEntry.create(bundle.format("log.enemy_applies_weak", enemy.name, intent.param), turn))
             }
             MULTI_ATTACK -> {
                 repeat(intent.param) {
                     val dmg = ((intent.damage + enemy.strength) * if (enemy.weak > 0) 0.75 else 1.0).toInt()
                     val actual = player.takeDamage(dmg)
-                    log.add(CombatLogEntry.create("${enemy.name} attacks for $actual damage!", turn))
+                    log.add(CombatLogEntry.create(bundle.format("log.enemy_attacks", enemy.name, actual), turn))
                     reflectThorns(player, turn, log)
                 }
             }
@@ -176,6 +176,6 @@ class EnemyAI(private val enemy: EnemyInstance, private val bundle: I18NBundle) 
     private fun reflectThorns(player: PlayerState, turn: Int, log: MutableList<CombatLogEntry>) {
         if (player.thorns <= 0) return
         val reflected = enemy.takeDamage(player.thorns)
-        log.add(CombatLogEntry.create("${enemy.name} takes $reflected Thorns damage!", turn))
+        log.add(CombatLogEntry.create(bundle.format("log.enemy_takes_thorns", enemy.name, reflected), turn))
     }
 }
