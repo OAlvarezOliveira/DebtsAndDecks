@@ -24,9 +24,11 @@ import java.util.Locale
  *
  * Covers the seed key (Phase 4a), every HUD/in-combat-screen key CombatRenderer's Phase 4b-i
  * migration references, every reward/end-screen key CombatRenderer's Phase 4b-ii migration
- * references, and every core-domain log/intent key CombatEngine/CardResolver/EnemyAI/EnemyInstance's
- * Phase 4b-iii migration references. JSON-sourced card/enemy strings remain out of scope here and
- * land in Phase 4b-iv.
+ * references, every core-domain log/intent key CombatEngine/CardResolver/EnemyAI/EnemyInstance's
+ * Phase 4b-iii migration references, and — as of Phase 4b-iv — every `card.<id>.name`/
+ * `card.<id>.description`/`enemy.<id>.name` key now stored in `assets/cards/all.json` and
+ * `assets/enemies/all.json` in place of literal text (see [CombatRenderer]/[CardResolver]'s
+ * `bundle.get(...)` consumption sites for those JSON-sourced fields).
  */
 class I18nBundleTest {
 
@@ -277,5 +279,185 @@ class I18nBundleTest {
         assertEquals("Mejora: Fuerza +3", bundle.format("intent.buff", 3))
         assertEquals("Perjuicio: Debilidad 2", bundle.format("intent.debuff", 2))
         assertEquals("Ataque Múltiple 4 x3", bundle.format("intent.multi_attack", 4, 3))
+    }
+
+    // --- Phase 4b-iv: JSON-sourced card/enemy strings (assets/cards/all.json, assets/enemies/
+    // all.json). `name`/`description` fields in those files now store bundle keys instead of
+    // literal text; this coverage is the sole automated proof of every key's resolution and
+    // translation, since no test loads the real JSON assets directly (DataLoader needs an Android
+    // Context, unavailable in a headless JVM test) — CombatRenderer/CardResolver consume these
+    // keys only through a live render/log path with no dedicated test file.
+
+    @Test
+    fun `English JSON-sourced card and enemy keys resolve`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+
+        assertEquals("Strike", bundle.get("card.strike.name"))
+        assertEquals("Deal 6 damage.", bundle.get("card.strike.description"))
+        assertEquals("Defend", bundle.get("card.defend.name"))
+        assertEquals("Gain 5 Block.", bundle.get("card.defend.description"))
+        assertEquals("Bash", bundle.get("card.bash.name"))
+        assertEquals("Deal 8 damage. Apply 1 Vulnerable.", bundle.get("card.bash.description"))
+        assertEquals("Survive", bundle.get("card.survive.name"))
+        assertEquals("Gain 8 Block.", bundle.get("card.survive.description"))
+        assertEquals("Heavy Blade", bundle.get("card.heavy_blade.name"))
+        assertEquals("Deal 14 damage.", bundle.get("card.heavy_blade.description"))
+        assertEquals("Iron Wave", bundle.get("card.iron_wave.name"))
+        assertEquals("Deal 7 damage. Gain 7 Block.", bundle.get("card.iron_wave.description"))
+        assertEquals("Pommel Strike", bundle.get("card.pommel_strike.name"))
+        assertEquals("Deal 9 damage. Draw 1 card.", bundle.get("card.pommel_strike.description"))
+        assertEquals("Whirlwind", bundle.get("card.whirlwind.name"))
+        assertEquals(
+            "Deal 5 damage to ALL enemies, once per Energy spent.",
+            bundle.get("card.whirlwind.description")
+        )
+        assertEquals("Reckless Charge", bundle.get("card.reckless_charge.name"))
+        assertEquals("Deal 7 damage. Lose 2 HP.", bundle.get("card.reckless_charge.description"))
+        assertEquals("Defend+", bundle.get("card.defend_plus.name"))
+        assertEquals("Gain 8 Block.", bundle.get("card.defend_plus.description"))
+        assertEquals("Wild Strike", bundle.get("card.wild_strike.name"))
+        assertEquals("Deal 12 damage. Exhaust.", bundle.get("card.wild_strike.description"))
+        assertEquals("Flex", bundle.get("card.flex.name"))
+        assertEquals("Gain 2 Strength.", bundle.get("card.flex.description"))
+        assertEquals("Clash", bundle.get("card.clash.name"))
+        assertEquals(
+            "Deal 14 damage. Can only be played if it's the only card in your hand.",
+            bundle.get("card.clash.description")
+        )
+        assertEquals("Anger", bundle.get("card.anger.name"))
+        assertEquals(
+            "Deal 6 damage. Add a copy to your discard pile.",
+            bundle.get("card.anger.description")
+        )
+        assertEquals("True Grit", bundle.get("card.true_grit.name"))
+        assertEquals("Gain 7 Block. Draw 1 card. Exhaust.", bundle.get("card.true_grit.description"))
+        assertEquals("Escrow Shield", bundle.get("card.escrow_shield.name"))
+        assertEquals(
+            "Activate Escrow Shield: Debt gained from borrowing is halved for the rest of combat.",
+            bundle.get("card.escrow_shield.description")
+        )
+        assertEquals("Debt Relief", bundle.get("card.debt_relief.name"))
+        assertEquals("Exhaust. Repay 10 Debt directly.", bundle.get("card.debt_relief.description"))
+        assertEquals("Wage Garnishment", bundle.get("card.wage_garnishment.name"))
+        assertEquals("Deal 4 damage. Repay 3 Debt.", bundle.get("card.wage_garnishment.description"))
+        assertEquals("Repo Sweep", bundle.get("card.repo_sweep.name"))
+        assertEquals(
+            "Deal 6 damage to ALL enemies. Gain 5 Gold.",
+            bundle.get("card.repo_sweep.description")
+        )
+        assertEquals("Collections Call", bundle.get("card.collections_call.name"))
+        assertEquals(
+            "Deal 4 damage 3 times. Each hit repays 2 Debt.",
+            bundle.get("card.collections_call.description")
+        )
+        assertEquals("Chapter 11", bundle.get("card.chapter_11.name"))
+        assertEquals(
+            "Exhaust. Lose 15 HP. Wipe all Debt to 0.",
+            bundle.get("card.chapter_11.description")
+        )
+        assertEquals("Compound Interest", bundle.get("card.compound_interest.name"))
+        assertEquals(
+            "Exhaust. Gain 1 Strength per 10 Debt.",
+            bundle.get("card.compound_interest.description")
+        )
+        assertEquals("Thug", bundle.get("enemy.thug.name"))
+        assertEquals("Loan Shark", bundle.get("enemy.loan_shark.name"))
+        assertEquals("Collector", bundle.get("enemy.collector.name"))
+    }
+
+    @Test
+    fun `Spanish JSON-sourced card and enemy keys resolve with neutral thematic translations`() {
+        val bundle = I18NBundle.createBundle(bundleBase, Locale("es"))
+
+        assertEquals("Golpe", bundle.get("card.strike.name"))
+        assertEquals("Inflige 6 de daño.", bundle.get("card.strike.description"))
+        assertEquals("Defensa", bundle.get("card.defend.name"))
+        assertEquals("Gana 5 de Bloqueo.", bundle.get("card.defend.description"))
+        assertEquals("Golpe Brutal", bundle.get("card.bash.name"))
+        assertEquals(
+            "Inflige 8 de daño. Aplica 1 de Vulnerable.",
+            bundle.get("card.bash.description")
+        )
+        assertEquals("Resistir", bundle.get("card.survive.name"))
+        assertEquals("Gana 8 de Bloqueo.", bundle.get("card.survive.description"))
+        assertEquals("Hoja Pesada", bundle.get("card.heavy_blade.name"))
+        assertEquals("Inflige 14 de daño.", bundle.get("card.heavy_blade.description"))
+        assertEquals("Ola de Hierro", bundle.get("card.iron_wave.name"))
+        assertEquals(
+            "Inflige 7 de daño. Gana 7 de Bloqueo.",
+            bundle.get("card.iron_wave.description")
+        )
+        assertEquals("Golpe de Pomo", bundle.get("card.pommel_strike.name"))
+        assertEquals("Inflige 9 de daño. Roba 1 carta.", bundle.get("card.pommel_strike.description"))
+        assertEquals("Torbellino", bundle.get("card.whirlwind.name"))
+        assertEquals(
+            "Inflige 5 de daño a TODOS los enemigos, una vez por cada Crédito gastado.",
+            bundle.get("card.whirlwind.description")
+        )
+        assertEquals("Carga Imprudente", bundle.get("card.reckless_charge.name"))
+        assertEquals(
+            "Inflige 7 de daño. Pierdes 2 de PS.",
+            bundle.get("card.reckless_charge.description")
+        )
+        assertEquals("Defensa+", bundle.get("card.defend_plus.name"))
+        assertEquals("Gana 8 de Bloqueo.", bundle.get("card.defend_plus.description"))
+        assertEquals("Golpe Salvaje", bundle.get("card.wild_strike.name"))
+        assertEquals("Inflige 12 de daño. Agotar.", bundle.get("card.wild_strike.description"))
+        assertEquals("Flexión", bundle.get("card.flex.name"))
+        assertEquals("Gana 2 de Fuerza.", bundle.get("card.flex.description"))
+        assertEquals("Choque", bundle.get("card.clash.name"))
+        assertEquals(
+            "Inflige 14 de daño. Solo se puede jugar si es la única carta en tu mano.",
+            bundle.get("card.clash.description")
+        )
+        assertEquals("Ira", bundle.get("card.anger.name"))
+        assertEquals(
+            "Inflige 6 de daño. Añade una copia a tu pila de descarte.",
+            bundle.get("card.anger.description")
+        )
+        assertEquals("Verdadero Temple", bundle.get("card.true_grit.name"))
+        assertEquals(
+            "Gana 7 de Bloqueo. Roba 1 carta. Agotar.",
+            bundle.get("card.true_grit.description")
+        )
+        assertEquals("Escudo de Garantía", bundle.get("card.escrow_shield.name"))
+        assertEquals(
+            "Activa el Escudo de Garantía: la Deuda obtenida por préstamos se reduce a la mitad " +
+                "el resto del combate.",
+            bundle.get("card.escrow_shield.description")
+        )
+        assertEquals("Alivio de Deuda", bundle.get("card.debt_relief.name"))
+        assertEquals(
+            "Agotar. Paga 10 de Deuda directamente.",
+            bundle.get("card.debt_relief.description")
+        )
+        assertEquals("Embargo de Salario", bundle.get("card.wage_garnishment.name"))
+        assertEquals(
+            "Inflige 4 de daño. Paga 3 de Deuda.",
+            bundle.get("card.wage_garnishment.description")
+        )
+        assertEquals("Barrida de Embargo", bundle.get("card.repo_sweep.name"))
+        assertEquals(
+            "Inflige 6 de daño a TODOS los enemigos. Gana 5 de Oro.",
+            bundle.get("card.repo_sweep.description")
+        )
+        assertEquals("Llamada de Cobranza", bundle.get("card.collections_call.name"))
+        assertEquals(
+            "Inflige 4 de daño 3 veces. Cada golpe paga 2 de Deuda.",
+            bundle.get("card.collections_call.description")
+        )
+        assertEquals("Capítulo 11", bundle.get("card.chapter_11.name"))
+        assertEquals(
+            "Agotar. Pierdes 15 de PS. Salda toda la Deuda a 0.",
+            bundle.get("card.chapter_11.description")
+        )
+        assertEquals("Interés Compuesto", bundle.get("card.compound_interest.name"))
+        assertEquals(
+            "Agotar. Gana 1 de Fuerza por cada 10 de Deuda.",
+            bundle.get("card.compound_interest.description")
+        )
+        assertEquals("Matón", bundle.get("enemy.thug.name"))
+        assertEquals("Usurero", bundle.get("enemy.loan_shark.name"))
+        assertEquals("Cobrador", bundle.get("enemy.collector.name"))
     }
 }
