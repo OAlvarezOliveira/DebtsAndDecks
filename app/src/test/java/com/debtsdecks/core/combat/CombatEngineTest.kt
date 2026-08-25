@@ -265,12 +265,12 @@ class CombatEngineTest {
     }
 
     @Test
-    fun `interest ticks once when a new encounter starts carrying Debt forward`() {
+    fun `interest ticks at the first turn start when carrying Debt forward`() {
         val thug = standardThug()
         engine.startCombat(listOf(thug), listOf("strike", "strike", "defend", "defend", "strike"), startingGold = 0, startingDebt = 100)
 
-        // 100 + ceil(100 * 10%) = 110, applied exactly once at encounter start.
-        assertEquals(110, engine.getState().debt)
+        // 100 + ceil(100 * 15%) = 115, applied at the first turn start.
+        assertEquals(115, engine.getState().debt)
     }
 
     @Test
@@ -293,12 +293,12 @@ class CombatEngineTest {
     fun `repayDebt with GOLD spends the minimum of available gold and debt`() {
         val thug = standardThug()
         engine.startCombat(listOf(thug), listOf("strike", "strike", "defend", "defend", "strike"), startingGold = 5, startingDebt = 8)
-        assertEquals(9, engine.getState().debt) // 8 + ceil(8 * 10%) = 9, confirms fixture assumption
+        assertEquals(10, engine.getState().debt) // 8 + ceil(8 * 15%) = 10, turn-start interest
 
         val result = engine.repayDebt(CombatEngine.RepayMode.GOLD)
 
         assertTrue(result.success)
-        assertEquals(4, engine.getState().debt) // 9 - min(5, 9) = 4
+        assertEquals(5, engine.getState().debt) // 10 - min(5, 10) = 5
         assertEquals(0, engine.getState().gold) // 5 - 5 = 0
     }
 
@@ -425,13 +425,13 @@ class CombatEngineTest {
         ))
         engine.startCombat(listOf(standardThug()), listOf("add_debt_card", "strike", "strike", "strike", "strike"), startingDebt = 180)
 
-        // 180 + ceil(180 * 10%) = 198 after the encounter-start interest tick.
-        assertEquals(198, engine.getState().debt)
+        // 180 + ceil(180 * 15%) = 207, capped to 200 at first turn start.
+        assertEquals(200, engine.getState().debt)
 
         val card = engine.getState().hand.find { it.cardId == "add_debt_card" }!!
         engine.playCard(card.id, null)
 
-        // 198 + 5 = 203, capped to INTEREST_CAP = 200.
+        // Already at cap, so the +5 add stays capped at INTEREST_CAP = 200.
         assertEquals(200, engine.getState().debt)
     }
 
@@ -525,7 +525,9 @@ class CombatEngineTest {
         val result = engine.endPlayerTurn()
 
         assertTrue(result.success)
-        assertEquals(debtBefore + 6, engine.getState().debt)
+        // LEVY adds 6, then the next turn-start interest tick compounds it.
+        val after = DebtConfig.applyInterest(debtBefore + 6)
+        assertEquals(after, engine.getState().debt)
         assertTrue(
             engine.getState().log.any { it.message == testLocalizer().format("log.intent_levy", 6) },
             "expected a localized LEVY log entry"
@@ -539,10 +541,10 @@ class CombatEngineTest {
             listOf("strike", "strike", "strike", "strike", "strike"),
             startingDebt = 180
         )
-        // 180 + ceil(180 * 10%) = 198 after the encounter-start interest tick.
-        assertEquals(198, engine.getState().debt)
+        // 180 + ceil(180 * 15%) = 207, capped to 200 at first turn start.
+        assertEquals(200, engine.getState().debt)
 
-        engine.endPlayerTurn() // LEVY 6 -> 198 + 6 = 204, capped to 200
+        engine.endPlayerTurn() // LEVY 6 -> 200 + 6 = 206, capped to 200
 
         assertEquals(200, engine.getState().debt)
     }

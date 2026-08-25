@@ -4,11 +4,23 @@
     "name": "enemy.thug.name",
     "hp": 24,
     "intentPattern": [
-      { "type": "ATTACK", "damage": 6 },
-      { "type": "ATTACK", "damage": 6 },
-      { "type": "BUFF", "param": 3 }
+      {
+        "type": "ATTACK",
+        "damage": 8
+      },
+      {
+        "type": "ATTACK",
+        "damage": 8
+      },
+      {
+        "type": "BUFF",
+        "param": 3
+      }
     ],
-    "rewards": { "gold": 10, "cardChoices": 3 },
+    "rewards": {
+      "gold": 10,
+      "cardChoices": 3
+    },
     "tier": "NORMAL",
     "tags": []
   },
@@ -17,28 +29,66 @@
     "name": "enemy.loan_shark.name",
     "hp": 40,
     "intentPattern": [
-      { "type": "ATTACK", "damage": 8 },
-      { "type": "BUFF", "param": 3 },
-      { "type": "ATTACK", "damage": 8 },
-      { "type": "DEBUFF", "param": 1 }
+      {
+        "type": "ATTACK",
+        "damage": 10
+      },
+      {
+        "type": "BUFF",
+        "param": 3
+      },
+      {
+        "type": "ATTACK",
+        "damage": 10
+      },
+      {
+        "type": "DEBUFF",
+        "param": 1
+      }
     ],
-    "rewards": { "gold": 15, "cardChoices": 4 },
+    "rewards": {
+      "gold": 15,
+      "cardChoices": 4
+    },
     "tier": "ELITE",
-    "tags": ["enrage_below_half"]
+    "tags": [
+      "enrage_below_half"
+    ]
   },
   {
     "id": "collector",
     "name": "enemy.collector.name",
     "hp": 56,
     "intentPattern": [
-      { "type": "ATTACK", "damage": 10 },
-      { "type": "MULTI_ATTACK", "damage": 7, "param": 2 },
-      { "type": "LEVY", "param": 5 },
-      { "type": "BUFF", "param": 4 },
-      { "type": "DEBUFF", "param": 2 }
+      {
+        "type": "ATTACK",
+        "damage": 12
+      },
+      {
+        "type": "MULTI_ATTACK",
+        "damage": 9,
+        "param": 2
+      },
+      {
+        "type": "LEVY",
+        "param": 5
+      },
+      {
+        "type": "BUFF",
+        "param": 4
+      },
+      {
+        "type": "DEBUFF",
+        "param": 2
+      }
     ],
-    "rewards": { "gold": 25, "cardChoices": 5 },
+    "rewards": {
+      "gold": 25,
+      "cardChoices": 5
+    },
     "tier": "BOSS",
-    "tags": ["debuff_resist"]
+    "tags": [
+      "debuff_resist"
+    ]
   }
 ]

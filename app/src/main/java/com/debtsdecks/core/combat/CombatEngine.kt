@@ -92,7 +92,7 @@ class CombatEngine(
         log.clear()
 
         gold = startingGold
-        debt = DebtConfig.applyInterest(startingDebt)
+        debt = startingDebt
         escrowShieldActive = false
 
         // Start first turn
@@ -306,6 +306,16 @@ class CombatEngine(
         val poisonBefore = player.poison
         val regenBefore = player.regen
         player.tickTurnStart()
+
+        // Per-turn Debt economy: compounding interest, then usury (Debt above half max HP
+        // burns HP). Both run before the player acts so carrying Debt has a visible cost.
+        debt = DebtConfig.applyInterest(debt)
+        if (debt > 0) log.add(CombatLogEntry.create(l10n.format("log.debt_interest", debt), turnNumber))
+        val usury = DebtConfig.usuryDamage(debt, player.maxHp)
+        if (usury > 0) {
+            player.hp = maxOf(1, player.hp - usury)
+            log.add(CombatLogEntry.create(l10n.format("log.debt_usury", usury), turnNumber))
+        }
         if (poisonBefore > 0) log.add(CombatLogEntry.create(l10n.format("log.poison_damage_player", poisonBefore), turnNumber))
         if (regenBefore > 0) log.add(CombatLogEntry.create(l10n.format("log.regen_heal_player", regenBefore), turnNumber))
         if (player.isDead()) {
