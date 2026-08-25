@@ -62,6 +62,26 @@ class CombatRenderer(private val bundle: I18NBundle) {
         "intent_debuff" to loadTexture("art/intent_debuff.png"),
         "intent_multi" to loadTexture("art/intent_multi.png")
     )
+    
+    // Per-card art, keyed by CardDefinition.id. Missing assets are skipped at construction
+    // so a missing art/cards/<id>.webp falls back to the frame-only card (no hard crash).
+    private val cardTextures: Map<String, Texture> = run {
+        val ids = listOf(
+            "compound_interest", "subprime_loan", "debt_forgiveness", "partial_forgiveness",
+            "tactical_bankruptcy", "reverse_mortgage", "foreclosure_express", "ghost_collector",
+            "golden_credit", "mortgage_collateral", "asset_auction", "risky_investment",
+            "bounced_check", "zombie_debt", "eternal_debt"
+        )
+        val m = mutableMapOf<String, Texture>()
+        for (id in ids) {
+            try {
+                m[id] = loadTexture("art/cards/$id.webp")
+            } catch (_: Throwable) {
+                // missing art -> frame-only fallback for this card
+            }
+        }
+        m
+    }
 
     // Layout constants
     private val screenWidth = 1280f
@@ -366,6 +386,14 @@ class CombatRenderer(private val bundle: I18NBundle) {
                 shapeRenderer.end()
             }
 
+            // Per-card art over the frame (falls back to frame-only when absent)
+            val cardArt = cardTextures[card.cardId]
+            if (cardArt != null) {
+                batch.begin()
+                batch.draw(cardArt, x + 6f, y + 6f, cardWidth - 12f, cardHeight - 12f)
+                batch.end()
+            }
+
             // Card content
             batch.begin()
             // Cost
@@ -495,6 +523,12 @@ class CombatRenderer(private val bundle: I18NBundle) {
             shapeRenderer.rect(bounds.x, bounds.y, bounds.width, bounds.height)
             shapeRenderer.end()
 
+            val cardArt = cardTextures[card.id]
+            if (cardArt != null) {
+                batch.begin()
+                batch.draw(cardArt, bounds.x + 6f, bounds.y + 6f, bounds.width - 12f, bounds.height - 12f)
+                batch.end()
+            }
             batch.begin()
             font.setColor(Color.BLACK)
             font.draw(batch, bundle.get(card.name), bounds.x + 15f, bounds.y + bounds.height - 20f)
@@ -580,6 +614,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         smallFont.dispose()
         enemyTextures.values.forEach { it.dispose() }
         cardFrameTextures.values.forEach { it.dispose() }
+        cardTextures.values.forEach { it.dispose() }
         intentTextures.values.forEach { it.dispose() }
     }
 

@@ -2,6 +2,7 @@ package com.debtsdecks.core.i18n
 
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.utils.I18NBundle
+import com.debtsdecks.gdx.i18n.BundleLocalizer
 import java.io.File
 import java.util.Locale
 
@@ -15,11 +16,12 @@ import java.util.Locale
  * restores it), since gdx's `I18NBundle` locale-candidate resolution consults `Locale.getDefault()`
  * and would otherwise behave differently depending on the host machine's own default locale.
  */
-fun testI18nBundle(): I18NBundle {
+fun testLocalizer(): Localizer {
     val original = Locale.getDefault()
     Locale.setDefault(Locale.US)
     try {
-        return I18NBundle.createBundle(FileHandle(File("src/main/assets/i18n/strings")), Locale.ENGLISH)
+        val bundle = I18NBundle.createBundle(FileHandle(File("src/main/assets/i18n/strings")), Locale.ENGLISH)
+        return BundleLocalizer(bundle)
     } finally {
         Locale.setDefault(original)
     }

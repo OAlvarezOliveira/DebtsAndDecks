@@ -1,7 +1,8 @@
 package com.debtsdecks.core.enemies
 
-import com.debtsdecks.core.i18n.testI18nBundle
+import com.debtsdecks.core.i18n.testLocalizer
 import com.debtsdecks.core.model.EnemyState
+import com.debtsdecks.core.model.PlayerState
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -22,7 +23,7 @@ class EnemyInstanceTest {
             rewards = EnemyRewards(gold = 0, cardChoices = 3),
             tags = tags
         ),
-        testI18nBundle()
+        testLocalizer()
     )
 
     @Test
@@ -86,7 +87,7 @@ class EnemyInstanceTest {
     fun `intentDisplayName reflects the enemy's current intent`() {
         val enemy = enemyWithTags() // default pattern: ATTACK, damage 5
 
-        assertEquals(testI18nBundle().format("intent.attack", 5), enemy.intentDisplayName())
+        assertEquals(testLocalizer().format("intent.attack", 5), enemy.intentDisplayName())
     }
 
     @Test
@@ -105,11 +106,38 @@ class EnemyInstanceTest {
                 rewards = EnemyRewards(gold = 0, cardChoices = 3),
                 tier = EnemyTier.ELITE
             ),
-            testI18nBundle()
+            testLocalizer()
         )
         val normal = enemyWithTags()
 
         assertEquals(EnemyTier.ELITE, EnemyState.fromInstance(elite).tier)
         assertEquals(EnemyTier.NORMAL, EnemyState.fromInstance(normal).tier)
+    }
+
+    // --- Debt-Economy boss interest (debt-economy-cards-and-boss-interest, PR2): IntentType.LEVY ---
+
+    private fun levyEnemy() = EnemyInstance(
+        EnemyDefinition(
+            id = "levy-enemy", name = "Levy Enemy", hp = 99,
+            intentPattern = listOf(IntentStep(IntentType.LEVY, param = 6), IntentStep(IntentType.ATTACK, 5)),
+            rewards = EnemyRewards(gold = 0, cardChoices = 3)
+        ),
+        testLocalizer()
+    )
+
+    @Test
+    fun `LEVY intent displays a localized label`() {
+        assertEquals(testLocalizer().format("intent.levy", 6), levyEnemy().intentDisplayName())
+    }
+
+    @Test
+    fun `EnemyAI advances past a LEVY intent without combat effects`() {
+        val enemy = levyEnemy()
+        val ai = EnemyAI(enemy, testLocalizer())
+
+        val log = ai.executeIntent(PlayerState(), listOf(enemy), 1)
+
+        assertEquals(0, log.size) // the engine owns the debt levy; EnemyAI contributes no combat log
+        assertEquals(IntentType.ATTACK, enemy.currentIntent().type) // advanced past LEVY
     }
 }

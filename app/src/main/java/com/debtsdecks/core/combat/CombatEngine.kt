@@ -1,12 +1,13 @@
 package com.debtsdecks.core.combat
 
-import com.badlogic.gdx.utils.I18NBundle
+import com.debtsdecks.core.i18n.Localizer
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.cards.CardRegistry
 import com.debtsdecks.core.combat.resolution.CardResolver
 import com.debtsdecks.core.enemies.EnemyAI
 import com.debtsdecks.core.enemies.EnemyDefinition
 import com.debtsdecks.core.enemies.EnemyInstance
+import com.debtsdecks.core.enemies.IntentType
 import com.debtsdecks.core.model.CombatLogEntry
 import com.debtsdecks.core.model.CombatState
 import com.debtsdecks.core.model.EnemyState
@@ -17,7 +18,7 @@ import kotlin.random.Random
 
 class CombatEngine(
     private val cardRegistry: CardRegistry,
-    private val bundle: I18NBundle,
+    private val l10n: Localizer,
     private val rng: Random = Random(System.currentTimeMillis())
 ) {
     private var player: PlayerState = PlayerState()
@@ -40,12 +41,14 @@ class CombatEngine(
 
     /** Per-combat flag (see [activateEscrowShield]) that halves Debt added from a shortfall while active. */
     private var escrowShieldActive: Boolean = false
-    private val cardResolver = CardResolver(bundle)
+    private val cardResolver = CardResolver(l10n)
     private var enemyAIs: Map<String, EnemyAI> = emptyMap()
 
     val HAND_SIZE = 5
 
     companion object {
+        /** Soft cap on Credit a player can hold at once (gain-credit economy). */
+        const val MAX_ENERGY_CAP = 6
         val STARTER_DECK = listOf(
             "strike", "strike", "strike", "strike", "strike",
             "defend", "defend", "defend",
@@ -69,8 +72,8 @@ class CombatEngine(
         startingHp: Int = PlayerState().maxHp
     ) {
         // Create enemies
-        enemies = enemyDefinitions.map { EnemyInstance(it, bundle) }.toMutableList()
-        enemyAIs = enemies.associateBy({ it.id }, { EnemyAI(it, bundle) })
+        enemies = enemyDefinitions.map { EnemyInstance(it, l10n) }.toMutableList()
+        enemyAIs = enemies.associateBy({ it.id }, { EnemyAI(it, l10n) })
 
         // Create player
         player = PlayerState(hp = startingHp)
@@ -220,7 +223,7 @@ class CombatEngine(
                 val amount = minOf(gold, debt)
                 gold -= amount
                 debt -= amount
-                log.add(CombatLogEntry.create(bundle.format("log.repay_gold", amount), turnNumber))
+                log.add(CombatLogEntry.create(l10n.format("log.repay_gold", amount), turnNumber))
                 RepayResult(true, "Repaid $amount Debt", amount)
             }
             RepayMode.DISCARD -> {
@@ -232,7 +235,7 @@ class CombatEngine(
                 discardPile.add(card)
                 val amount = minOf(DebtConfig.REPAY_DISCARD_VALUE, debt)
                 debt -= amount
-                log.add(CombatLogEntry.create(bundle.format("log.repay_discard", card.name, amount), turnNumber))
+                log.add(CombatLogEntry.create(l10n.format("log.repay_discard", card.name, amount), turnNumber))
                 RepayResult(true, "Repaid $amount Debt", amount)
             }
         }
@@ -256,9 +259,16 @@ class CombatEngine(
         for (enemy in enemies.filter { !it.isDead() }) {
             val poisonDmg = enemy.tickPoison()
             if (poisonDmg > 0) {
-                enemyLog.add(CombatLogEntry.create(bundle.format("log.poison_damage_enemy", poisonDmg, enemy.name), turnNumber))
+                enemyLog.add(CombatLogEntry.create(l10n.format("log.poison_damage_enemy", poisonDmg, enemy.name), turnNumber))
             }
             if (enemy.isDead()) continue
+            // Boss `interest`: the engine owns the player's Debt and applies the squeeze here.
+            // EnemyAI treats LEVY as advance-only; only its combat effect (debt) is applied above.
+            val intent = enemy.currentIntent()
+            if (intent.type == IntentType.LEVY) {
+                debt = minOf(debt + intent.param, DebtConfig.INTEREST_CAP)
+                enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_levy", intent.param), turnNumber))
+            }
             val ai = enemyAIs[enemy.id]!!
             enemyLog.addAll(ai.executeIntent(player, enemies, turnNumber))
         }
@@ -296,8 +306,8 @@ class CombatEngine(
         val poisonBefore = player.poison
         val regenBefore = player.regen
         player.tickTurnStart()
-        if (poisonBefore > 0) log.add(CombatLogEntry.create(bundle.format("log.poison_damage_player", poisonBefore), turnNumber))
-        if (regenBefore > 0) log.add(CombatLogEntry.create(bundle.format("log.regen_heal_player", regenBefore), turnNumber))
+        if (poisonBefore > 0) log.add(CombatLogEntry.create(l10n.format("log.poison_damage_player", poisonBefore), turnNumber))
+        if (regenBefore > 0) log.add(CombatLogEntry.create(l10n.format("log.regen_heal_player", regenBefore), turnNumber))
         if (player.isDead()) {
             endCombat(victory = false)
             return
@@ -308,7 +318,7 @@ class CombatEngine(
 
         currentPhase = TurnPhase.PLAYER_ACTION
 
-        log.add(CombatLogEntry.create(bundle.format("log.turn_header", turnNumber), turnNumber))
+        log.add(CombatLogEntry.create(l10n.format("log.turn_header", turnNumber), turnNumber))
     }
 
     private fun drawCards(count: Int) {
@@ -318,7 +328,7 @@ class CombatEngine(
                 // Shuffle discard into draw
                 drawPile.addAll(discardPile.shuffled(rng))
                 discardPile.clear()
-                log.add(CombatLogEntry.create(bundle.get("log.reshuffle_discard"), turnNumber))
+                log.add(CombatLogEntry.create(l10n.get("log.reshuffle_discard"), turnNumber))
             }
             if (hand.size < HAND_SIZE) {
                 val card = drawPile.removeFirst()
@@ -334,7 +344,7 @@ class CombatEngine(
                     val enemy = enemies.find { it.id == effect.targetId }
                     if (enemy != null) {
                         val actualDamage = enemy.takeDamage(effect.amount)
-                        log.add(CombatLogEntry.create(bundle.format("log.dealt_damage", actualDamage, enemy.name), turnNumber))
+                        log.add(CombatLogEntry.create(l10n.format("log.dealt_damage", actualDamage, enemy.name), turnNumber))
                     }
                 }
                 is CardResolver.Effect.Block -> {
@@ -385,13 +395,30 @@ class CombatEngine(
                 is CardResolver.Effect.EscrowShieldActivate -> {
                     activateEscrowShield()
                 }
+                is CardResolver.Effect.AddDebt -> {
+                    // Debt added directly to the player; capped, and never escrow-halved (the
+                    // escrow only shields Credit-shortfall borrowing, handled in playCard).
+                    debt = minOf(debt + effect.amount, DebtConfig.INTEREST_CAP)
+                }
+                is CardResolver.Effect.GainCredit -> {
+                    energy = minOf(energy + effect.amount, MAX_ENERGY_CAP)
+                }
+                is CardResolver.Effect.ExhaustFromHand -> {
+                    // Cost one card from the hand; prefer a card other than the just-played source.
+                    val sacrificed = hand.firstOrNull { it.id != sourceCard.id } ?: hand.firstOrNull()
+                    if (sacrificed != null) {
+                        hand.remove(sacrificed)
+                        exhaustPile.add(sacrificed)
+                        sacrificed.exhausted = true
+                    }
+                }
             }
         }
     }
 
     private fun endCombat(victory: Boolean) {
         currentPhase = TurnPhase.COMBAT_END
-        log.add(CombatLogEntry.create(bundle.get(if (victory) "log.victory" else "log.defeat"), turnNumber))
+        log.add(CombatLogEntry.create(l10n.get(if (victory) "log.victory" else "log.defeat"), turnNumber))
     }
 
     data class PlayResult(val success: Boolean, val message: String)

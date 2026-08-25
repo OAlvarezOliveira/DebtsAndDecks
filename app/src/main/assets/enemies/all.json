@@ -33,6 +33,7 @@
     "intentPattern": [
       { "type": "ATTACK", "damage": 10 },
       { "type": "MULTI_ATTACK", "damage": 7, "param": 2 },
+      { "type": "LEVY", "param": 5 },
       { "type": "BUFF", "param": 4 },
       { "type": "DEBUFF", "param": 2 }
     ],

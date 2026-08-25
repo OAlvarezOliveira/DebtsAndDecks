@@ -2,7 +2,7 @@ package com.debtsdecks.core.combat.resolution
 
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.combat.DebtConfig
-import com.debtsdecks.core.i18n.testI18nBundle
+import com.debtsdecks.core.i18n.testLocalizer
 import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.model.CardType
 import com.debtsdecks.core.model.CombatState
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test
  */
 class CardResolverTest {
 
-    private val resolver = CardResolver(testI18nBundle())
+    private val resolver = CardResolver(testLocalizer())
 
     private fun testEnemy(id: String = "enemy-1", vulnerable: Int = 0) = EnemyState(
         id = id,
@@ -143,6 +143,7 @@ class CardResolverTest {
     fun `Chapter 11 wipes Debt and costs HP equal to DebtConfig CHAPTER_11_HP_COST`() {
         val def = CardDefinition(
             id = "chapter_11", name = "Chapter 11", type = CardType.SKILL, cost = 2,
+            selfDamage = DebtConfig.CHAPTER_11_HP_COST,
             targetType = TargetType.SELF, description = "Exhaust. Lose 15 HP. Wipe all Debt to 0.",
             rarity = Rarity.RARE, tags = setOf("exhaust", "wipe_debt")
         )
@@ -197,5 +198,76 @@ class CardResolverTest {
 
         val resultAtLowDebt = resolver.resolve(card, null, testState(debt = 5))
         assertFalse(resultAtLowDebt.effects.any { it is CardResolver.Effect.StrengthGain }) // floor(5/10) = 0, no-op
+    }
+
+    // --- Debt-Economy (debt-economy-cards-and-boss-interest, PR1): new effect primitives ---
+
+    @Test
+    fun `add-debt card emits an AddDebt effect`() {
+        val def = CardDefinition(
+            id = "subprime_loan", name = "Subprime Loan", type = CardType.SKILL, cost = 0,
+            debtAdd = 3, creditGain = 3, targetType = TargetType.SELF,
+            description = "Gain 3 Credit this turn; add 3 Debt.", rarity = Rarity.UNCOMMON,
+            tags = setOf("add_debt", "gain_credit")
+        )
+        val card = CardInstance(def)
+
+        val result = resolver.resolve(card, null, testState(debt = 10))
+
+        val addDebt = result.effects.filterIsInstance<CardResolver.Effect.AddDebt>()
+        assertEquals(1, addDebt.size)
+        assertEquals(3, addDebt.single().amount)
+    }
+
+    @Test
+    fun `gain-credit card emits a GainCredit effect`() {
+        val def = CardDefinition(
+            id = "golden_credit", name = "Golden Credit", type = CardType.SKILL, cost = 2,
+            creditGain = 4, targetType = TargetType.SELF,
+            description = "Gain 4 Credit this turn.", rarity = Rarity.UNCOMMON, tags = setOf("gain_credit")
+        )
+        val card = CardInstance(def)
+
+        val result = resolver.resolve(card, null, testState())
+
+        val gainCredit = result.effects.filterIsInstance<CardResolver.Effect.GainCredit>()
+        assertEquals(1, gainCredit.size)
+        assertEquals(4, gainCredit.single().amount)
+    }
+
+    @Test
+    fun `asset-auction card emits an ExhaustFromHand cost and a GainGold reward`() {
+        val def = CardDefinition(
+            id = "asset_auction", name = "Asset Auction", type = CardType.SKILL, cost = 1,
+            goldGain = 9, targetType = TargetType.SELF,
+            description = "Exhaust a card from hand; gain 9 Gold.", rarity = Rarity.UNCOMMON,
+            tags = setOf("hand_exhaust")
+        )
+        val card = CardInstance(def)
+
+        val result = resolver.resolve(card, null, testState())
+
+        assertTrue(result.effects.contains(CardResolver.Effect.ExhaustFromHand))
+        val gold = result.effects.filterIsInstance<CardResolver.Effect.GainGold>()
+        assertEquals(1, gold.size)
+        assertEquals(9, gold.single().amount)
+    }
+
+    @Test
+    fun `reverse-mortgage emits Gold scaled by current Debt with floor rounding`() {
+        val def = CardDefinition(
+            id = "reverse_mortgage", name = "Reverse Mortgage", type = CardType.SKILL, cost = 1,
+            goldGain = 4, targetType = TargetType.SELF,
+            description = "Gain 4 Gold per 10 Debt.", rarity = Rarity.UNCOMMON, tags = setOf("gold_scaled_debt")
+        )
+        val card = CardInstance(def)
+
+        val atTwentyFive = resolver.resolve(card, null, testState(debt = 25))
+        val goldAtTwentyFive = atTwentyFive.effects.filterIsInstance<CardResolver.Effect.GainGold>()
+        assertEquals(1, goldAtTwentyFive.size)
+        assertEquals(8, goldAtTwentyFive.single().amount) // floor(25/10) * 4 = 8
+
+        val atLowDebt = resolver.resolve(card, null, testState(debt = 5))
+        assertFalse(atLowDebt.effects.any { it is CardResolver.Effect.GainGold }) // floor(5/10)=0 -> no-op
     }
 }

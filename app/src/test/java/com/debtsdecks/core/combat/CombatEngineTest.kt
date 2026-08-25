@@ -1,9 +1,10 @@
 package com.debtsdecks.core.combat
 
 import com.debtsdecks.core.cards.CardRegistry
-import com.debtsdecks.core.i18n.testI18nBundle
+import com.debtsdecks.core.i18n.testLocalizer
 import com.debtsdecks.core.enemies.EnemyDefinition
 import com.debtsdecks.core.enemies.EnemyRewards
+import com.debtsdecks.core.enemies.EnemyTier
 import com.debtsdecks.core.enemies.IntentStep
 import com.debtsdecks.core.enemies.IntentType
 import com.debtsdecks.core.model.CardDefinition
@@ -46,7 +47,7 @@ class CombatEngineTest {
         )
         cardRegistry = CardRegistry.create(listOf(strike, defend))
 
-        engine = CombatEngine(cardRegistry, testI18nBundle(), rng)
+        engine = CombatEngine(cardRegistry, testLocalizer(), rng)
     }
 
     @Test
@@ -173,7 +174,7 @@ class CombatEngineTest {
             rarity = Rarity.BASIC
         )
         cardRegistry = CardRegistry.create(cardRegistry.all() + bash)
-        engine = CombatEngine(cardRegistry, testI18nBundle(), rng)
+        engine = CombatEngine(cardRegistry, testLocalizer(), rng)
 
         val thug = EnemyDefinition(
             id = "thug",
@@ -215,7 +216,7 @@ class CombatEngineTest {
             rarity = Rarity.BASIC
         )
         cardRegistry = CardRegistry.create(cardRegistry.all() + pricey)
-        engine = CombatEngine(cardRegistry, testI18nBundle(), rng)
+        engine = CombatEngine(cardRegistry, testLocalizer(), rng)
         return pricey
     }
 
@@ -226,7 +227,7 @@ class CombatEngineTest {
             rarity = Rarity.UNCOMMON, tags = setOf("escrow_shield_activate")
         )
         cardRegistry = CardRegistry.create(cardRegistry.all() + escrowShield)
-        engine = CombatEngine(cardRegistry, testI18nBundle(), rng)
+        engine = CombatEngine(cardRegistry, testLocalizer(), rng)
         return escrowShield
     }
 
@@ -390,5 +391,169 @@ class CombatEngineTest {
         // CardResolver.Effect.EscrowShieldActivate reached CombatEngine.applyEffects()
         // and called activateEscrowShield(), not just that the direct API call works.
         assertEquals(1, engine.getState().debt)
+    }
+
+    // --- Debt-Economy (debt-economy-cards-and-boss-interest, PR1): new effect primitives ---
+
+    private fun registerCard(def: CardDefinition): CardDefinition {
+        cardRegistry = CardRegistry.create(cardRegistry.all() + def)
+        engine = CombatEngine(cardRegistry, testLocalizer(), rng)
+        return def
+    }
+
+    @Test
+    fun `playing an add-debt card raises player Debt`() {
+        registerCard(CardDefinition(
+            id = "add_debt_card", name = "Add Debt", type = CardType.SKILL, cost = 0,
+            debtAdd = 5, targetType = TargetType.SELF, description = "Add 5 Debt.",
+            rarity = Rarity.UNCOMMON, tags = setOf("add_debt")
+        ))
+        engine.startCombat(listOf(standardThug()), listOf("add_debt_card", "strike", "strike", "strike", "strike"))
+
+        val card = engine.getState().hand.find { it.cardId == "add_debt_card" }!!
+        engine.playCard(card.id, null)
+
+        assertEquals(5, engine.getState().debt)
+    }
+
+    @Test
+    fun `add-debt is capped at the debt ceiling`() {
+        registerCard(CardDefinition(
+            id = "add_debt_card", name = "Add Debt", type = CardType.SKILL, cost = 0,
+            debtAdd = 5, targetType = TargetType.SELF, description = "Add 5 Debt.",
+            rarity = Rarity.UNCOMMON, tags = setOf("add_debt")
+        ))
+        engine.startCombat(listOf(standardThug()), listOf("add_debt_card", "strike", "strike", "strike", "strike"), startingDebt = 180)
+
+        // 180 + ceil(180 * 10%) = 198 after the encounter-start interest tick.
+        assertEquals(198, engine.getState().debt)
+
+        val card = engine.getState().hand.find { it.cardId == "add_debt_card" }!!
+        engine.playCard(card.id, null)
+
+        // 198 + 5 = 203, capped to INTEREST_CAP = 200.
+        assertEquals(200, engine.getState().debt)
+    }
+
+    @Test
+    fun `add-debt is NOT halved when the escrow shield is active`() {
+        registerCard(CardDefinition(
+            id = "add_debt_card", name = "Add Debt", type = CardType.SKILL, cost = 0,
+            debtAdd = 5, targetType = TargetType.SELF, description = "Add 5 Debt.",
+            rarity = Rarity.UNCOMMON, tags = setOf("add_debt")
+        ))
+        registerEscrowShieldCard()
+        engine.startCombat(
+            listOf(standardThug()),
+            listOf("escrow_shield_test", "add_debt_card", "strike", "strike", "strike")
+        )
+
+        val shield = engine.getState().hand.find { it.cardId == "escrow_shield_test" }!!
+        engine.playCard(shield.id, null)
+        val card = engine.getState().hand.find { it.cardId == "add_debt_card" }!!
+        engine.playCard(card.id, null)
+
+        // Full 5, NOT halved: the escrow shields only Credit-shortfall borrowing.
+        assertEquals(5, engine.getState().debt)
+    }
+
+    @Test
+    fun `playing a gain-credit card grants extra energy`() {
+        registerCard(CardDefinition(
+            id = "golden_credit", name = "Golden Credit", type = CardType.SKILL, cost = 1,
+            creditGain = 4, targetType = TargetType.SELF, description = "Gain 4 Credit.",
+            rarity = Rarity.UNCOMMON, tags = setOf("gain_credit")
+        ))
+        engine.startCombat(listOf(standardThug()), listOf("golden_credit", "strike", "strike", "strike", "strike"))
+
+        val card = engine.getState().hand.find { it.cardId == "golden_credit" }!!
+        engine.playCard(card.id, null)
+
+        // 3 - 1 cost = 2, + 4 gain = 6.
+        assertEquals(6, engine.getState().energy)
+    }
+
+    @Test
+    fun `gain-credit is capped at MAX_ENERGY_CAP`() {
+        registerCard(CardDefinition(
+            id = "golden_credit", name = "Golden Credit", type = CardType.SKILL, cost = 1,
+            creditGain = 4, targetType = TargetType.SELF, description = "Gain 4 Credit.",
+            rarity = Rarity.UNCOMMON, tags = setOf("gain_credit")
+        ))
+        engine.startCombat(listOf(standardThug()), listOf("golden_credit", "golden_credit", "strike", "strike", "strike"))
+
+        val first = engine.getState().hand.find { it.cardId == "golden_credit" }!!
+        engine.playCard(first.id, null) // 3 - 1 = 2, + 4 = 6
+        val second = engine.getState().hand.find { it.cardId == "golden_credit" }!!
+        engine.playCard(second.id, null) // 6 - 1 = 5, + 4 = 9 -> capped to 6
+
+        assertEquals(6, engine.getState().energy)
+    }
+
+    @Test
+    fun `playing an asset-auction card exhausts another hand card and gains gold`() {
+        registerCard(CardDefinition(
+            id = "asset_auction", name = "Asset Auction", type = CardType.SKILL, cost = 1,
+            goldGain = 9, targetType = TargetType.SELF, description = "Exhaust a card; gain 9 Gold.",
+            rarity = Rarity.UNCOMMON, tags = setOf("hand_exhaust")
+        ))
+        engine.startCombat(listOf(standardThug()), listOf("asset_auction", "strike", "strike", "strike", "strike"))
+
+        val card = engine.getState().hand.find { it.cardId == "asset_auction" }!!
+        engine.playCard(card.id, null)
+
+        val state = engine.getState()
+        assertEquals(9, state.gold)
+        // One strike was exhausted as the cost; the played asset_auction went to the discard pile.
+        assertEquals(1, state.exhaustPileCount)
+    }
+
+    // --- Debt-Economy boss interest (debt-economy-cards-and-boss-interest, PR2): IntentType.LEVY ---
+
+    private fun levyCollector() = EnemyDefinition(
+        id = "collector", name = "Collector", hp = 80,
+        intentPattern = listOf(IntentStep(IntentType.LEVY, param = 6)),
+        rewards = EnemyRewards(gold = 20, cardChoices = 3),
+        tier = EnemyTier.BOSS
+    )
+
+    @Test
+    fun `a LEVY enemy intent raises player Debt and logs it when the turn ends`() {
+        engine.startCombat(listOf(levyCollector()), listOf("strike", "strike", "strike", "strike", "strike"))
+        val debtBefore = engine.getState().debt
+
+        val result = engine.endPlayerTurn()
+
+        assertTrue(result.success)
+        assertEquals(debtBefore + 6, engine.getState().debt)
+        assertTrue(
+            engine.getState().log.any { it.message == testLocalizer().format("log.intent_levy", 6) },
+            "expected a localized LEVY log entry"
+        )
+    }
+
+    @Test
+    fun `LEVY debt is capped at the debt ceiling`() {
+        engine.startCombat(
+            listOf(levyCollector()),
+            listOf("strike", "strike", "strike", "strike", "strike"),
+            startingDebt = 180
+        )
+        // 180 + ceil(180 * 10%) = 198 after the encounter-start interest tick.
+        assertEquals(198, engine.getState().debt)
+
+        engine.endPlayerTurn() // LEVY 6 -> 198 + 6 = 204, capped to 200
+
+        assertEquals(200, engine.getState().debt)
+    }
+
+    @Test
+    fun `a normal enemy without a LEVY intent never adds Debt`() {
+        engine.startCombat(listOf(standardThug()), listOf("strike", "strike", "strike", "strike", "strike"))
+        val debtBefore = engine.getState().debt
+
+        engine.endPlayerTurn()
+
+        assertEquals(debtBefore, engine.getState().debt)
     }
 }

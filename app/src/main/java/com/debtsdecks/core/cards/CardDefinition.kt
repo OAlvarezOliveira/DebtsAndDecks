@@ -24,6 +24,11 @@ data class CardDefinition(
     val debtRepay: Int = 0,
     /** Flat Gold granted once per play, regardless of card type or hit count (debt-resource-mechanic). */
     val goldGain: Int = 0,
+    /** Flat Debt added directly to the player when the card resolves (`add_debt` tag). This is a
+     *  distinct "penalty/loan" source, never halved by the Escrow Shield. */
+    val debtAdd: Int = 0,
+    /** Flat Credit/energy granted this turn when the card resolves (`gain_credit` tag). */
+    val creditGain: Int = 0,
     val hits: Int = 1,
     val targetType: TargetType,
     val description: String,

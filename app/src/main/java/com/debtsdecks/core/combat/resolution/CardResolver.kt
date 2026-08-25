@@ -1,19 +1,19 @@
 package com.debtsdecks.core.combat.resolution
 
-import com.badlogic.gdx.utils.I18NBundle
+import com.debtsdecks.core.i18n.Localizer
 import com.debtsdecks.core.cards.CardInstance
-import com.debtsdecks.core.combat.DebtConfig
 import com.debtsdecks.core.model.CombatLogEntry
 import com.debtsdecks.core.model.CombatState
 import com.debtsdecks.core.model.PlayerState
 import com.debtsdecks.core.model.EnemyState
 import com.debtsdecks.core.model.TargetType
+import kotlin.math.floor
 
 /**
- * [bundle] was wired in this constructor in the combat-progression-and-i18n Phase 4a DI slice and
- * is consumed as of Phase 4b-iii: all log strings below resolve via `bundle.get()`/`bundle.format()`.
+ * [l10n] was wired in this constructor in the combat-progression-and-i18n Phase 4a DI slice and
+ * is consumed as of Phase 4b-iii: all log strings below resolve via `l10n.get()`/`l10n.format()`.
  */
-class CardResolver(private val bundle: I18NBundle) {
+class CardResolver(private val l10n: Localizer) {
     data class ResolutionResult(
         val effects: List<Effect>,
         val logEntries: List<CombatLogEntry>
@@ -44,6 +44,13 @@ class CardResolver(private val bundle: I18NBundle) {
         /** Activates the per-combat Escrow Shield (halves Debt gained from borrowing). Emitted
          *  for cards tagged `"escrow_shield_activate"` (Escrow Shield). */
         object EscrowShieldActivate : Effect
+        /** Adds [amount] Debt directly to the player (a "penalty/loan" source, e.g. Subprime Loan,
+         *  Bounced Check). Never halved by the Escrow Shield — only Credit-shortfall borrowing is. */
+        data class AddDebt(val amount: Int) : Effect
+        /** Grants [amount] Credit/energy for the current turn (e.g. Golden Credit). */
+        data class GainCredit(val amount: Int) : Effect
+        /** Costs one card from the player's hand (exhausted) in exchange for value (e.g. Asset Auction). */
+        object ExhaustFromHand : Effect
     }
 
     /**
@@ -73,7 +80,7 @@ class CardResolver(private val bundle: I18NBundle) {
                 if (targets.isEmpty()) {
                     return ResolutionResult(
                         emptyList(),
-                        listOf(CombatLogEntry.create(bundle.get("log.no_valid_target"), state.turnNumber))
+                        listOf(CombatLogEntry.create(l10n.get("log.no_valid_target"), state.turnNumber))
                     )
                 }
 
@@ -94,38 +101,38 @@ class CardResolver(private val bundle: I18NBundle) {
                     repeat(landedHits) { effects.add(Effect.RepayDebt(card.definition.debtRepay)) }
                     logEntries.add(
                         CombatLogEntry.create(
-                            bundle.format("log.repay_per_hit", card.definition.debtRepay, landedHits),
+                            l10n.format("log.repay_per_hit", card.definition.debtRepay, landedHits),
                             state.turnNumber
                         )
                     )
                 }
                 if (repeatCount <= 0) {
                     logEntries.add(
-                        CombatLogEntry.create(bundle.format("log.card_fizzles", bundle.get(card.name)), state.turnNumber)
+                        CombatLogEntry.create(l10n.format("log.card_fizzles", l10n.get(card.name)), state.turnNumber)
                     )
                 }
 
                 if (card.baseWeakApply > 0) {
                     targets.forEach { effects.add(Effect.WeakApply(it, card.baseWeakApply)) }
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.applied_weak", card.baseWeakApply), state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_weak", card.baseWeakApply), state.turnNumber))
                 }
                 if (card.baseVulnerableApply > 0) {
                     targets.forEach { effects.add(Effect.VulnerableApply(it, card.baseVulnerableApply)) }
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.applied_vulnerable", card.baseVulnerableApply), state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_vulnerable", card.baseVulnerableApply), state.turnNumber))
                 }
                 if (card.basePoisonApply > 0) {
                     targets.forEach { effects.add(Effect.PoisonApply(it, card.basePoisonApply)) }
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.applied_poison", card.basePoisonApply), state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_poison", card.basePoisonApply), state.turnNumber))
                 }
             }
             com.debtsdecks.core.model.CardType.SKILL, com.debtsdecks.core.model.CardType.POWER -> {
                 if (card.baseBlock > 0) {
                     effects.add(Effect.Block(card.baseBlock))
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.gained_block", card.baseBlock), state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.gained_block", card.baseBlock), state.turnNumber))
                 }
                 if (card.baseDraw > 0) {
                     effects.add(Effect.Draw(card.baseDraw))
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.drew_cards", card.baseDraw), state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.drew_cards", card.baseDraw), state.turnNumber))
                 }
                 // Compound Interest scales Strength off current Debt instead of a flat amount:
                 // 1 Strength per 10 Debt, floor-rounded. Replaces the flat baseStrengthGain path
@@ -135,64 +142,84 @@ class CardResolver(private val bundle: I18NBundle) {
                     if (scaledAmount > 0) {
                         effects.add(Effect.StrengthGain(player.hashCode().toString(), scaledAmount))
                         logEntries.add(
-                            CombatLogEntry.create(bundle.format("log.debt_fuels_resolve", scaledAmount), state.turnNumber)
+                            CombatLogEntry.create(l10n.format("log.debt_fuels_resolve", scaledAmount), state.turnNumber)
                         )
                     }
                 } else if (card.baseStrengthGain > 0) {
                     effects.add(Effect.StrengthGain(player.hashCode().toString(), card.baseStrengthGain))
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.gained_strength", card.baseStrengthGain), state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.gained_strength", card.baseStrengthGain), state.turnNumber))
                 }
                 if (card.definition.debtRepay > 0) {
                     effects.add(Effect.RepayDebt(card.definition.debtRepay))
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.repaid_debt", card.definition.debtRepay), state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.repaid_debt", card.definition.debtRepay), state.turnNumber))
                 }
                 if (card.baseThornsGain > 0) {
                     effects.add(Effect.ThornsGain(card.baseThornsGain))
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.gained_thorns", card.baseThornsGain), state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.gained_thorns", card.baseThornsGain), state.turnNumber))
                 }
                 if (card.baseRegenGain > 0) {
                     effects.add(Effect.RegenGain(card.baseRegenGain))
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.gained_regen", card.baseRegenGain), state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.gained_regen", card.baseRegenGain), state.turnNumber))
                 }
                 if (card.baseWeakApply > 0 && targetId != null) {
                     effects.add(Effect.WeakApply(targetId, card.baseWeakApply))
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.applied_weak", card.baseWeakApply), state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_weak", card.baseWeakApply), state.turnNumber))
                 }
                 if (card.baseVulnerableApply > 0 && targetId != null) {
                     effects.add(Effect.VulnerableApply(targetId, card.baseVulnerableApply))
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.applied_vulnerable", card.baseVulnerableApply), state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_vulnerable", card.baseVulnerableApply), state.turnNumber))
                 }
                 if (card.basePoisonApply > 0 && targetId != null) {
                     effects.add(Effect.PoisonApply(targetId, card.basePoisonApply))
-                    logEntries.add(CombatLogEntry.create(bundle.format("log.applied_poison", card.basePoisonApply), state.turnNumber))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_poison", card.basePoisonApply), state.turnNumber))
                 }
             }
         }
 
         // Chapter 11's self-damage cost is read from DebtConfig.CHAPTER_11_HP_COST (single source
         // of truth shared with the rest of the debt economy) rather than a duplicated JSON literal.
-        val selfDamageAmount = if (card.definition.tags.contains("wipe_debt")) {
-            DebtConfig.CHAPTER_11_HP_COST
-        } else {
-            card.baseSelfDamage
-        }
+        // HP cost of a Debt wipe is now card-owned (its own selfDamage field); Chapter 11 sets it
+        // to DebtConfig.CHAPTER_11_HP_COST in data, while Debt Forgiveness/Tactical Bankruptcy use
+        // their own values. The wipe_debt tag no longer forces the flat 15-HP cost.
+        val selfDamageAmount = card.baseSelfDamage
         if (selfDamageAmount > 0) {
             effects.add(Effect.SelfDamage(selfDamageAmount))
-            logEntries.add(CombatLogEntry.create(bundle.format("log.lost_hp", selfDamageAmount), state.turnNumber))
+            logEntries.add(CombatLogEntry.create(l10n.format("log.lost_hp", selfDamageAmount), state.turnNumber))
         }
 
-        if (card.definition.goldGain > 0) {
+        if (card.definition.goldGain > 0 && !card.definition.tags.contains("gold_scaled_debt")) {
             effects.add(Effect.GainGold(card.definition.goldGain))
-            logEntries.add(CombatLogEntry.create(bundle.format("log.gained_gold", card.definition.goldGain), state.turnNumber))
+            logEntries.add(CombatLogEntry.create(l10n.format("log.gained_gold", card.definition.goldGain), state.turnNumber))
+        }
+        // --- Debt-Economy primitives (debt-economy-cards-and-boss-interest, PR1) ---
+        // add-debt: a "penalty/loan" source added directly to the player; never escrow-halved.
+        if (card.definition.tags.contains("add_debt") && card.definition.debtAdd > 0) {
+            effects.add(Effect.AddDebt(card.definition.debtAdd))
+        }
+        // gain-credit: grants Credit/energy for the current turn.
+        if (card.definition.tags.contains("gain_credit") && card.definition.creditGain > 0) {
+            effects.add(Effect.GainCredit(card.definition.creditGain))
+        }
+        // hand-exhaust: costs one card from the hand in exchange for value (Asset Auction).
+        if (card.definition.tags.contains("hand_exhaust")) {
+            effects.add(Effect.ExhaustFromHand)
+        }
+        // gold-scaled-by-debt: Reverse Mortgage grants Gold scaled by current Debt (floor).
+        if (card.definition.tags.contains("gold_scaled_debt")) {
+            val scaled = floor(state.debt / 10.0).toInt() * card.definition.goldGain
+            if (scaled > 0) {
+                effects.add(Effect.GainGold(scaled))
+                logEntries.add(CombatLogEntry.create(l10n.format("log.gained_gold", scaled), state.turnNumber))
+            }
         }
 
         if (card.definition.tags.contains("wipe_debt")) {
             effects.add(Effect.WipeDebt)
-            logEntries.add(CombatLogEntry.create(bundle.get("log.debt_wiped"), state.turnNumber))
+            logEntries.add(CombatLogEntry.create(l10n.get("log.debt_wiped"), state.turnNumber))
         }
         if (card.definition.tags.contains("escrow_shield_activate")) {
             effects.add(Effect.EscrowShieldActivate)
-            logEntries.add(CombatLogEntry.create(bundle.get("log.escrow_shield_active"), state.turnNumber))
+            logEntries.add(CombatLogEntry.create(l10n.get("log.escrow_shield_active"), state.turnNumber))
         }
 
         if (card.definition.tags.contains("exhaust")) {

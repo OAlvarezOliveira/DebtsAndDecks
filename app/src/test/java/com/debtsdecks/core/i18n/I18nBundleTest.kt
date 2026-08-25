@@ -268,6 +268,8 @@ class I18nBundleTest {
         assertEquals("Buff Strength +3", bundle.format("intent.buff", 3))
         assertEquals("Debuff Weak 2", bundle.format("intent.debuff", 2))
         assertEquals("Multi Attack 4 x3", bundle.format("intent.multi_attack", 4, 3))
+        assertEquals("Levy 6 Debt", bundle.format("intent.levy", 6))
+        assertEquals("The creditor levies 6 Debt on you!", bundle.format("log.intent_levy", 6))
     }
 
     @Test
@@ -279,6 +281,8 @@ class I18nBundleTest {
         assertEquals("Mejora: Fuerza +3", bundle.format("intent.buff", 3))
         assertEquals("Perjuicio: Debilidad 2", bundle.format("intent.debuff", 2))
         assertEquals("Ataque Múltiple 4 x3", bundle.format("intent.multi_attack", 4, 3))
+        assertEquals("Recargo de 6 de Deuda", bundle.format("intent.levy", 6))
+        assertEquals("¡El acreedor te impone un recargo de 6 de Deuda!", bundle.format("log.intent_levy", 6))
     }
 
     // --- Phase 4b-iv: JSON-sourced card/enemy strings (assets/cards/all.json, assets/enemies/
@@ -460,4 +464,70 @@ class I18nBundleTest {
         assertEquals("Usurero", bundle.get("enemy.loan_shark.name"))
         assertEquals("Cobrador", bundle.get("enemy.collector.name"))
     }
+    @Test
+    fun `English new economy cards name and description resolve`() {
+        val b = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+        assertEquals("Subprime Loan", b.get("card.subprime_loan.name"))
+        assertEquals("Gain 3 Credit this turn. Add 3 Debt.", b.get("card.subprime_loan.description"))
+        assertEquals("Debt Forgiveness", b.get("card.debt_forgiveness.name"))
+        assertEquals("Wipe all Debt to 0.", b.get("card.debt_forgiveness.description"))
+        assertEquals("Partial Forgiveness", b.get("card.partial_forgiveness.name"))
+        assertEquals("Repay 8 Debt.", b.get("card.partial_forgiveness.description"))
+        assertEquals("Tactical Bankruptcy", b.get("card.tactical_bankruptcy.name"))
+        assertEquals("Lose 8 HP. Wipe all Debt to 0.", b.get("card.tactical_bankruptcy.description"))
+        assertEquals("Reverse Mortgage", b.get("card.reverse_mortgage.name"))
+        assertEquals("Gain 4 Gold per 10 Debt.", b.get("card.reverse_mortgage.description"))
+        assertEquals("Foreclosure Express", b.get("card.foreclosure_express.name"))
+        assertEquals("Deal 6 damage. Gain 4 Gold.", b.get("card.foreclosure_express.description"))
+        assertEquals("Ghost Collector", b.get("card.ghost_collector.name"))
+        assertEquals("Deal 5 damage. Apply 2 Weak.", b.get("card.ghost_collector.description"))
+        assertEquals("Golden Credit", b.get("card.golden_credit.name"))
+        assertEquals("Gain 4 Credit this turn.", b.get("card.golden_credit.description"))
+        assertEquals("Mortgage Collateral", b.get("card.mortgage_collateral.name"))
+        assertEquals("Gain 12 Block.", b.get("card.mortgage_collateral.description"))
+        assertEquals("Asset Auction", b.get("card.asset_auction.name"))
+        assertEquals("Exhaust a card from hand. Gain 9 Gold.", b.get("card.asset_auction.description"))
+        assertEquals("Risky Investment", b.get("card.risky_investment.name"))
+        assertEquals("Gain 12 Gold. Lose 6 HP.", b.get("card.risky_investment.description"))
+        assertEquals("Bounced Check", b.get("card.bounced_check.name"))
+        assertEquals("Deal 7 damage. Add 3 Debt.", b.get("card.bounced_check.description"))
+        assertEquals("Zombie Debt", b.get("card.zombie_debt.name"))
+        assertEquals("Add 2 Debt. Add a copy to your discard pile.", b.get("card.zombie_debt.description"))
+        assertEquals("Eternal Debt", b.get("card.eternal_debt.name"))
+        assertEquals("Add 4 Debt.", b.get("card.eternal_debt.description"))
+    }
+
+    @Test
+    fun `Spanish new economy cards name and description resolve with neutral thematic translations`() {
+        val b = I18NBundle.createBundle(bundleBase, Locale("es"))
+        assertEquals("Préstamo Subprime", b.get("card.subprime_loan.name"))
+        assertEquals("Gana 3 de Crédito este turno. Añade 3 de Deuda.", b.get("card.subprime_loan.description"))
+        assertEquals("Perdón de Deuda", b.get("card.debt_forgiveness.name"))
+        assertEquals("Saldas toda la Deuda a 0.", b.get("card.debt_forgiveness.description"))
+        assertEquals("Perdón Parcial", b.get("card.partial_forgiveness.name"))
+        assertEquals("Pagas 8 de Deuda.", b.get("card.partial_forgiveness.description"))
+        assertEquals("Bancarrota Táctica", b.get("card.tactical_bankruptcy.name"))
+        assertEquals("Pierdes 8 de PS. Saldas toda la Deuda a 0.", b.get("card.tactical_bankruptcy.description"))
+        assertEquals("Hipoteca Inversa", b.get("card.reverse_mortgage.name"))
+        assertEquals("Gana 4 de Oro por cada 10 de Deuda.", b.get("card.reverse_mortgage.description"))
+        assertEquals("Embargo Exprés", b.get("card.foreclosure_express.name"))
+        assertEquals("Inflige 6 de daño. Gana 4 de Oro.", b.get("card.foreclosure_express.description"))
+        assertEquals("Cobrador Fantasma", b.get("card.ghost_collector.name"))
+        assertEquals("Inflige 5 de daño. Aplica 2 de Debilidad.", b.get("card.ghost_collector.description"))
+        assertEquals("Crédito Dorado", b.get("card.golden_credit.name"))
+        assertEquals("Gana 4 de Crédito este turno.", b.get("card.golden_credit.description"))
+        assertEquals("Garantía Hipotecaria", b.get("card.mortgage_collateral.name"))
+        assertEquals("Gana 12 de Bloqueo.", b.get("card.mortgage_collateral.description"))
+        assertEquals("Subasta de Bienes", b.get("card.asset_auction.name"))
+        assertEquals("Agota una carta de tu mano. Gana 9 de Oro.", b.get("card.asset_auction.description"))
+        assertEquals("Inversión Arriesgada", b.get("card.risky_investment.name"))
+        assertEquals("Gana 12 de Oro. Pierdes 6 de PS.", b.get("card.risky_investment.description"))
+        assertEquals("Cheque Sin Fondos", b.get("card.bounced_check.name"))
+        assertEquals("Inflige 7 de daño. Añade 3 de Deuda.", b.get("card.bounced_check.description"))
+        assertEquals("Deuda Zombi", b.get("card.zombie_debt.name"))
+        assertEquals("Añade 2 de Deuda. Añade una copia a tu pila de descarte.", b.get("card.zombie_debt.description"))
+        assertEquals("Deuda Eterna", b.get("card.eternal_debt.name"))
+        assertEquals("Añade 4 de Deuda.", b.get("card.eternal_debt.description"))
+    }
+
 }

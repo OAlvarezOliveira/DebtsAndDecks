@@ -11,8 +11,10 @@ import com.debtsdecks.core.combat.CombatEngine
 import com.debtsdecks.core.combat.RunManager
 import com.debtsdecks.core.data.DataLoader
 import com.debtsdecks.core.enemies.EnemyDefinition
+import com.debtsdecks.core.i18n.Localizer
 import com.debtsdecks.gdx.GameScreen
 import com.debtsdecks.gdx.audio.SoundManager
+import com.debtsdecks.gdx.i18n.BundleLocalizer
 import com.debtsdecks.gdx.input.CombatInputHandler
 import com.debtsdecks.gdx.render.CombatRenderer
 import org.koin.android.ext.koin.androidContext
@@ -35,6 +37,10 @@ val gdxModule = module {
     // DebtsAndDecksApp.onCreate()'s startKoin{} call. Lazy resolution defers the actual
     // Gdx.files.internal(...) call until GameApp.create() first triggers container.get().
     single { I18NBundle.createBundle(Gdx.files.internal("i18n/strings")) }
+    // Core classes declare only the pure-Kotlin Localizer; the GDX adapter is registered here in
+    // gdxModule (where I18NBundle + Gdx.files are valid) and resolved across modules, keeping
+    // core/ free of com.badlogic.gdx.* imports per CONVENTIONS.md Architecture Rule #1.
+    single<Localizer> { BundleLocalizer(get()) }
     single { CombatRenderer(get()) }
     single { SoundManager() }
     factory { CombatInputHandler(get(), get(), get(), get(), get()) }

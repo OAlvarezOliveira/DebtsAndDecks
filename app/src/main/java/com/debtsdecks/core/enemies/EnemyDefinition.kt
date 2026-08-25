@@ -26,6 +26,6 @@ data class EnemyRewards(
     val cardChoices: Int
 )
 
-enum class IntentType { ATTACK, BUFF, DEBUFF, MULTI_ATTACK }
+enum class IntentType { ATTACK, BUFF, DEBUFF, MULTI_ATTACK, LEVY }
 
 enum class EnemyTier { NORMAL, ELITE, BOSS }

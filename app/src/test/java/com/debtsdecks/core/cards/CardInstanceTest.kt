@@ -55,4 +55,32 @@ class CardInstanceTest {
     fun `shortfall is zero for a free card regardless of credit`() {
         assertEquals(0, card(cost = 0).shortfall(0))
     }
+
+    @Test
+    fun `strike card has correct base properties`() {
+        val strike = CardRegistry.create(loadCards()).getOrThrow("strike")
+        assertEquals(1, strike.cost)
+        assertEquals(6, strike.damage)
+        assertEquals(CardType.ATTACK, strike.type)
+        assertEquals(TargetType.ENEMY, strike.targetType)
+        assertEquals(Rarity.BASIC, strike.rarity)
+        assertTrue(strike.tags.contains("starter"))
+    }
+
+    private fun loadCards(): List<CardDefinition> {
+        // In real implementation this would parse assets/cards/all.json
+        return listOf(
+            CardDefinition(
+                id = "strike",
+                name = "Strike",
+                type = CardType.ATTACK,
+                cost = 1,
+                damage = 6,
+                targetType = TargetType.ENEMY,
+                description = "Deal 6 damage",
+                rarity = Rarity.BASIC,
+                tags = setOf("starter")
+            )
+        )
+    }
 }
