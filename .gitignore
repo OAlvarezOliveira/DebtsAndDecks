@@ -4,7 +4,6 @@
 /gradle/wrapper/gradle-wrapper.jar
 **/build/
 *.iml
-
 # Android
 /local.properties
 *.apk
@@ -20,27 +19,37 @@
 *.keystore.password
 *.keystore.alias
 *.keystore.alias.password
-
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
-
 # OS
 .DS_Store
 Thumbs.db
-
 # Logs
 *.log
-
 # Kotlin
 *.kt.bin
-
 # LibGDX
 *.gdx
-
 # Temporary
 *.tmp
 *.temp
+# Local Pi runtime state
+.atl/
+.pi/settings.json
+# Local Engram project config (machine-local tool config, not part of the repo)
+.engram/
+
+# Generated & local-only assets
+/Arts/
+/app/libs/
+/gradlew
+/gradle-*.zip
+/temp/
+/wrapper-classes/
+/wrapper-extract/
+# Design reference archive (source material, not part of the build)
+/docs/Debt Collector Noir — Game Art System.zip
