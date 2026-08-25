@@ -1,7 +1,6 @@
 # Gradle
 /build
 /.gradle
-/gradle/wrapper/gradle-wrapper.jar
 **/build/
 *.iml
 # Android
@@ -46,7 +45,6 @@ Thumbs.db
 # Generated & local-only assets
 /Arts/
 /app/libs/
-/gradlew
 /gradle-*.zip
 /temp/
 /wrapper-classes/
