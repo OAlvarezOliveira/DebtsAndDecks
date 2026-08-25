@@ -54,14 +54,14 @@
 
 ## Daily Log
 
-### 2026-08-25 (Session — fallback harness, Pi/gentle-engram)
-**Goal:** Recap MVP status; update TRACKING; smoke-check SDK/extensions.
+### 2026-08-25 (Session 2 — delivery, fallback harness, Pi/gentle-engram)
+**Goal:** Deliver the pending debt-economy work to `develop`.
 **Done:**
-- Verified suite green + SDD verify PASS for `debt-economy-cards-and-boss-interest` (7/7 req, 12/12 scenarios)
-- Confirmed 15 card arts + 3 enemy arts + frames + intents + 5 SFX + launcher icons in place
-- Confirmed delivery state: debt-economy changes live only in working tree (19 files, +734/−248); combat-progression-i18n stack (pr1–pr7) not yet merged to `develop`
-- Updated TRACKING.md to reflect real project state
-**Next:** Authorize commit batch for delivery.
+- Optimized the 15 card images: JPEG 2048px disguised as `.png` (70 MB) → WebP 512px q82 (760 KB); originals moved to `Arts/original-2048/` (gitignored); `CombatRenderer` now loads `art/cards/<id>.webp`; suite still green (24 tasks)
+- RDD disabled clone-scope (authorized `gentle-ai review mode disable --scope clone`) → delivery under ordinary repo policy; learned the Pi gate fail-closes on wrapped/compound lifecycle commands (direct command only, no `cd &&` prefix)
+- 3 commits: `feat(combat)` debt economy + Localizer, `feat(art)` assets, `chore(docs)` tracking
+- Fast-forward merged combat-progression-i18n stack (pr1–pr7) + the 3 new commits into `develop`; working tree clean
+**Next:** Manual playtest + balance; APK build (< 20 MB); fill metrics dashboard.
 
 ### 2026-08-20 (Session)
 **Goal:** Economy + combat progression + i18n foundation.
