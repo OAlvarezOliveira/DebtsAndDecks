@@ -8,6 +8,9 @@ import com.debtsdecks.gdx.audio.SoundManager
 class GameApp : ApplicationAdapter() {
     private lateinit var screen: GameScreen
 
+    private fun <T> withScreen(block: GameScreen.() -> T): T? =
+        if (::screen.isInitialized) screen.block() else null
+
     override fun create() {
         screen = DebtsAndDecksApp.container.get()
         Gdx.input.inputProcessor = screen.inputProcessor
@@ -26,16 +29,16 @@ class GameApp : ApplicationAdapter() {
 
     override fun pause() {
         super.pause()
-        screen.pause()
+        withScreen { pause() }
     }
 
     override fun resume() {
         super.resume()
-        screen.resume()
+        withScreen { resume() }
     }
 
     override fun resize(width: Int, height: Int) {
         super.resize(width, height)
-        screen.resize(width, height)
+        withScreen { resize(width, height) }
     }
 }

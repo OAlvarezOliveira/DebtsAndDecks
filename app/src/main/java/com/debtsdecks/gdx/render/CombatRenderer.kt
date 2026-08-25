@@ -64,10 +64,11 @@ class CombatRenderer(private val bundle: I18NBundle) {
     )
     
     // Per-card art, keyed by CardDefinition.id. Missing assets are skipped at construction
-    // so a missing art/cards/<id>.webp falls back to the frame-only card (no hard crash).
+    // so a missing art/cards/<id>.png falls back to the frame-only card (no hard crash).
     private val cardTextures: Map<String, Texture> = run {
         val ids = listOf(
-            "compound_interest", "subprime_loan", "debt_forgiveness", "partial_forgiveness",
+            "strike", "defend", "bash", "survive",
+                "compound_interest", "subprime_loan", "debt_forgiveness", "partial_forgiveness",
             "tactical_bankruptcy", "reverse_mortgage", "foreclosure_express", "ghost_collector",
             "golden_credit", "mortgage_collateral", "asset_auction", "risky_investment",
             "bounced_check", "zombie_debt", "eternal_debt"
@@ -75,9 +76,11 @@ class CombatRenderer(private val bundle: I18NBundle) {
         val m = mutableMapOf<String, Texture>()
         for (id in ids) {
             try {
-                m[id] = loadTexture("art/cards/$id.webp")
-            } catch (_: Throwable) {
-                // missing art -> frame-only fallback for this card
+                m[id] = loadTexture("art/cards/$id.png")
+            } catch (t: Throwable) {
+                // missing art -> frame-only fallback; log device-side load failures
+                    Gdx.app.error("DebtsDecks", "card art load failed: art/cards/" + id)
+                    for (el in t.stackTrace.take(6)) Gdx.app.error("DebtsDecks", el.toString())
             }
         }
         m
