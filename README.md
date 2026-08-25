@@ -205,4 +205,9 @@ Debts & Decks/
 
 ## License
 
-Proprietary — Personal project, not for distribution.
+**Split license:**
+
+- **Code** (Kotlin, Gradle, JSON data, tests) — [MIT](LICENSE). You can read it, learn from it, and reuse the code.
+- **Art & assets** (card art, enemy art, frames, intents, UI, sounds, musical assets, and the "Debts & Decks" name/brand) — **All Rights Reserved.** You may not copy, redistribute, or reuse them without prior written permission.
+
+Everything in `app/src/main/assets/art/`, `app/src/main/assets/sounds/`, and `app/src/main/res/` is the reserved-art part. Clone the repo, study the code, but ask before using any visual or audio asset in your own project.
