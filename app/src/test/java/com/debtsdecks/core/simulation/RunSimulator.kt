@@ -26,6 +26,7 @@ class RunSimulator(
     private val cardRegistry: CardRegistry,
     private val enemyDefinitions: List<EnemyDefinition>,
     private val l10n: Localizer = NoOpLocalizer,
+    private val policy: RunPolicy = ScriptedPolicy,
 ) {
     /** Generous upper bound; any real 3-encounter run stays far below it. Guards runaways. */
     private val maxActionsPerRun = 500
@@ -62,7 +63,7 @@ class RunSimulator(
             when (run.phase) {
                 RunManager.Phase.COMBAT -> driveCombat(engine, run, state)
                 RunManager.Phase.REWARD -> {
-                    val pick = ScriptedPolicy.chooseReward(run.rewardChoices)
+                    val pick = policy.chooseReward(run.rewardChoices)
                     run.chooseReward(pick)
                     currentCombatTurnStart = null
                 }
@@ -80,7 +81,7 @@ class RunSimulator(
     }
 
     private fun driveCombat(engine: CombatEngine, run: RunManager, state: com.debtsdecks.core.model.CombatState) {
-        val action = ScriptedPolicy.chooseAction(state)
+        val action = policy.chooseAction(state)
         when (action) {
             is ScriptedPolicy.CombatAction.Play -> {
                 engine.playCard(action.instanceId, action.targetId)

@@ -191,6 +191,39 @@ class RunSimulationHarnessTest {
         return (0L until n.toLong()).map { sim.simulate(it) }
     }
 
+    private fun runSweepWith(policy: RunPolicy, n: Int = 200): List<SimulationResult> {
+        val cards = TestAssetLoader.loadCards()
+        val enemies = TestAssetLoader.loadEnemies()
+        val registry = com.debtsdecks.core.cards.CardRegistry.create(cards)
+        val sim = RunSimulator(registry, enemies, policy = policy)
+        return (0L until n.toLong()).map { sim.simulate(it) }
+    }
+
+    // --- What-if experiment: Leverage-exploiting policy vs conservative baseline ---
+
+    @Test
+    fun `leverage policy comparison sweep`() {
+        val greedyResults = runSweepWith(ScriptedPolicy)
+        val leverageResults = runSweepWith(LeveragePolicy)
+
+        val greedy = SimulationReport.from(greedyResults)
+        val leverage = SimulationReport.from(leverageResults)
+
+        println()
+        println("=== LEVERAGE POLICY vs GREEDY (200 seeds each) ===")
+        println("Greedy   -> win ${"%.1f".format(greedy.winRate * 100)}% | peak debt ${"%.1f".format(greedy.avgPeakDebt)} | HP@win ${"%.1f".format(greedy.avgHpAtVictory)}")
+        println("Leverage -> win ${"%.1f".format(leverage.winRate * 100)}% | peak debt ${"%.1f".format(leverage.avgPeakDebt)} | HP@win ${"%.1f".format(leverage.avgHpAtVictory)}")
+        println("Defeats greedy: ${greedy.defeatsByEncounter}")
+        println("Defeats leverage: ${leverage.defeatsByEncounter}")
+        // Insight (not a mandate): if the leverage-aggressive policy cannot meaningfully out-borrow
+        // the conservative one, the card pool offers no real incentive to take on Debt — the
+        // leverage mechanic exists but is not being PLAYED. Assert the honest invariant: the
+        // leverage policy never WINS LESS (Leverage never actively hurts).
+        assertTrue(leverage.winRate + 0.02 >= greedy.winRate, "leverage policy should not win less")
+        // Report the leverage spread for the experiment output.
+        println("Leverage spread: ${"%.1f".format((leverage.winRate - greedy.winRate) * 100)}pp win | debt ${"%.1f".format(leverage.avgPeakDebt - greedy.avgPeakDebt)}")
+    }
+
     @Test
     fun `sweep never observes negative debt`() {
         // The negative-debt assertion lives inside RunSimulator.simulate (checked each state read);

@@ -12,7 +12,12 @@ import com.debtsdecks.core.model.TurnPhase
  * side-effect free: they read [CombatState]/[CardDefinition] and return a decision value,
  * never mutating engine state. See run-simulation-harness design docs.
  */
-object ScriptedPolicy {
+interface RunPolicy {
+    fun chooseAction(state: CombatState): ScriptedPolicy.CombatAction
+    fun chooseReward(choices: List<CardDefinition>): CardDefinition
+}
+
+object ScriptedPolicy : RunPolicy {
 
     sealed interface CombatAction {
         data class Play(val instanceId: String, val targetId: String?) : CombatAction
@@ -20,7 +25,7 @@ object ScriptedPolicy {
     }
 
     /** One decision per PLAYER_ACTION phase call. Never mutates [state]. */
-    fun chooseAction(state: CombatState): CombatAction {
+    override fun chooseAction(state: CombatState): CombatAction {
         if (state.currentTurn != TurnPhase.PLAYER_ACTION) return CombatAction.EndTurn
 
         // Blocking turn: play the highest-block skill if available, else fall through to attack rule.
@@ -59,11 +64,11 @@ object ScriptedPolicy {
         return CombatAction.Play(best.instanceId, enemyTargetId(state))
     }
 
-    private fun damagePerCost(c: CardInstance): Double =
+    internal fun damagePerCost(c: CardInstance): Double =
         if (c.cost <= 0) c.baseDamage.toDouble() else c.baseDamage.toDouble() / c.cost
 
     /** Target the first alive enemy (the policy plays single-target attacks at the first threat). */
-    private fun enemyTargetId(state: CombatState): String? =
+    internal fun enemyTargetId(state: CombatState): String? =
         state.enemies.firstOrNull { it.hp > 0 }?.id
 
     /** True if [state] warrants playing Defend this turn instead of an attack. */
@@ -88,7 +93,7 @@ object ScriptedPolicy {
     }
 
     /** Highest damage; ties broken by lowest cost, then list order. */
-    fun chooseReward(choices: List<CardDefinition>): CardDefinition {
+    override fun chooseReward(choices: List<CardDefinition>): CardDefinition {
         if (choices.isEmpty()) error("chooseReward requires at least one offer")
         return choices.maxWith(
             compareBy<CardDefinition> { it.damage }        // highest damage
