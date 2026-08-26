@@ -23,11 +23,6 @@ class CombatInputHandler(
     private var selectedCard: CardInstance? = null
     private val touchPos = Vector2()
 
-    // R6: dedicated repay-by-discard flow — tap the REPAY CARD button to arm it, then tap a
-    // hand card to discard it for a flat Debt cut. Kept separate from selectedCard/card-play
-    // state since repaying never resolves a CardDefinition effect.
-    private var repayDiscardModeActive: Boolean = false
-
     override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
         if (pointer > 0) return false
 
@@ -47,7 +42,6 @@ class CombatInputHandler(
             RunManager.Phase.VICTORY, RunManager.Phase.DEFEAT -> {
                 runManager.restartRun()
                 deselect()
-                setRepayDiscardMode(false)
                 true
             }
         }
@@ -70,27 +64,11 @@ class CombatInputHandler(
             combatEngine.endPlayerTurn()
             refreshAndAnnounce()
             deselect()
-            setRepayDiscardMode(false)
             return true
-        }
-
-        // R6/R8: REPAY controls are only surfaced/enabled here, i.e. gated behind the same
-        // `currentTurn == PLAYER_ACTION` check `touchDown` already applies before ever calling
-        // handlePlayerAction. This is a deliberate choice (mirrors playCard's own UX gate) even
-        // though CombatEngine.repayDebt() itself has no phase gate and would accept calls at any
-        // time — see apply-progress-phase3 for the full rationale.
-        if (CombatRenderer.repayGoldButtonBounds.contains(x, y)) {
-            return handleRepayGoldTap(state)
-        }
-        if (CombatRenderer.repayDiscardButtonBounds.contains(x, y)) {
-            return handleRepayDiscardToggleTap(state)
         }
 
         val tappedCard = handCardAt(x, y, state.hand)
         if (tappedCard != null) {
-            if (repayDiscardModeActive) {
-                return repayWithDiscardedCard(tappedCard)
-            }
             when {
                 selectedCard?.id == tappedCard.id -> deselect() // tap the selected card again to cancel it
                 tappedCard.isPlayable(state.debt) -> {
@@ -143,35 +121,6 @@ class CombatInputHandler(
     }
 
     /** R6 GOLD mode: spends `min(gold, debt)` 1:1, no card selection needed. */
-    private fun handleRepayGoldTap(state: CombatState): Boolean {
-        if (state.debt <= 0 || state.gold <= 0) return true // button tapped but nothing to do; consume the tap
-        val result = combatEngine.repayDebt(CombatEngine.RepayMode.GOLD)
-        if (result.success) soundManager.playCardPlay()
-        refreshAndAnnounce()
-        return true
-    }
-
-    /** R6 DISCARD mode: arms/disarms tap-a-card-to-repay; the actual repay happens in [repayWithDiscardedCard]. */
-    private fun handleRepayDiscardToggleTap(state: CombatState): Boolean {
-        if (state.debt <= 0) return true // nothing to repay; consume the tap without arming the mode
-        if (!repayDiscardModeActive) soundManager.playCardSelect()
-        setRepayDiscardMode(!repayDiscardModeActive)
-        return true
-    }
-
-    private fun repayWithDiscardedCard(card: CardInstance): Boolean {
-        val result = combatEngine.repayDebt(CombatEngine.RepayMode.DISCARD, card.id)
-        if (result.success) soundManager.playCardPlay()
-        setRepayDiscardMode(false)
-        refreshAndAnnounce()
-        deselect()
-        return true
-    }
-
-    private fun setRepayDiscardMode(active: Boolean) {
-        repayDiscardModeActive = active
-        renderer.setRepayDiscardMode(active)
-    }
 
     private fun select(card: CardInstance) {
         selectedCard = card

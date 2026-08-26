@@ -72,10 +72,6 @@ class I18nBundleTest {
 
         assertEquals("PLAYER", bundle.get("hud.player.label"))
         assertEquals("END TURN", bundle.get("hud.button.end_turn"))
-        assertEquals("REPAY GOLD", bundle.get("hud.button.repay_gold"))
-        assertEquals("REPAY CARD", bundle.get("hud.button.repay_card"))
-        assertEquals("CANCEL", bundle.get("hud.button.cancel"))
-        assertEquals("Tap a card to discard it and repay Debt", bundle.get("hud.repay_discard_hint"))
         assertEquals("COMBAT LOG", bundle.get("hud.combat_log_header"))
     }
 
@@ -106,10 +102,6 @@ class I18nBundleTest {
 
         assertEquals("JUGADOR", bundle.get("hud.player.label"))
         assertEquals("TERMINAR TURNO", bundle.get("hud.button.end_turn"))
-        assertEquals("PAGAR CON ORO", bundle.get("hud.button.repay_gold"))
-        assertEquals("PAGAR CON CARTA", bundle.get("hud.button.repay_card"))
-        assertEquals("CANCELAR", bundle.get("hud.button.cancel"))
-        assertEquals("Toca una carta para descartarla y pagar la Deuda", bundle.get("hud.repay_discard_hint"))
         assertEquals("REGISTRO DE COMBATE", bundle.get("hud.combat_log_header"))
     }
 
@@ -170,8 +162,6 @@ class I18nBundleTest {
     fun `English CombatEngine and EnemyAI log strings resolve with real interpolation`() {
         val bundle = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
 
-        assertEquals("Repaid 12 Debt with Gold.", bundle.format("log.repay_gold", 12))
-        assertEquals("Discarded Strike to repay 3 Debt.", bundle.format("log.repay_discard", "Strike", 3))
         assertEquals("Poison deals 4 damage to Thug!", bundle.format("log.poison_damage_enemy", 4, "Thug"))
         assertEquals("Poison deals 2 damage to you!", bundle.format("log.poison_damage_player", 2))
         assertEquals("Regen heals you for 5!", bundle.format("log.regen_heal_player", 5))
@@ -191,8 +181,6 @@ class I18nBundleTest {
     fun `Spanish CombatEngine and EnemyAI log strings resolve with real interpolation and thematic translations`() {
         val bundle = I18NBundle.createBundle(bundleBase, Locale("es"))
 
-        assertEquals("Pagaste 12 de Deuda con Oro.", bundle.format("log.repay_gold", 12))
-        assertEquals("Descartaste Strike para pagar 3 de Deuda.", bundle.format("log.repay_discard", "Strike", 3))
         assertEquals("¡El Veneno causa 4 de daño a Thug!", bundle.format("log.poison_damage_enemy", 4, "Thug"))
         assertEquals("¡El Veneno te causa 2 de daño!", bundle.format("log.poison_damage_player", 2))
         assertEquals("¡La Regeneración te cura 5!", bundle.format("log.regen_heal_player", 5))

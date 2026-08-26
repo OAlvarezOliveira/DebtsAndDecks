@@ -36,7 +36,7 @@ class CombatEngine(
     /** Run-persistent liability, carried in via [startCombat] and grown by a per-encounter interest tick. */
     private var debt: Int = 0
 
-    /** Run-persistent currency, carried in via [startCombat] and spendable through [repayDebt]. */
+    /** Run-persistent currency, carried in via [startCombat] and spent through the run boundary. */
     private var gold: Int = 0
 
     /** Per-combat flag (see [activateEscrowShield]) that halves Debt added from a shortfall while active. */
@@ -228,44 +228,6 @@ class CombatEngine(
 
         return PlayResult(true, "Card played")
     }
-
-    /**
-     * Dedicated, always-available action to pay down Debt: it does not cost Credit and does not
-     * end the turn. [RepayMode.GOLD] spends `min(gold, debt)` 1:1; [RepayMode.DISCARD] discards
-     * the hand card identified by [discardInstanceId] for a flat [DebtConfig.REPAY_DISCARD_VALUE]
-     * cut, clamped so Debt never goes negative.
-     */
-    fun repayDebt(mode: RepayMode, discardInstanceId: String? = null): RepayResult {
-        if (debt <= 0) {
-            return RepayResult(false, "No debt to repay")
-        }
-        return when (mode) {
-            RepayMode.GOLD -> {
-                if (gold <= 0) {
-                    return RepayResult(false, "No gold available")
-                }
-                val amount = minOf(gold, debt)
-                gold -= amount
-                debt -= amount
-                log.add(CombatLogEntry.create(l10n.format("log.repay_gold", amount), turnNumber))
-                RepayResult(true, "Repaid $amount Debt", amount)
-            }
-            RepayMode.DISCARD -> {
-                val index = hand.indexOfFirst { it.id == discardInstanceId }
-                if (index == -1) {
-                    return RepayResult(false, "Card not in hand")
-                }
-                val card = hand.removeAt(index)
-                discardPile.add(card)
-                val amount = minOf(DebtConfig.REPAY_DISCARD_VALUE, debt)
-                debt -= amount
-                log.add(CombatLogEntry.create(l10n.format("log.repay_discard", card.name, amount), turnNumber))
-                RepayResult(true, "Repaid $amount Debt", amount)
-            }
-        }
-    }
-
-    enum class RepayMode { GOLD, DISCARD }
 
     fun endPlayerTurn(): TurnResult {
         if (currentPhase != TurnPhase.PLAYER_ACTION) {
@@ -466,5 +428,4 @@ class CombatEngine(
 
     data class PlayResult(val success: Boolean, val message: String)
     data class TurnResult(val success: Boolean, val message: String)
-    data class RepayResult(val success: Boolean, val message: String, val debtReduced: Int = 0)
 }

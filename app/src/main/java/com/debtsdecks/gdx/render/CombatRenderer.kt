@@ -103,24 +103,11 @@ class CombatRenderer(private val bundle: I18NBundle) {
     private val endTurnBtnW = 150f
     private val endTurnBtnH = 60f
 
-    // R6: dedicated REPAY controls, stacked in the same right-hand column as END TURN (above it,
-    // not beside it) so their x-range never collides with a centered hand of cards, and their
-    // y-range (120-230) stays clear of the combat log panel below (y >= 260, see drawLog).
-    private val repayGoldBtnX = 1100f
-    private val repayGoldBtnY = 120f
-    private val repayDiscardBtnX = 1100f
-    private val repayDiscardBtnY = 180f
-    private val repayBtnW = 150f
-    private val repayBtnH = 50f
-
     // Warning-orange, distinct from selection (YELLOW), unplayable (GRAY) and the at-risk-Debt
     // RED used on the HUD line below: signals "this card is playable but will add to Debt if
     // played" per R8/R9. Design doc doesn't pin an exact color, so this is this apply run's
     // documented choice — see apply-progress-phase3.
     private val borrowTintColor = Color(1f, 0.55f, 0.15f, 1f)
-
-    private var repayDiscardModeActive: Boolean = false
-    fun setRepayDiscardMode(active: Boolean) { repayDiscardModeActive = active }
 
     fun render(state: CombatState, batch: SpriteBatch) {
         // ShapeRenderer defaults to a raw screen-pixel projection; without this it draws
@@ -451,27 +438,6 @@ class CombatRenderer(private val bundle: I18NBundle) {
         font.draw(batch, bundle.get("hud.button.end_turn"), endTurnBtnX + 20f, endTurnBtnY + 40f)
         batch.end()
 
-        // R6: REPAY controls — only drawn "live" (colored, not GRAY) during PLAYER_ACTION, the
-        // same phase gate CombatInputHandler enforces before it will ever route a tap to either
-        // button; see that file's handlePlayerAction for the enforcement side of this decision.
-        val canRepayGold = canAct && state.debt > 0 && state.gold > 0
-        drawRepayButton(repayGoldBtnX, repayGoldBtnY, repayBtnW, repayBtnH, bundle.get("hud.button.repay_gold"), canRepayGold, false, batch)
-
-        val canRepayDiscard = canAct && state.debt > 0 && state.hand.isNotEmpty()
-        val discardLabel = if (repayDiscardModeActive) bundle.get("hud.button.cancel") else bundle.get("hud.button.repay_card")
-        drawRepayButton(
-            repayDiscardBtnX, repayDiscardBtnY, repayBtnW, repayBtnH,
-            discardLabel, canRepayDiscard || repayDiscardModeActive, repayDiscardModeActive, batch
-        )
-
-        if (repayDiscardModeActive) {
-            batch.begin()
-            smallFont.setColor(borrowTintColor)
-            smallFont.draw(batch, bundle.get("hud.repay_discard_hint"), 300f, 690f)
-            smallFont.setColor(Color.WHITE)
-            batch.end()
-        }
-
         // Turn phase indicator. state.currentTurn.name/pile counts are numeric/enum data, not
         // authored copy — see the class KDoc for why the enum identifier itself stays untranslated.
         batch.begin()
@@ -482,28 +448,6 @@ class CombatRenderer(private val bundle: I18NBundle) {
             bundle.format("hud.pile_counts", state.drawPileCount, state.discardPileCount, state.exhaustPileCount),
             50f, 640f
         )
-        batch.end()
-    }
-
-    private fun drawRepayButton(
-        x: Float, y: Float, w: Float, h: Float,
-        label: String, enabled: Boolean, highlighted: Boolean, batch: SpriteBatch
-    ) {
-        val base = when {
-            highlighted -> borrowTintColor
-            enabled -> Color(0.3f, 0.6f, 1f, 1f)
-            else -> Color.GRAY
-        }
-        shadowRect(x, y, w, h)
-        gradientRect(x, y, w, h, darken(base, 0.65f), base)
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-        shapeRenderer.setColor(0f, 0f, 0f, 1f)
-        shapeRenderer.rect(x, y, w, h)
-        shapeRenderer.end()
-
-        batch.begin()
-        smallFont.draw(batch, label, x + 10f, y + h / 2f + 6f)
         batch.end()
     }
 
@@ -623,8 +567,6 @@ class CombatRenderer(private val bundle: I18NBundle) {
 
     companion object {
         val endTurnButtonBounds = com.badlogic.gdx.math.Rectangle(1100f, 50f, 150f, 60f)
-        val repayGoldButtonBounds = com.badlogic.gdx.math.Rectangle(1100f, 120f, 150f, 50f)
-        val repayDiscardButtonBounds = com.badlogic.gdx.math.Rectangle(1100f, 180f, 150f, 50f)
 
         private const val REWARD_CARD_WIDTH = 280f
         private const val REWARD_CARD_HEIGHT = 380f

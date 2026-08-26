@@ -33,8 +33,6 @@ object DebtConfig {
     /** Maximum fraction of a Gold reward that garnishment can redirect toward Debt repayment. */
     const val MAX_GARNISH_RATE: Double = 0.75
 
-    /** Flat Debt reduction granted by discarding a card via the repay action. */
-    const val REPAY_DISCARD_VALUE: Int = 5
 
     // --- C4 leverage-payoff-cards constants ---
 
