@@ -70,6 +70,15 @@ class CardInstance(
      */
     fun isPlayable(): Boolean = !exhausted
 
+        /**
+         * Whether this card can be played given current [debt]. Liquidation cards
+         * ("execution_damage"/"refinance" tags) are additionally gated: explicitly unplayable
+         * when [debt] <= 0, so the player sees a disabled card rather than a silent no-op.
+         */
+        fun isPlayable(debt: Int): Boolean =
+            !exhausted && !((definition.tags.contains("execution_damage") ||
+                             definition.tags.contains("refinance")) && debt <= 0)
+
     /** How much [credit] falls short of this card's [cost], or 0 if [credit] fully covers it. */
     fun shortfall(credit: Int): Int = maxOf(0, cost - credit)
 

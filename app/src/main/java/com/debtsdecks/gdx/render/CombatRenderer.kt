@@ -137,7 +137,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         drawPlayer(state, batch)
 
         // Hand
-        drawHand(state.hand, state.energy, batch, state.currentTurn)
+        drawHand(state.hand, state.energy, state.debt, batch, state.currentTurn)
 
         // UI
         drawUI(state, batch)
@@ -348,7 +348,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         }
     }
 
-    private fun drawHand(hand: List<CardInstance>, energy: Int, batch: SpriteBatch, phase: TurnPhase) {
+    private fun drawHand(hand: List<CardInstance>, energy: Int, debt: Int, batch: SpriteBatch, phase: TurnPhase) {
         val canAct = phase == TurnPhase.PLAYER_ACTION
         val totalWidth = hand.size * cardWidth + (hand.size - 1) * cardSpacing
         val startX = (screenWidth - totalWidth) / 2
@@ -363,7 +363,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
             // plain WHITE so the player can see a play will add to Debt before committing to it.
             val tint = when {
                 selected -> Color.YELLOW
-                !canAct || !card.isPlayable() -> Color.GRAY
+                !canAct || !card.isPlayable(debt) -> Color.GRAY
                 card.shortfall(energy) > 0 -> borrowTintColor
                 else -> Color.WHITE
             }

@@ -84,12 +84,25 @@ class CardResolver(private val l10n: Localizer) {
                     )
                 }
 
+                // Liquidation — Ejecución: deals damage equal to current Debt, then wipes it.
+                if (card.definition.tags.contains("execution_damage")) {
+                    for (t in targets) {
+                        effects.add(Effect.Damage(t, state.debt))
+                    }
+                    effects.add(Effect.WipeDebt)
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.execution_damage", state.debt), state.turnNumber))
+                    return ResolutionResult(effects, logEntries)
+                }
+
                 val repeatCount = if (card.definition.tags.contains("x_cost")) xValue else maxOf(1, card.baseHits)
                 var landedHits = 0
                 repeat(repeatCount) {
                     for (t in targets) {
                         val enemy = enemies[t] ?: continue
-                        val baseDamage = ((card.baseDamage + player.strength) * if (player.weak > 0) 0.75 else 1.0).toInt()
+                        // Debt-as-Leverage: every ATTACK hit gains floor(debt / 5) bonus damage
+                        // unconditionally (no tag/opt-out) — the debt economy scales aggression.
+                        val leverageBonus = state.debt / 5
+                        val baseDamage = ((card.baseDamage + player.strength + leverageBonus) * if (player.weak > 0) 0.75 else 1.0).toInt()
                         val effectiveDamage = if (enemy.vulnerable > 0) (baseDamage * 1.5).toInt() else baseDamage
                         effects.add(Effect.Damage(t, effectiveDamage))
                         landedHits++
@@ -152,6 +165,15 @@ class CardResolver(private val l10n: Localizer) {
                 if (card.definition.debtRepay > 0) {
                     effects.add(Effect.RepayDebt(card.definition.debtRepay))
                     logEntries.add(CombatLogEntry.create(l10n.format("log.repaid_debt", card.definition.debtRepay), state.turnNumber))
+                }
+
+                // Liquidation — Refinanciar: halves current Debt and grants Block equal to the
+                // cancelled amount (floor arithmetic; both effects use the same halved value).
+                if (card.definition.tags.contains("refinance")) {
+                    val cancelled = state.debt / 2
+                    effects.add(Effect.Block(cancelled))
+                    effects.add(Effect.RepayDebt(cancelled))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.refinance_applied", cancelled), state.turnNumber))
                 }
                 if (card.baseThornsGain > 0) {
                     effects.add(Effect.ThornsGain(card.baseThornsGain))

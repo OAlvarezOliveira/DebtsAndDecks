@@ -42,7 +42,14 @@ class RunSimulator(
 
         while (true) {
             actions++
-            check(actions <= maxActionsPerRun) { "run exceeded max actions" }
+            if (actions > maxActionsPerRun) {
+                    val st = engine.getState()
+                    throw IllegalStateException(
+                        "run exceeded max actions (seed=$seed phase=${run.phase} turn=${st.turnNumber} " +
+                        "debt=${st.debt} hp=${st.player.hp} enemies=${st.enemies.map { "${it.defId}:${it.hp}" }} " +
+                        "turnPhase=${st.currentTurn} hand=${st.hand.map { it.cardId }} energy=${st.energy})"
+                    )
+                }
 
             val state = engine.getState()
             check(state.debt >= 0) { "Debt observed negative (seed $seed)" }

@@ -270,4 +270,80 @@ class CardResolverTest {
         val atLowDebt = resolver.resolve(card, null, testState(debt = 5))
         assertFalse(atLowDebt.effects.any { it is CardResolver.Effect.GainGold }) // floor(5/10)=0 -> no-op
     }
-}
+
+    // --- Debt-as-Leverage: unconditional ATTACK bonus ---
+
+    @Test
+    fun `leverage adds floor(debt over 5) bonus damage to attacks`() {
+        val def = CardDefinition(
+            id = "strike", name = "Strike", type = CardType.ATTACK, cost = 1, damage = 6,
+            targetType = TargetType.ENEMY, description = "Deal 6.", rarity = Rarity.BASIC
+        )
+        val card = CardInstance(def)
+
+        // debt 0 -> base 6
+        val r0 = resolver.resolve(card, "enemy-1", testState(debt = 0))
+        assertEquals(6, r0.effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount)
+
+        // debt 5 -> +1 = 7
+        val r5 = resolver.resolve(card, "enemy-1", testState(debt = 5))
+        assertEquals(7, r5.effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount)
+
+        // debt 7 -> +1 (floor) = 7
+        val r7 = resolver.resolve(card, "enemy-1", testState(debt = 7))
+        assertEquals(7, r7.effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount)
+
+        // debt 24 -> +4 = 10
+        val r24 = resolver.resolve(card, "enemy-1", testState(debt = 24))
+        assertEquals(10, r24.effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount)
+
+        // debt 30 -> +6 = 12
+        val r30 = resolver.resolve(card, "enemy-1", testState(debt = 30))
+        assertEquals(12, r30.effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount)
+    }
+
+    // --- Liquidation: Ejecución (execution_damage) ---
+
+    @Test
+    fun `ejecucion deals damage equal to debt and wipes it`() {
+        val def = CardDefinition(
+            id = "ejecucion", name = "Foreclosure", type = CardType.ATTACK, cost = 2,
+            targetType = TargetType.ENEMY, description = "Damage = Debt, then wipe.",
+            rarity = Rarity.RARE, tags = setOf("execution_damage")
+        )
+        val card = CardInstance(def)
+
+        val result = resolver.resolve(card, "enemy-1", testState(debt = 22))
+
+        val damages = result.effects.filterIsInstance<CardResolver.Effect.Damage>()
+        assertEquals(1, damages.size)
+        assertEquals(22, damages.single().amount)
+        assertTrue(result.effects.contains(CardResolver.Effect.WipeDebt))
+    }
+
+    // --- Liquidation: Refinanciar (refinance) ---
+
+    @Test
+    fun `refinanciar halves debt and grants matching block`() {
+        val def = CardDefinition(
+            id = "refinanciar", name = "Refinance", type = CardType.SKILL, cost = 1,
+            targetType = TargetType.SELF, description = "Halve Debt, gain Block.",
+            rarity = Rarity.UNCOMMON, tags = setOf("refinance")
+        )
+        val card = CardInstance(def)
+
+        // debt 22 -> cancel 11, block 11
+        val r22 = resolver.resolve(card, null, testState(debt = 22))
+        val block22 = r22.effects.filterIsInstance<CardResolver.Effect.Block>().single().amount
+        val repay22 = r22.effects.filterIsInstance<CardResolver.Effect.RepayDebt>().single().amount
+        assertEquals(11, block22)
+        assertEquals(11, repay22)
+
+        // debt 7 -> cancel 3 (floor), block 3
+        val r7 = resolver.resolve(card, null, testState(debt = 7))
+        val block7 = r7.effects.filterIsInstance<CardResolver.Effect.Block>().single().amount
+        val repay7 = r7.effects.filterIsInstance<CardResolver.Effect.RepayDebt>().single().amount
+        assertEquals(3, block7)
+        assertEquals(3, repay7)
+    }
+    }

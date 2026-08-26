@@ -72,6 +72,15 @@ class RunManager(
             return
         }
 
+        // Execution defeat: Debt crossed the threshold mid-combat, so `endCombat` fired while
+        // the player still has HP and enemies are still alive. HP-0 above covers life loss; this
+        // covers the Debt-driven loss (Debt-as-Leverage pivot), which must also end the run.
+        val allEnemiesDead = state.enemies.all { it.hp <= 0 }
+        if (!allEnemiesDead) {
+            phase = Phase.DEFEAT
+            return
+        }
+
         // Enemy defeated: garnish the Gold reward toward Debt repayment instead of granting it
         // in full (see DebtConfig.garnishAmount).
         val rawGold = enemyDefinitions[encounterIndex].rewards.gold

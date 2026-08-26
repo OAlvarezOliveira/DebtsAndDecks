@@ -1,6 +1,7 @@
 package com.debtsdecks.core.combat
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
@@ -47,20 +48,8 @@ class DebtConfigTest {
     }
 
     @Test
-    fun `usuryDamage is zero below the threshold`() {
-        // Usury starts at Debt > half of max HP (50 -> threshold 25).
-        assertEquals(0, DebtConfig.usuryDamage(debt = 25, maxHp = 50))
-        assertEquals(0, DebtConfig.usuryDamage(debt = 0, maxHp = 50))
-    }
-
-    @Test
-    fun `usuryDamage burns the overflow above the threshold`() {
-        // Debt 40 vs maxHp 50 -> threshold 25 -> burns 15 HP.
-        assertEquals(15, DebtConfig.usuryDamage(debt = 40, maxHp = 50))
-    }
-
-    @Test
-    fun `usuryDamage never kills below 1 HP`() {
-        assertEquals(49, DebtConfig.usuryDamage(debt = 200, maxHp = 50))
+    fun `EXECUTION_THRESHOLD sits above BREAK_THRESHOLD for a playable leverage range`() {
+        assertTrue(DebtConfig.EXECUTION_THRESHOLD > DebtConfig.BREAK_THRESHOLD)
+        assertEquals(50, DebtConfig.EXECUTION_THRESHOLD)
     }
 }

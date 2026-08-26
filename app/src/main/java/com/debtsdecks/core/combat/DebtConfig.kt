@@ -7,9 +7,8 @@ import kotlin.math.min
 /**
  * Named constants and pure formulas for the Debt/Gold/Credit economy.
  *
- * Balance tuned for MVP playtest round 2 (plan C): interest ticks per turn instead of per
- * encounter, a lower break threshold so the collector arrives earlier, and usury that turns
- * high Debt into an HP bleed — the Debt economy is the difficulty axis, not HP race alone.
+ * Balance tuned for the Debt-as-Leverage pivot: interest ticks per turn, a break threshold that
+ * doubles as the Execution death line, and a debt economy that is the difficulty axis.
  */
 object DebtConfig {
 
@@ -22,11 +21,17 @@ object DebtConfig {
     /** Debt level that schedules the forced "collector" encounter and the garnishment ramp ceiling. */
     const val BREAK_THRESHOLD: Int = 30
 
+    /**
+     * Debt level above which any debt-increasing action is immediate defeat (Execution).
+     * Deliberately ABOVE [BREAK_THRESHOLD]: the collector (forced at BREAK_THRESHOLD) arrives
+     * before death, giving the Debt-as-Leverage range (5..EXECUTION-1) room to be played —
+     * with EXECUTION == BREAK (30), interest alone would cross the line every turn and the
+     * mechanic was unplayable. See C2 apply-progress decision A.
+     */
+    const val EXECUTION_THRESHOLD: Int = 50
+
     /** Maximum fraction of a Gold reward that garnishment can redirect toward Debt repayment. */
     const val MAX_GARNISH_RATE: Double = 0.75
-
-    /** Fraction of max HP at which outstanding Debt starts burning HP (usury). */
-    const val USURY_HP_RATIO: Double = 0.5
 
     /** Flat Debt reduction granted by discarding a card via the repay action. */
     const val REPAY_DISCARD_VALUE: Int = 5
@@ -42,17 +47,6 @@ object DebtConfig {
         if (debt <= 0) return debt
         val interest = ceil(debt * INTEREST_RATE).toInt()
         return min(debt + interest, INTEREST_CAP)
-    }
-
-    /**
-     * HP lost to usury at the start of a turn: Debt above half the player's [maxHp] burns the
-     * overflow directly as HP, never killing below 1 HP. Returns 0 when [debt] is at or below
-     * the threshold.
-     */
-    fun usuryDamage(debt: Int, maxHp: Int): Int {
-        val threshold = floor(maxHp * USURY_HP_RATIO).toInt()
-        if (debt <= threshold || maxHp <= 0) return 0
-        return minOf(debt - threshold, maxOf(0, maxHp - 1))
     }
 
     /**

@@ -558,4 +558,41 @@ class CombatEngineTest {
 
         assertEquals(debtBefore, engine.getState().debt)
     }
+
+    // --- Execution loss condition (Debt-as-Leverage pivot) ---
+
+    @Test
+    fun `execution kills mid-turn when a card adds debt past 50`() {
+        registerCard(CardDefinition(
+            id = "debt_bomb", name = "Debt Bomb", type = CardType.SKILL, cost = 0,
+            debtAdd = 5, targetType = TargetType.SELF, description = "Add 5 Debt.",
+            rarity = Rarity.UNCOMMON, tags = setOf("add_debt")
+        ))
+        // interest pushes 43 -> 50 at turn start (survives: == threshold); +5 crosses to 55.
+        engine.startCombat(listOf(standardThug()), listOf("debt_bomb", "strike", "strike", "strike", "strike"), startingDebt = 43)
+        assertEquals(50, engine.getState().debt) // 43 + ceil(43*15%)=50, survives
+
+        val card = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        val result = engine.playCard(card.id, null)
+
+        assertTrue(result.success)
+        assertEquals(55, engine.getState().debt) // 50 + 5 = 55 -> executed
+        assertTrue(engine.getState().currentTurn == com.debtsdecks.core.model.TurnPhase.COMBAT_END)
+    }
+
+    @Test
+    fun `execution adds distinct log for levy-triggered debt`() {
+        engine.startCombat(
+            listOf(levyCollector()),
+            listOf("strike", "strike", "strike", "strike", "strike"),
+            startingDebt = 44
+        )
+        // interest 44 -> 51 at turn start; LEVY +6 -> 57 > 50 executes.
+        val result = engine.endPlayerTurn()
+        assertTrue(result.success)
+        assertTrue(
+            engine.getState().log.any { it.message == testLocalizer().get("log.debt_execution_levy") },
+            "expected levy execution log"
+        )
+    }
 }

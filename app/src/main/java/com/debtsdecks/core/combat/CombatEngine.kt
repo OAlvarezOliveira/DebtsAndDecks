@@ -41,7 +41,28 @@ class CombatEngine(
 
     /** Per-combat flag (see [activateEscrowShield]) that halves Debt added from a shortfall while active. */
     private var escrowShieldActive: Boolean = false
-    private val cardResolver = CardResolver(l10n)
+            private enum class DebtSource { LEVY, OTHER }
+
+        /**
+         * Adds [amount] Debt, clamped to [DebtConfig.INTEREST_CAP], then checks Execution
+         * (Debt > EXECUTION_THRESHOLD). Returns true when Execution tripped — the caller MUST
+         * endCombat(victory = false) and stop. All in-combat debt increases (Credit-shortfall
+         * borrow, enemy LEVY, card AddDebt) route through this helper; the per-turn interest
+         * tick in beginTurn is deliberately excluded (Decision B).
+         */
+        private fun addDebt(amount: Int, source: DebtSource = DebtSource.OTHER): Boolean {
+            debt = minOf(debt + amount, DebtConfig.INTEREST_CAP)
+            if (debt > DebtConfig.EXECUTION_THRESHOLD) {
+                val key = if (source == DebtSource.LEVY) "log.debt_execution_levy" else "log.debt_execution"
+                log.add(CombatLogEntry.create(l10n.get(key), turnNumber))
+                return true
+            }
+            return false
+        }
+
+        private var levyExecution = false
+
+        private val cardResolver = CardResolver(l10n)
     private var enemyAIs: Map<String, EnemyAI> = emptyMap()
 
     val HAND_SIZE = 5
@@ -133,7 +154,7 @@ class CombatEngine(
         }
 
         val card = hand[cardIndex]
-        if (!card.isPlayable()) {
+        if (!card.isPlayable(debt)) {
             return PlayResult(false, "Card cannot be played")
         }
 
@@ -169,7 +190,10 @@ class CombatEngine(
             energy -= (card.cost - rawShortfall)
             if (rawShortfall > 0) {
                 val actualBorrow = if (escrowShieldActive) (rawShortfall + 1) / 2 else rawShortfall
-                debt = minOf(debt + actualBorrow, DebtConfig.INTEREST_CAP)
+                if (addDebt(actualBorrow)) {
+                    endCombat(victory = false)
+                    return PlayResult(true, "Defeat!")
+                }
             }
         }
 
@@ -266,13 +290,20 @@ class CombatEngine(
             // EnemyAI treats LEVY as advance-only; only its combat effect (debt) is applied above.
             val intent = enemy.currentIntent()
             if (intent.type == IntentType.LEVY) {
-                debt = minOf(debt + intent.param, DebtConfig.INTEREST_CAP)
+                if (addDebt(intent.param, DebtSource.LEVY)) { levyExecution = true }
                 enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_levy", intent.param), turnNumber))
             }
             val ai = enemyAIs[enemy.id]!!
             enemyLog.addAll(ai.executeIntent(player, enemies, turnNumber))
         }
         log.addAll(enemyLog)
+
+            // Execution defeat from an enemy LEVY intent (mid-enemy-turn debt crossing).
+            if (levyExecution) {
+                endCombat(victory = false)
+                levyExecution = false
+                return TurnResult(true, "Defeat!")
+            }
 
         // Check win condition (poison may have finished off the last enemy)
         if (enemies.all { it.isDead() }) {
@@ -307,15 +338,14 @@ class CombatEngine(
         val regenBefore = player.regen
         player.tickTurnStart()
 
-        // Per-turn Debt economy: compounding interest, then usury (Debt above half max HP
-        // burns HP). Both run before the player acts so carrying Debt has a visible cost.
+        // Per-turn Debt economy: compounding interest only. Execution (Debt > threshold) is
+            // deliberately NOT checked at turn start — inheriting high Debt from a won combat must
+            // not auto-defeat before the player acts; danger comes from accumulating in-combat
+            // (borrow/LEVY/card), which routes through addDebt(). Decision B; threshold raised to 50
+            // in decision A so the leverage range stays playable.
+        
         debt = DebtConfig.applyInterest(debt)
         if (debt > 0) log.add(CombatLogEntry.create(l10n.format("log.debt_interest", debt), turnNumber))
-        val usury = DebtConfig.usuryDamage(debt, player.maxHp)
-        if (usury > 0) {
-            player.hp = maxOf(1, player.hp - usury)
-            log.add(CombatLogEntry.create(l10n.format("log.debt_usury", usury), turnNumber))
-        }
         if (poisonBefore > 0) log.add(CombatLogEntry.create(l10n.format("log.poison_damage_player", poisonBefore), turnNumber))
         if (regenBefore > 0) log.add(CombatLogEntry.create(l10n.format("log.regen_heal_player", regenBefore), turnNumber))
         if (player.isDead()) {
@@ -408,7 +438,10 @@ class CombatEngine(
                 is CardResolver.Effect.AddDebt -> {
                     // Debt added directly to the player; capped, and never escrow-halved (the
                     // escrow only shields Credit-shortfall borrowing, handled in playCard).
-                    debt = minOf(debt + effect.amount, DebtConfig.INTEREST_CAP)
+                    if (addDebt(effect.amount)) {
+                        endCombat(victory = false)
+                        return
+                    }
                 }
                 is CardResolver.Effect.GainCredit -> {
                     energy = minOf(energy + effect.amount, MAX_ENERGY_CAP)

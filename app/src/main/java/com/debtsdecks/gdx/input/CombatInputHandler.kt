@@ -93,7 +93,7 @@ class CombatInputHandler(
             }
             when {
                 selectedCard?.id == tappedCard.id -> deselect() // tap the selected card again to cancel it
-                tappedCard.isPlayable() -> {
+                tappedCard.isPlayable(state.debt) -> {
                     soundManager.playCardSelect()
                     select(tappedCard)
                 }

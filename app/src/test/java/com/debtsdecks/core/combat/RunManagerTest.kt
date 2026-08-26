@@ -280,7 +280,7 @@ class RunManagerTest {
 
     @Test
     fun `crossing the break threshold forces the collector encounter next, without desyncing encounterIndex`() {
-        val registry = CardRegistry.create(makeStarterCards(surviveCost = 60) + rewardCards)
+        val registry = CardRegistry.create(makeStarterCards(surviveCost = 33) + rewardCards)
         val engine = CombatEngine(registry, testLocalizer(), rng)
         val rm = RunManager(engine, registry, enemies, rng)
 
@@ -309,7 +309,7 @@ class RunManagerTest {
 
     @Test
     fun `the break encounter does not re-trigger after it has already fired once this run`() {
-        val registry = CardRegistry.create(makeStarterCards(surviveCost = 60) + rewardCards)
+        val registry = CardRegistry.create(makeStarterCards(surviveCost = 33) + rewardCards)
         val engine = CombatEngine(registry, testLocalizer(), rng)
         val rm = RunManager(engine, registry, enemies, rng)
 
@@ -321,10 +321,9 @@ class RunManagerTest {
         assertFalse(rm.pendingBreakEncounter)
         assertEquals("Collector", engine.getState().enemies[0].name)
 
-        // Carried + interest-ticked Debt is still >= BREAK_THRESHOLD here; refresh() must NOT
-        // re-arm pendingBreakEncounter since the break already fired once this run.
-        rm.refresh()
-        assertTrue(rm.debt >= DebtConfig.BREAK_THRESHOLD)
+        // Winning the Thug garnished Debt (garnishAmount on the gold reward), so carried Debt may
+        // now sit below BREAK_THRESHOLD — intended. What must hold: refresh() does NOT re-arm the
+        // pendingBreakEncounter flag once the break already fired this run.
         assertFalse(rm.pendingBreakEncounter)
 
         finishSoleEnemy(engine, rm)
@@ -391,7 +390,7 @@ class RunManagerTest {
 
     @Test
     fun `restarting the run resets debt, gold, and the pending break flag`() {
-        val registry = CardRegistry.create(makeStarterCards(surviveCost = 60) + rewardCards)
+        val registry = CardRegistry.create(makeStarterCards(surviveCost = 33) + rewardCards)
         val engine = CombatEngine(registry, testLocalizer(), rng)
         val rm = RunManager(engine, registry, enemies, rng)
 

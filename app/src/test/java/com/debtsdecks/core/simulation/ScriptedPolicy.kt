@@ -4,6 +4,7 @@ import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.model.CardType
 import com.debtsdecks.core.model.CombatState
+import com.debtsdecks.core.combat.DebtConfig
 import com.debtsdecks.core.model.TurnPhase
 
 /**
@@ -32,7 +33,11 @@ object ScriptedPolicy {
             }
         }
 
-        val attacks = state.hand.filter { it.type == CardType.ATTACK }
+        // Respect the game's playability gates: Liquidation cards (Ejecución/Refinanciar) are
+        // unplayable at Debt <= 0 — playing Ejecución at zero Debt deals 0 damage and can deadlock
+        // the run loop. Filter to cards the current Debt actually allows.
+        val playable = state.hand.filter { it.isPlayable(state.debt) }
+        val attacks = playable.filter { it.type == CardType.ATTACK }
         if (attacks.isEmpty()) return CombatAction.EndTurn
 
         // Zero-shortfall attacks preferred; only when none exist do we take on Debt (shortfall play).
@@ -44,6 +49,13 @@ object ScriptedPolicy {
                 .thenBy { it.baseDamage }                   // then highest raw damage
                 .thenByDescending { it.instanceId }         // then lowest id (alphabetical)
         )
+                // Debt-as-Leverage safety: never play a shortfall attack whose borrow would cross the
+        // Execution line (debt > EXECUTION_THRESHOLD is an instant loss). End the turn instead.
+        val wouldBorrow = best.cost > state.energy
+        val debtAfter = state.debt + (best.cost - state.energy)
+        if (wouldBorrow && debtAfter >= DebtConfig.EXECUTION_THRESHOLD) {
+            return CombatAction.EndTurn
+        }
         return CombatAction.Play(best.instanceId, enemyTargetId(state))
     }
 
