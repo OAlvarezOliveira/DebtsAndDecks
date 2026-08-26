@@ -124,7 +124,7 @@ Update **daily** at end of session.
 |-------|--------|-----------|
 | Language | Kotlin | Native Android, modern, coroutines |
 | Engine | LibGDX | 2D, cross-platform, lightweight, no editor lock-in |
-| Build | Gradle (KTS) | Standard Android, version catalogs |
+| Build | Gradle (KTS) | Standard Android, Kotlin DSL |
 | DI | Koin | Lightweight, Kotlin-first |
 | Data | JSON + DataStore | No DB needed for MVP |
 | Testing | JUnit + MockK | Unit tests for game logic |
