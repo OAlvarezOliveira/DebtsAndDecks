@@ -1,5 +1,6 @@
 package com.debtsdecks.core.combat.resolution
 
+import com.debtsdecks.core.combat.DebtConfig
 import com.debtsdecks.core.i18n.Localizer
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.model.CombatLogEntry
@@ -94,6 +95,19 @@ class CardResolver(private val l10n: Localizer) {
                     return ResolutionResult(effects, logEntries)
                 }
 
+                // C4 leverage-payoff-cards — asset_bubble: damage equal to half current Debt,
+                // PLUS the flat leverage bonus, but deliberately does NOT wipe. The "keep the
+                // band" sibling of execution_damage (same place in the ATTACK branch, no wipe).
+                if (card.definition.tags.contains("debt_payoff")) {
+                    val payoff = state.debt / DebtConfig.DEBT_PAYOFF_DIVISOR
+                    val withLeverage = payoff + state.debt / 5
+                    for (t in targets) {
+                        effects.add(Effect.Damage(t, withLeverage))
+                    }
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.debt_payoff_damage", withLeverage), state.turnNumber))
+                    return ResolutionResult(effects, logEntries)
+                }
+
                 val repeatCount = if (card.definition.tags.contains("x_cost")) xValue else maxOf(1, card.baseHits)
                 var landedHits = 0
                 repeat(repeatCount) {
@@ -102,7 +116,14 @@ class CardResolver(private val l10n: Localizer) {
                         // Debt-as-Leverage: every ATTACK hit gains floor(debt / 5) bonus damage
                         // unconditionally (no tag/opt-out) — the debt economy scales aggression.
                         val leverageBonus = state.debt / 5
-                        val baseDamage = ((card.baseDamage + player.strength + leverageBonus) * if (player.weak > 0) 0.75 else 1.0).toInt()
+                        // C4: `debt_scaling` ATTACK cards double-dip — extra per-hit damage
+                        // floor(debt / DEBT_SCALING_ATTACK_DIVISOR) on top of the flat bonus.
+                        val taggedScale = if (card.definition.tags.contains("debt_scaling")) {
+                            state.debt / DebtConfig.DEBT_SCALING_ATTACK_DIVISOR
+                        } else {
+                            0
+                        }
+                        val baseDamage = ((card.baseDamage + player.strength + leverageBonus + taggedScale) * if (player.weak > 0) 0.75 else 1.0).toInt()
                         val effectiveDamage = if (enemy.vulnerable > 0) (baseDamage * 1.5).toInt() else baseDamage
                         effects.add(Effect.Damage(t, effectiveDamage))
                         landedHits++
@@ -174,6 +195,21 @@ class CardResolver(private val l10n: Localizer) {
                     effects.add(Effect.Block(cancelled))
                     effects.add(Effect.RepayDebt(cancelled))
                     logEntries.add(CombatLogEntry.create(l10n.format("log.refinance_applied", cancelled), state.turnNumber))
+                }
+                // C4 leverage-payoff-cards — collateral_hold: Block equal to half current Debt,
+                // NO repayment, NO wipe. The defensive "hold the band" option that keeps the
+                // Leverage damage intact (the cash-out sibling is refinanciar / refinance).
+                if (card.definition.tags.contains("debt_payoff")) {
+                    val held = state.debt / DebtConfig.DEBT_PAYOFF_DIVISOR
+                    effects.add(Effect.Block(held))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.debt_payoff_block", held), state.turnNumber))
+                }
+                // C4 leverage-payoff-cards — overdraft: draw count scales with current Debt.
+                // Engine drawCards already caps at HAND_SIZE, so no unbounded growth.
+                if (card.definition.tags.contains("debt_draw")) {
+                    val drawCount = DebtConfig.DEBT_DRAW_BASE + state.debt / DebtConfig.DEBT_DRAW_DIVISOR
+                    effects.add(Effect.Draw(drawCount))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.debt_draw", drawCount), state.turnNumber))
                 }
                 if (card.baseThornsGain > 0) {
                     effects.add(Effect.ThornsGain(card.baseThornsGain))

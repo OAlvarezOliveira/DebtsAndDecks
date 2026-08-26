@@ -15,6 +15,7 @@ data class SimulationResult(
     val endHp: Int,
     val turnsPerCombat: List<Int>,
     val defeatEncounterId: String?,
+        val pickedRewardIds: List<String> = emptyList(),
 )
 
 /**
@@ -40,6 +41,7 @@ class RunSimulator(
         val turnsPerCombat = mutableListOf<Int>()
         var currentCombatTurnStart: Int? = null
         var defeatEncounterId: String? = null
+        val pickedRewardIds = mutableListOf<String>()
 
         while (true) {
             actions++
@@ -64,17 +66,18 @@ class RunSimulator(
                 RunManager.Phase.COMBAT -> driveCombat(engine, run, state)
                 RunManager.Phase.REWARD -> {
                     val pick = policy.chooseReward(run.rewardChoices)
+                    pickedRewardIds.add(pick.id)
                     run.chooseReward(pick)
                     currentCombatTurnStart = null
                 }
                 RunManager.Phase.VICTORY -> {
                     turnsPerCombat.add(turnsFor(currentCombatTurnStart, state.turnNumber))
-                    return SimulationResult(seed, RunOutcome.VICTORY, peakDebt, run.hp, turnsPerCombat, null)
+                    return SimulationResult(seed, RunOutcome.VICTORY, peakDebt, run.hp, turnsPerCombat, null, pickedRewardIds)
                 }
                 RunManager.Phase.DEFEAT -> {
                     turnsPerCombat.add(turnsFor(currentCombatTurnStart, state.turnNumber))
                     defeatEncounterId = run.debt?.let { currentEncounterId(state) }
-                    return SimulationResult(seed, RunOutcome.DEFEAT, peakDebt, 0, turnsPerCombat, defeatEncounterId)
+                    return SimulationResult(seed, RunOutcome.DEFEAT, peakDebt, 0, turnsPerCombat, defeatEncounterId, pickedRewardIds)
                 }
             }
         }

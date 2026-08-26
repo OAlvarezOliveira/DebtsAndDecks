@@ -36,6 +36,24 @@ object DebtConfig {
     /** Flat Debt reduction granted by discarding a card via the repay action. */
     const val REPAY_DISCARD_VALUE: Int = 5
 
+    // --- C4 leverage-payoff-cards constants ---
+
+    /** Extra damage per hit for `debt_scaling` ATTACK cards: floor(debt / N), ON TOP of the
+     *  unconditional flat Leverage bonus (floor(debt / 5)) every attack already gets. Tagged
+     *  attacks thus double-dip by design (flat /5 + tag /10). */
+    const val DEBT_SCALING_ATTACK_DIVISOR: Int = 10
+
+    /** Divisor for `debt_payoff` cards (ATTACK damage or SKILL Block) = floor(debt / N).
+     *  Deliberately NO wipe and NO repayment: the "keep the band" sibling of the all-in
+     *  `execution_damage` wipe. */
+    const val DEBT_PAYOFF_DIVISOR: Int = 2
+
+    /** Divisor for `debt_draw` cards: draw = [DEBT_DRAW_BASE] + floor(debt / N). */
+    const val DEBT_DRAW_DIVISOR: Int = 10
+
+    /** Base draw for `debt_draw` cards at zero/low Debt. */
+    const val DEBT_DRAW_BASE: Int = 1
+
     /** HP cost of the Chapter 11 card's full Debt wipe. */
     const val CHAPTER_11_HP_COST: Int = 15
 

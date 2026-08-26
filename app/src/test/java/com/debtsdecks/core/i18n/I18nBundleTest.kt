@@ -231,6 +231,9 @@ class I18nBundleTest {
             "Escrow Shield active: Debt from borrowing is halved this combat!",
             bundle.get("log.escrow_shield_active")
         )
+        assertEquals("Paid out 14 Debt as damage!", bundle.format("log.debt_payoff_damage", 14))
+        assertEquals("Held collateral: gained 10 Block.", bundle.format("log.debt_payoff_block", 10))
+        assertEquals("Overdraft: drew 3 cards.", bundle.format("log.debt_draw", 3))
     }
 
     @Test
@@ -257,6 +260,9 @@ class I18nBundleTest {
             "¡Escudo de Garantía activo: la Deuda por préstamos se reduce a la mitad este combate!",
             bundle.get("log.escrow_shield_active")
         )
+        assertEquals("¡Liquidaste 14 de Deuda como daño!", bundle.format("log.debt_payoff_damage", 14))
+        assertEquals("Garantía retenida: ganaste 10 de Bloqueo.", bundle.format("log.debt_payoff_block", 10))
+        assertEquals("Descubierto: robaste 3 cartas.", bundle.format("log.debt_draw", 3))
     }
 
     @Test
@@ -490,11 +496,23 @@ class I18nBundleTest {
         assertEquals("Risky Investment", b.get("card.risky_investment.name"))
         assertEquals("Gain 12 Gold. Lose 6 HP.", b.get("card.risky_investment.description"))
         assertEquals("Bounced Check", b.get("card.bounced_check.name"))
-        assertEquals("Deal 7 damage. Add 3 Debt.", b.get("card.bounced_check.description"))
+        assertEquals("Deal 5 damage. Add 4 Debt.", b.get("card.bounced_check.description"))
         assertEquals("Zombie Debt", b.get("card.zombie_debt.name"))
-        assertEquals("Add 2 Debt. Add a copy to your discard pile.", b.get("card.zombie_debt.description"))
+        assertEquals("Add 2 Debt. Gain 1 Credit. Add a copy to your discard pile.", b.get("card.zombie_debt.description"))
         assertEquals("Eternal Debt", b.get("card.eternal_debt.name"))
-        assertEquals("Add 4 Debt.", b.get("card.eternal_debt.description"))
+        assertEquals("Add 3 Debt. Add a copy to your discard pile. Gain 1 Strength per 10 Debt.", b.get("card.eternal_debt.description"))
+        assertEquals("Leverage Strike", b.get("card.leverage_strike.name"))
+        assertEquals("Deal 5 damage. Deal 1 extra damage per 10 Debt.", b.get("card.leverage_strike.description"))
+        assertEquals("Asset Bubble", b.get("card.asset_bubble.name"))
+        assertEquals("Deal damage equal to half your Debt. Keep your Debt.", b.get("card.asset_bubble.description"))
+        assertEquals("Overdraft", b.get("card.overdraft.name"))
+        assertEquals("Draw 1 card, plus 1 per 10 Debt.", b.get("card.overdraft.description"))
+        assertEquals("Collateral Hold", b.get("card.collateral_hold.name"))
+        assertEquals("Gain Block equal to half your Debt. Keep your Debt.", b.get("card.collateral_hold.description"))
+        assertEquals("Repossession Expert", b.get("card.repo_expert.name"))
+        assertEquals("Deal 7 damage. Apply 1 Weak.", b.get("card.repo_expert.description"))
+        assertEquals("Emergency Fund", b.get("card.emergency_fund.name"))
+        assertEquals("Gain 6 Block. Draw 1 card.", b.get("card.emergency_fund.description"))
     }
 
     @Test
@@ -523,11 +541,23 @@ class I18nBundleTest {
         assertEquals("Inversión Arriesgada", b.get("card.risky_investment.name"))
         assertEquals("Gana 12 de Oro. Pierdes 6 de PS.", b.get("card.risky_investment.description"))
         assertEquals("Cheque Sin Fondos", b.get("card.bounced_check.name"))
-        assertEquals("Inflige 7 de daño. Añade 3 de Deuda.", b.get("card.bounced_check.description"))
+        assertEquals("Inflige 5 de daño. Añade 4 de Deuda.", b.get("card.bounced_check.description"))
         assertEquals("Deuda Zombi", b.get("card.zombie_debt.name"))
-        assertEquals("Añade 2 de Deuda. Añade una copia a tu pila de descarte.", b.get("card.zombie_debt.description"))
+        assertEquals("Añade 2 de Deuda. Gana 1 de Crédito. Añade una copia a tu pila de descarte.", b.get("card.zombie_debt.description"))
         assertEquals("Deuda Eterna", b.get("card.eternal_debt.name"))
-        assertEquals("Añade 4 de Deuda.", b.get("card.eternal_debt.description"))
+        assertEquals("Añade 3 de Deuda. Añade una copia a tu pila de descarte. Gana 1 de Fuerza por cada 10 de Deuda.", b.get("card.eternal_debt.description"))
+        assertEquals("Golpe Apalancado", b.get("card.leverage_strike.name"))
+        assertEquals("Inflige 5 de daño. Inflige 1 de daño extra por cada 10 de Deuda.", b.get("card.leverage_strike.description"))
+        assertEquals("Burbuja de Activos", b.get("card.asset_bubble.name"))
+        assertEquals("Inflige daño igual a la mitad de tu Deuda. Conservas tu Deuda.", b.get("card.asset_bubble.description"))
+        assertEquals("Descubierto", b.get("card.overdraft.name"))
+        assertEquals("Roba 1 carta, más 1 por cada 10 de Deuda.", b.get("card.overdraft.description"))
+        assertEquals("Garantía Retenida", b.get("card.collateral_hold.name"))
+        assertEquals("Gana Bloqueo igual a la mitad de tu Deuda. Conservas tu Deuda.", b.get("card.collateral_hold.description"))
+        assertEquals("Experto en Reposeo", b.get("card.repo_expert.name"))
+        assertEquals("Inflige 7 de daño. Aplica 1 de Debilidad.", b.get("card.repo_expert.description"))
+        assertEquals("Fondo de Emergencia", b.get("card.emergency_fund.name"))
+        assertEquals("Gana 6 de Bloqueo. Roba 1 carta.", b.get("card.emergency_fund.description"))
     }
 
 }

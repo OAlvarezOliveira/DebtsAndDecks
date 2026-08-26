@@ -222,6 +222,32 @@ class RunSimulationHarnessTest {
         assertTrue(leverage.winRate + 0.02 >= greedy.winRate, "leverage policy should not win less")
         // Report the leverage spread for the experiment output.
         println("Leverage spread: ${"%.1f".format((leverage.winRate - greedy.winRate) * 100)}pp win | debt ${"%.1f".format(leverage.avgPeakDebt - greedy.avgPeakDebt)}")
+
+        // --- C4 variance exit evidence (R4) ---
+        // R4.1: borrowing must now PAY — the leverage policy's peak Debt must clearly exceed the
+        // conservative baseline (design: the C4 payoff table was created to invert this number,
+        // which was 9.5 vs 10.1 before C4 — leverage peaked LOWER while trying to borrow).
+        assertTrue(
+            leverage.avgPeakDebt > greedy.avgPeakDebt,
+            "Leverage peak debt (${leverage.avgPeakDebt}) must exceed greedy baseline (${greedy.avgPeakDebt})"
+        )
+        // R4.2: no dominant line — neither policy may win 70%+.
+        assertTrue(greedy.winRate < 0.70, "greedy win rate ${greedy.winRate} must stay under 70%")
+        assertTrue(leverage.winRate < 0.70, "leverage win rate ${leverage.winRate} must stay under 70%")
+        // R4.3: the new payoff cards must actually be picked in winning runs (table is played,
+        // not dead weight). Collect picks from victory seeds across both policies.
+        val winningPicks = (greedyResults + leverageResults)
+            .filter { it.outcome == RunOutcome.VICTORY }
+            .flatMap { it.pickedRewardIds }
+            .toSet()
+        val payoffPicked = winningPicks.intersect(
+            setOf("leverage_strike", "asset_bubble", "overdraft", "collateral_hold", "zombie_debt")
+        )
+        assertTrue(
+            payoffPicked.isNotEmpty(),
+            "winning runs must pick at least one C4 payoff/leverage card; picked=${winningPicks}"
+        )
+        println("C4 payoff cards picked in winning runs: ${payoffPicked}")
     }
 
     @Test
