@@ -4,7 +4,7 @@
 
 ## Dev loop at a glance
 
-- Stack: **Android · LibGDX 1.12.1 · Kotlin · kotlinx-serialization · Koin** (single `:app` Gradle module).
+- Stack: **Android (compileSdk/targetSdk 36, minSdk 24) · AGP 8.10.1 · Gradle 8.11.1 · Kotlin 2.2.20 · LibGDX 1.14.2 · kotlinx-serialization · Koin** (single `:app` Gradle module). Baseline resolved and justified in `docs/ADR/0002-16kb-page-size-and-platform-baseline.md`.
 - Orchestration: SDD (init → explore → proposal → spec → design → tasks → apply → verify → sync → archive) via el-Gentleman on Pi. Artifact store = **Engram** (memory), not `openspec/` — this repo has no `openspec/` directory.
 - Persistent memory: **Engram** (HTTP server `engram serve` @ `ENGRAM_URL=http://127.0.0.1:7437`). Project detection is pinned via a repo-local `.engram/config.json` with `{"project_name": "debtsanddecks"}`.
 
@@ -18,22 +18,35 @@
 ## Reproduce the build/tests (headless)
 
 ```bash
-# preferred: the committed wrapper works again (re-verified 2026-08-27)
+# preferred: the committed wrapper works (re-verified 2026-08-27 on Gradle 8.11.1)
 ./gradlew --no-daemon :app:testDebugUnitTest [--tests "<FQCN>"]
 
-# equivalent fallback via the cached distribution, if the wrapper ever breaks again
-~/.gradle/wrapper/dists/gradle-8.9-bin/90cnw93cvbtalezasaz0blq0a/gradle-8.9/bin/gradle \
+# release artifacts (unsigned until P6 adds signing)
+./gradlew --no-daemon :app:bundleRelease      # -> app/build/outputs/bundle/release/app-release.aab
+./gradlew --no-daemon :app:assembleRelease    # -> app/build/outputs/apk/release/app-release-unsigned.apk
+
+# fallback only, if the wrapper ever breaks: a standalone distribution
+~/.gradle/standalone/gradle-8.11.1/bin/gradle \
   --no-daemon :app:testDebugUnitTest [--tests "<FQCN>"]
 ```
 
-- **Gradle version pin: 8.9**, and it was never the problem —
-  `gradle/wrapper/gradle-wrapper.properties` reads
-  `distributionUrl=…/gradle-8.9-bin.zip` (verified 2026-08-27, byte-for-byte).
+- **Gradle version pin: 8.11.1** (raised from 8.9 on 2026-08-27). It is not a free choice: AGP
+  8.10.1 requires Gradle >= 8.11.1, and AGP 8.10 is the lowest stable line supporting `compileSdk 36`.
+  Only the `distributionUrl` text in `gradle/wrapper/gradle-wrapper.properties` changed; the
+  wrapper JAR was **not** regenerated.
+- The standalone fallback above was installed while resolving that Gradle bump
+  (SHA-256 `f397b287…6eee151c6`, verified against the published `.sha256`). It is retained as a
+  fallback only — **`./gradlew` is the canonical invocation** and needs no repair.
+- Build outputs `*.apk` / `*.aab` are gitignored, so `fd` will not list them without `-I`.
+- **On any future LibGDX bump, re-run the 16 KB Check A script** kept in ADR 0002 (it is
+  deliberately not committed to the tree). LibGDX 1.12.1 shipped `.so` files with `p_align 0x1000`,
+  which Google Play rejects for `targetSdk >= 35`; 1.13.0 is the first aligned release.
 - **The "wrapper jar is broken" note is obsolete.** It was true before `7cc7bf1 build(gradle): commit
   wrapper so public repo clones are buildable`. Re-verified 2026-08-27: `gradle/wrapper/gradle-wrapper.jar`
   is a valid 43 KB archive containing `GradleWrapperMain.class`, and `./gradlew --version` reports
-  Gradle 8.9 successfully. No wrapper repair is outstanding. Older SDD artifacts that mandate the
-  cached-binary path as the *only* working invocation are stale on this point.
+  Gradle 8.11.1 successfully after the `distributionUrl` bump. No wrapper repair is outstanding.
+  Older SDD artifacts that mandate the cached-binary path as the *only* working invocation are
+  stale on this point.
 - Ignore harmless daemon-socket stderr noise ("Unexpected type tag 71").
 - Baseline suite: **124/124 green** across **10 test classes** (measured 2026-08-27 via
   `:app:testDebugUnitTest`; the figure previously recorded here was stale). Render/art has no headless GL harness —

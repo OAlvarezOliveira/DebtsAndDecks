@@ -21,13 +21,14 @@ signing, store listing and closed testing. See **BD-1** below — v1 ships free.
 ### To Do
 - [ ] **Polish** Manual playtest on device/emulator: full loop + economy feel
 - [ ] **Polish** Balance pass from playtest (debt pressure, boss LEVY, reward pool)
-- [ ] **Build** APK installs and runs on device (target < 20 MB)
 - [ ] **Measure** Metrics dashboard below (combat duration, win rate, FPS, launch time)
 
 ### Doing
-- [ ] `play-store-launch` P1 `platform-baseline` (platform modernization — not started here)
+- [ ] `play-store-launch` P2 (next phase)
 
 ### Done
+- [x] **Platform** `play-store-launch` P1 `android-platform-modernization` — compileSdk/targetSdk 36, AGP 8.10.1, Gradle 8.11.1, Kotlin 2.2.20, LibGDX 1.14.2; 16 KB verdict `ALIGNED-AFTER-FALLBACK` verified on shipping bytes and on a 16 KB device (2026-08-27, see ADR 0002)
+- [x] **Build** APK builds, installs and runs — **13 MB** release APK / 12 MB AAB, under the `< 20 MB` target (2026-08-27). *Run was on a 16 KB **emulator**; a physical-device run is still outstanding (OQ-1).*
 - [x] **Delivery** Commit debt-economy work (delivered — `38d584d`, `5f0cc3e`, `d07196b`; verified 2026-08-27 via `git log`)
 - [x] **Delivery** Merge combat-progression-i18n stack (pr1–pr7, 8 commits) into `develop`
 - [x] **Setup** Gradle project with LibGDX + Kotlin + Serialization + Koin
@@ -82,6 +83,41 @@ state, so the launch programme starts from facts instead of stale prose.
 - Docs-only change: no `.kt`/`.kts`/`.xml`/`.json` touched, test count identical before and after.
 **Next:** P1 `platform-baseline` (Gradle/AGP/Kotlin, `compileSdk`/`targetSdk` 35+, 16 KB page size,
 LibGDX version question, wrapper-jar repair). Then decide C3's real scope and give Gold a sink (C7).
+
+### 2026-08-27 (Session 3 — `play-store-launch` P1 `android-platform-modernization`)
+**Goal:** Raise the Android platform baseline to `compileSdk`/`targetSdk` 36 and settle the 16 KB
+page-size question with measured bytes, not version numbers.
+**Done:**
+- **16 KB verdict: `ALIGNED-AFTER-FALLBACK`.** LibGDX 1.12.1 genuinely failed — its 64-bit `.so`
+  files ship `p_align 0x1000` where Play requires `>= 0x4000`. Measured every candidate release
+  from Maven rather than guessing: **1.13.0 is the alignment floor**. Pinned **1.14.2** (trigger
+  **T1**), which measures `0x4000` on both 64-bit ABIs. Cross-validated with `readelf -lW`.
+- Toolchain resolved from primary sources *before* editing, then applied one variable per rung with
+  the full suite after each: Gradle 8.9 → **8.11.1**, Kotlin 1.9.22 → **2.2.20**, AGP 8.4.0 →
+  **8.10.1**, compileSdk/targetSdk 34 → **36**, LibGDX 1.12.1 → **1.14.2**. `minSdk` stays **24**.
+  All seven rungs green at **124/124**, so the count P0 measured did not move.
+- All three 16 KB layers verified on the **shipping bytes**: Check A on the `.so` extracted from the
+  release APK (PASS), Check B `zipalign -c -P 16 -v 4` (exit 0, all four `.so` `Stored` and on exact
+  16384-byte boundaries), and **Check C on a real 16 KB device** — AVD with
+  `getconf PAGE_SIZE = 16384` on API 36: install `Success`, launch `Status: ok`, `nativeloader` maps
+  `libgdx.so` straight out of the APK, LibGDX reaches OpenGL ES 3.1, no crashes.
+- Manifest cleanup: removed the deprecated `package=` attribute (the AGP deprecation warning is now
+  **0** occurrences) and all three unused permissions (`INTERNET`, `ACCESS_NETWORK_STATE`,
+  `WAKE_LOCK`); disabled the accelerometer, compass and gyroscope.
+- `copyAndroidNatives` rewritten as a real `Sync` task — now up-to-date-checkable and
+  configuration-cache safe, which the old `doFirst { copy { } }` could never be.
+- **Answered P0's open handoff on APK size:** release APK **13 MB**, AAB **12 MB** — comfortably
+  under the `< 20 MB` target, so the PNG revert did not break the budget.
+- **Answered P0's card-art handoff:** **19 of 27** cards render art (8 are deliberately art-less) —
+  exactly the expected count. The decoder accepts the files; nothing to defer to P5.
+- **Corrected a defect in the phase instructions:** they called for
+  `android:layoutInDisplayCutoutMode` on `<activity>`, which does not exist (AAPT rejects it). The
+  real attribute is the *theme* attribute `android:windowLayoutInDisplayCutoutMode`, now set to
+  `shortEdges` in `Theme.DebtsAndDecks.Fullscreen`.
+- Full rationale, raw evidence, the Check A script and the rollback pins are in
+  `docs/ADR/0002-16kb-page-size-and-platform-baseline.md`.
+**Next:** P2. Deferred on purpose: `allowBackup` → **P4**; `numSamples` and any cutout restyling →
+**P5**; app signing → **P6**; headless render/GL harness and version catalogs → **P7**.
 
 ### 2026-08-25 (Session 2 — delivery, fallback harness, Pi/gentle-engram)
 **Goal:** Deliver the pending debt-economy work to `develop`.
@@ -144,7 +180,14 @@ LibGDX version question, wrapper-jar repair). Then decide C3's real scope and gi
 | 2026-08-25 | Engram tooling | Server on `127.0.0.1:7437`; project name is **`debtsanddecks`** (lowercase) — `mem_search` with any other casing fails connection. |
 | 2026-08-27 | **BD-1 — v1 ships free** | v1 ships **free**: no billing, no IAP, no ads, no analytics, no third-party SDKs. Two permanent consequences: (1) the Play **Data safety** declaration stays "no data collected, no data shared" for as long as no analytics/ads/billing SDK is added — adding one **reopens BD-1**; (2) publication uses a **personal** developer account, so **closed testing with 12 opted-in testers for 14 continuous days** is required before production access can be requested *(policy verified 2026-08-27 — re-check the Play Console requirement page before relying on it for a release date)*. |
 | 2026-08-27 | C3 `remove-free-debt-valve` status | **NEEDS RE-VERIFICATION.** `rg "RepayMode\|repayDebt\|REPAY_DISCARD_VALUE\|USURY_HP_RATIO" app/src/` returns zero matches and `9afd532` removed the valve, so C3's scope may already be satisfied by C2/C4 — or C3 may be mis-scoped. P0 records the evidence and deliberately does not decide. |
-| 2026-08-27 | Card art format | Reverted to PNG by `fe281e1`; 19 files, all genuine PNG, ~355–470 KB each. APK-size impact against the `< 20 MB` target is handed to P1. |
+| 2026-08-27 | Card art format | Reverted to PNG by `fe281e1`; 19 files, all genuine PNG, ~355–470 KB each. APK-size impact against the `< 20 MB` target is handed to P1. — *answered by P1 2026-08-27: release APK **13 MB**, AAB **12 MB**; the budget holds, no action needed.* |
+| 2026-08-27 | **16 KB page-size compliance** | **`ALIGNED-AFTER-FALLBACK`.** LibGDX 1.12.1 ships 64-bit `.so` with `p_align 0x1000`; Play requires `>= 0x4000` for `targetSdk >= 35`. Measured every release: **1.13.0 is the floor**, pinned **1.14.2** (trigger **T1**). Verified on shipping bytes at all three layers — ELF alignment, `zipalign -P 16`, and a real device with `PAGE_SIZE = 16384`. **No shortcut was used**: 64-bit ABIs kept, `useLegacyPackaging` never set, no warning suppressed, `targetSdk` never lowered. Evidence in ADR 0002. |
+| 2026-08-27 | Toolchain baseline | Gradle **8.11.1**, AGP **8.10.1**, Kotlin **2.2.20**, LibGDX **1.14.2**, compileSdk/targetSdk **36**, minSdk **24** (unchanged). Each rung is forced by the one above it, not chosen for recency — AGP 8.10 is the lowest stable line supporting API 36, and it dictates the Gradle and Kotlin floors. Suite green at 124/124 after every rung. |
+| 2026-08-27 | Gradle wrapper status | **Not broken, and no repair pulled forward from P7.** The JAR is a valid 43 KB archive; it only ever pointed at a Gradle too old for AGP 8.10.1. Bumping `distributionUrl` to 8.11.1 is sufficient and `./gradlew` is the canonical invocation. A standalone 8.11.1 (SHA-256 verified) was installed while resolving this and is retained as a fallback only. |
+| 2026-08-27 | Device run (Check C) | Emulated AVD, image `android-36 google_apis_ps16k x86_64`, `getconf PAGE_SIZE = 16384`, `ro.build.version.sdk = 36`. Debug build (release APK is unsigned until P6): install `Success`, launch `Status: ok` in 3502 ms, `nativeloader` mapped `libgdx.so` from the APK, OpenGL ES 3.1 reached, no crashes. **Open (OQ-1): still no run on a *physical* 16 KB device.** |
+| 2026-08-27 | `allowBackup` | **Deferred to P4** (OQ-2). Left at `true` in P1; the decision belongs with the Play Data safety declaration, not with the platform baseline. |
+| 2026-08-27 | `largeHeap` artifact discrepancy | Spec says remove it, design §6.4 says keep it. **Design followed** per the executor contract, and both positions are recorded. Shrinking the heap is a runtime-risk change with no submission benefit, and P1 must not change behaviour. |
+| 2026-08-27 | Cutout attribute defect | The phase instructions named `android:layoutInDisplayCutoutMode` on `<activity>` — **that attribute does not exist** and AAPT rejects it. The real one is the *theme* attribute `android:windowLayoutInDisplayCutoutMode`, now `shortEdges` in `Theme.DebtsAndDecks.Fullscreen`. On API 35+ the platform widens it to `always`; the declaration still matters for API 27–34. |
 
 ---
 
