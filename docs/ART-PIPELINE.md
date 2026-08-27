@@ -35,8 +35,10 @@ why the surviving damage is exactly the kind a flood fill cannot reach (section 
 
 ### 2.3 Card face geometry
 
-`card_frame_*.png` has a **fully transparent centre**; the opaque border eats **13.7% of the
-width and 12.9% of the height per side** (`FRAME_INSET_X` / `FRAME_INSET_Y`). Consequences:
+`card_frame_*.png` is expected to have a **fully transparent centre**; the opaque border eats
+**13.7% of the width and 12.9% of the height per side** (`FRAME_INSET_X` / `FRAME_INSET_Y`).
+Measured opaque coverage inside that window: attack 8.6%, skill 11.5%, **power 96.4%** — the power
+frame violates the contract outright (section 3.9). Consequences:
 
 - The frame is drawn **last**, over everything, and the content must live inside that hole.
 - The interior splits into an art window (top) and a solid text panel (bottom
@@ -123,6 +125,21 @@ scale crops ~12% off the top and bottom. Authoring at 1920x720 or wider would re
 Brief item A7 specified a separate vignette overlay PNG drawn at ~50% alpha above everything. It
 was instead baked into the two background PNGs, because a true overlay also dims the HUD and the
 combat log. Deliberate, and reversible in minutes if the literal spec is wanted.
+
+### 3.8 Baked text in the ATTACK frame
+
+`card_frame_attack.png` has lettering stamped into the lower moulding (reads as `...TSTOPPED`).
+Because the frame is shared, this appears on **every ATTACK card in the game**, under the type tag.
+
+### 3.9 The POWER frame has no window
+
+`card_frame_power.png` is **96.4% opaque inside the area the renderer treats as the transparent
+window**, against 8.6% and 11.5% for attack and skill. The frame is drawn last, over everything,
+so a POWER card would render as a solid slab: no art, no name, no description, no type tag. It
+also carries a residual transparency checkerboard in its upper right.
+
+`all.json` currently holds 18 SKILL and 9 ATTACK cards and **zero POWER**, so nothing triggers it
+today. It will break the moment the first POWER card is added.
 
 ## 4. What is missing to debug the render layer
 
