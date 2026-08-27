@@ -13,6 +13,8 @@ import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.I18NBundle
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.combat.DebtConfig
+import com.debtsdecks.core.combat.NodeConfig
+import com.debtsdecks.core.combat.RunManager
 import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.model.CardType
 import com.debtsdecks.core.model.CombatState
@@ -108,6 +110,13 @@ class CombatRenderer(private val bundle: I18NBundle) {
     // played" per R8/R9. Design doc doesn't pin an exact color, so this is this apply run's
     // documented choice — see apply-progress-phase3.
     private val borrowTintColor = Color(1f, 0.55f, 0.15f, 1f)
+
+    // C7 node screen: which sub-view is active (main choices vs shop/remove/loan sub-offers).
+    // Input and render share this via [setNodeMode]/[nodeMode].
+    enum class NodeMode { CHOICES, SHOP, REMOVE, LOAN }
+    private var nodeMode: NodeMode = NodeMode.CHOICES
+    fun setNodeMode(mode: NodeMode) { nodeMode = mode }
+    fun getNodeMode(): NodeMode = nodeMode
 
     fun render(state: CombatState, batch: SpriteBatch) {
         // ShapeRenderer defaults to a raw screen-pixel projection; without this it draws
@@ -449,6 +458,102 @@ class CombatRenderer(private val bundle: I18NBundle) {
             50f, 640f
         )
         batch.end()
+    }
+
+    // --- C7 between-fight node screen (logic in RunManager; pure presentation here) ---
+
+    fun renderNode(run: RunManager, batch: SpriteBatch) {
+        shapeRenderer.projectionMatrix = batch.projectionMatrix
+        drawBackground()
+
+        batch.begin()
+        font.draw(batch, bundle.format("node.header"), 50f, 690f)
+        smallFont.draw(batch, bundle.format("node.heal", NodeConfig.HEAL_AMOUNT), 50f, 665f)
+        smallFont.draw(batch, bundle.format("node.gold_debt", run.gold, run.debt), 50f, 640f)
+        batch.end()
+
+        val buyCost = NodeConfig.escalatedCost(NodeConfig.BUY_BASE, run.nodeIndex)
+        val removeCost = NodeConfig.escalatedCost(NodeConfig.REMOVE_BASE, run.nodeIndex)
+        val loanGold = NodeConfig.escalatedCost(NodeConfig.LOAN_GOLD_BASE, run.nodeIndex)
+        val loanDebt = NodeConfig.escalatedCost(NodeConfig.LOAN_DEBT_BASE, run.nodeIndex)
+
+        when (nodeMode) {
+            NodeMode.CHOICES -> {
+                drawNodeButton(0, bundle.get("node.button.free_pick"), run.rewardChoices.isNotEmpty(), batch)
+                drawNodeButton(1, bundle.get("node.button.repay"), run.gold > 0 && run.debt > 0, batch)
+                drawNodeButton(2, bundle.get("node.button.buy"), run.gold >= buyCost, batch)
+                drawNodeButton(3, bundle.get("node.button.remove"), run.gold >= removeCost, batch)
+                val affordableLoan = run.debt + loanDebt <= DebtConfig.EXECUTION_THRESHOLD
+                drawNodeButton(4, bundle.get("node.button.loan"), affordableLoan, batch)
+            }
+            NodeMode.SHOP -> {
+                batch.begin()
+                font.draw(batch, bundle.format("node.shop.title", run.nodeIndex), 50f, 690f)
+                font.draw(batch, bundle.format("node.buy_offer", buyCost), 50f, 660f)
+                batch.end()
+                drawCardOffers(run.nodeShopChoices, batch)
+            }
+            NodeMode.REMOVE -> {
+                batch.begin()
+                font.draw(batch, bundle.get("node.remove.title"), 50f, 690f)
+                font.draw(batch, bundle.format("node.remove_offer", removeCost), 50f, 660f)
+                batch.end()
+                drawCardOffers(run.resolveNodeRemoveCards(), batch)
+            }
+            NodeMode.LOAN -> {
+                batch.begin()
+                font.draw(batch, bundle.get("node.loan.title"), 50f, 690f)
+                font.draw(batch, bundle.format("node.loan_offer", loanGold, loanDebt), 50f, 660f)
+                batch.end()
+                drawNodeButton(0, bundle.get("node.button.loan"), true, batch)
+            }
+        }
+    }
+
+    private fun drawNodeButton(index: Int, label: String, enabled: Boolean, batch: SpriteBatch) {
+        val b = nodeChoiceBounds(index)
+        val base = if (enabled) Color(0.3f, 0.6f, 1f, 1f) else Color.GRAY
+        shadowRect(b.x, b.y, b.width, b.height)
+        gradientRect(b.x, b.y, b.width, b.height, darken(base, 0.65f), base)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.setColor(0f, 0f, 0f, 1f)
+        shapeRenderer.rect(b.x, b.y, b.width, b.height)
+        shapeRenderer.end()
+        batch.begin()
+        smallFont.draw(batch, label, b.x + 10f, b.y + b.height / 2f + 6f)
+        batch.end()
+    }
+
+    private fun drawCardOffers(cards: List<CardDefinition>, batch: SpriteBatch) {
+        cards.forEachIndexed { index, card ->
+            val bounds = nodeSubCardBounds(index, cards.size)
+            shadowRect(bounds.x, bounds.y, bounds.width, bounds.height)
+            gradientRect(bounds.x, bounds.y, bounds.width, bounds.height, Color(0.85f, 0.85f, 0.85f, 1f), Color.WHITE)
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+            shapeRenderer.setColor(0f, 0f, 0f, 1f)
+            shapeRenderer.rect(bounds.x, bounds.y, bounds.width, bounds.height)
+            shapeRenderer.end()
+            batch.begin()
+            smallFont.draw(batch, bundle.get(card.name), bounds.x + 10f, bounds.y + bounds.height - 20f)
+            smallFont.draw(batch, bundle.get(card.description), bounds.x + 10f, bounds.y + 60f)
+            batch.end()
+        }
+    }
+
+    // --- Node layout helpers (shared with CombatInputHandler via the public bounds fn) ---
+
+    fun nodeChoiceBounds(index: Int): Rectangle {
+        val x = listOf(40f, 230f, 420f, 610f, 800f)[index]
+        return Rectangle(x, 120f, 170f, 50f)
+    }
+
+    fun nodeSubCardBounds(index: Int, count: Int): Rectangle {
+        val w = 280f
+        val h = 380f
+        val spacing = 40f
+        val total = count * w + (count - 1) * spacing
+        val startX = (1280f - total) / 2f
+        return Rectangle(startX + index * (w + spacing), 180f, w, h)
     }
 
     fun renderReward(choices: List<CardDefinition>, batch: SpriteBatch) {

@@ -50,6 +50,10 @@ class RunManager(
     /** Current run deck size (used by the sim's node policy / UI affordance). */
     val deckSize: Int get() = deck.size
 
+    /** Resolves the node's removal-offer ids to their full card definitions (for rendering). */
+    fun resolveNodeRemoveCards(): List<CardDefinition> =
+        nodeRemoveChoices.mapNotNull { cardRegistry.get(it) }
+
     /** Run-persistent liability, mirrored from [combatEngine] on every [refresh] while in combat. */
     var debt: Int = 0
         private set

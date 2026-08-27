@@ -39,7 +39,7 @@ class GameScreen(
         // begin()/end() - SpriteBatch throws IllegalStateException on a nested begin().
         when (runManager.phase) {
             RunManager.Phase.COMBAT -> renderer.render(combatEngine.getState(), batch)
-            RunManager.Phase.NODE -> renderer.renderReward(runManager.rewardChoices, batch) // PR2: full node screen
+            RunManager.Phase.NODE -> renderer.renderNode(runManager, batch)
             RunManager.Phase.VICTORY -> renderer.renderRunEnd(batch, won = true)
             RunManager.Phase.DEFEAT -> renderer.renderRunEnd(batch, won = false)
         }

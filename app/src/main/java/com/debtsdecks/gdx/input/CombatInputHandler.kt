@@ -38,7 +38,7 @@ class CombatInputHandler(
                     false
                 }
             }
-            RunManager.Phase.NODE -> handleRewardTap(worldPos.x, worldPos.y) // PR2: full node tap
+            RunManager.Phase.NODE -> handleNodeTap(worldPos.x, worldPos.y)
             RunManager.Phase.VICTORY, RunManager.Phase.DEFEAT -> {
                 runManager.restartRun()
                 deselect()
@@ -47,15 +47,59 @@ class CombatInputHandler(
         }
     }
 
-    private fun handleRewardTap(x: Float, y: Float): Boolean {
-        val choices = runManager.rewardChoices
-        choices.forEachIndexed { index, card ->
-            if (CombatRenderer.rewardCardBounds(index, choices.size).contains(x, y)) {
-                runManager.chooseReward(card)
-                return true
+    /** C7: node screen taps — main choices + sub-offers (shop/remove/loan) + cancel. */
+    private fun handleNodeTap(x: Float, y: Float): Boolean {
+        val mode = renderer.getNodeMode()
+        if (mode == CombatRenderer.NodeMode.CHOICES) {
+            // Main choice buttons (0..4).
+            for (i in 0..4) {
+                if (renderer.nodeChoiceBounds(i).contains(x, y)) {
+                    return when (i) {
+                        0 -> { runManager.takeNodeFreePick(runManager.rewardChoices.first()); true }
+                        1 -> { if (runManager.repayViaNode()) { announce(); true } else false }
+                        2 -> { renderer.setNodeMode(CombatRenderer.NodeMode.SHOP); true }
+                        3 -> { renderer.setNodeMode(CombatRenderer.NodeMode.REMOVE); true }
+                        4 -> { renderer.setNodeMode(CombatRenderer.NodeMode.LOAN); true }
+                        else -> false
+                    }
+                }
             }
+            return false
         }
-        return false
+        // Sub-offer modes: tap a card to choose, or the CANCEL button (top-right corner).
+        if (y > 650f && x > 1100f) { // CANCEL stub zone
+            renderer.setNodeMode(CombatRenderer.NodeMode.CHOICES)
+            return true
+        }
+        return when (mode) {
+            CombatRenderer.NodeMode.SHOP -> {
+                runManager.nodeShopChoices.forEachIndexed { index, card ->
+                    if (renderer.nodeSubCardBounds(index, runManager.nodeShopChoices.size).contains(x, y)) {
+                        return runManager.buyCard(card)
+                    }
+                }
+                false
+            }
+            CombatRenderer.NodeMode.REMOVE -> {
+                val removeCards = runManager.resolveNodeRemoveCards()
+                removeCards.forEachIndexed { index, card ->
+                    if (renderer.nodeSubCardBounds(index, removeCards.size).contains(x, y)) {
+                        return runManager.removeCardFromDeck(card.id)
+                    }
+                }
+                false
+            }
+            CombatRenderer.NodeMode.LOAN -> {
+                renderer.setNodeMode(CombatRenderer.NodeMode.CHOICES)
+                runManager.takeLoan()
+            }
+            CombatRenderer.NodeMode.CHOICES -> false
+        }
+    }
+
+    private fun announce() {
+        soundManager.playCardPlay()
+        refreshAndAnnounce()
     }
 
     private fun handlePlayerAction(x: Float, y: Float, state: CombatState): Boolean {

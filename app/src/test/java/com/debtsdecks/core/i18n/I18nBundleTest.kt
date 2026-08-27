@@ -548,4 +548,46 @@ class I18nBundleTest {
         assertEquals("Gana 6 de Bloqueo. Roba 1 carta.", b.get("card.emergency_fund.description"))
     }
 
+    // --- C7 between-fight node keys ---
+
+    @Test
+    fun `English node keys resolve`() {
+        val b = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+        assertEquals("REST STOP", b.get("node.header"))
+        assertEquals("Restored 8 HP", b.format("node.heal", 8))
+        assertEquals("Gold: 10 | Debt: 4", b.format("node.gold_debt", 10, 4))
+        assertEquals("FREE PICK", b.get("node.button.free_pick"))
+        assertEquals("REPAY", b.get("node.button.repay"))
+        assertEquals("BUY", b.get("node.button.buy"))
+        assertEquals("REMOVE", b.get("node.button.remove"))
+        assertEquals("LOAN", b.get("node.button.loan"))
+        assertEquals("SHOP — 2 deck", b.format("node.shop.title", 2))
+        assertEquals("Choose a card to buy (18 gold)", b.format("node.buy_offer", 18))
+        assertEquals("REMOVE CARD", b.get("node.remove.title"))
+        assertEquals("Choose a card to remove (22 gold)", b.format("node.remove_offer", 22))
+        assertEquals("Take 27 gold, add 18 debt", b.format("node.loan_offer", 27, 18))
+        assertEquals("CANCEL", b.get("node.cancel"))
+        assertEquals("Not enough gold", b.get("node.insufficient_gold"))
+    }
+
+    @Test
+    fun `Spanish node keys resolve with neutral thematic translations`() {
+        val b = I18NBundle.createBundle(bundleBase, Locale("es"))
+        assertEquals("PARADA DE DESCANSO", b.get("node.header"))
+        assertEquals("Recuperaste 8 PS", b.format("node.heal", 8))
+        assertEquals("Oro: 10 | Deuda: 4", b.format("node.gold_debt", 10, 4))
+        assertEquals("TOMAR CARTA", b.get("node.button.free_pick"))
+        assertEquals("PAGAR DEUDA", b.get("node.button.repay"))
+        assertEquals("COMPRAR", b.get("node.button.buy"))
+        assertEquals("ELIMINAR", b.get("node.button.remove"))
+        assertEquals("PRÉSTAMO", b.get("node.button.loan"))
+        assertEquals("TIENDA — mazo 2", b.format("node.shop.title", 2))
+        assertEquals("Elige una carta para comprar (18 de oro)", b.format("node.buy_offer", 18))
+        assertEquals("ELIMINAR CARTA", b.get("node.remove.title"))
+        assertEquals("Elige una carta para eliminar (22 de oro)", b.format("node.remove_offer", 22))
+        assertEquals("Toma 27 de oro, añade 18 de Deuda", b.format("node.loan_offer", 27, 18))
+        assertEquals("CANCELAR", b.get("node.cancel"))
+        assertEquals("Oro insuficiente", b.get("node.insufficient_gold"))
+    }
+
 }
