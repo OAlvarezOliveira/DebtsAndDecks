@@ -277,7 +277,7 @@ that resolves on `develop`.
 | C2 | `debt-as-leverage` | The pivot itself (Leverage/Execution/Liquidation rules above) | Spec: developer · Apply: Pi | **DONE** — `0fb163b` |
 | C3 | `remove-free-debt-valve` | Removes the free discard/gold repay in combat | Pi | **NEEDS RE-VERIFICATION** [^c3] |
 | C4 | `leverage-payoff-cards` | 6-10 new cards, retire/rework the 3 dead cards | Card table: developer · Apply: Pi | **DONE** — `57b11c2` |
-| C5 | `run-length-and-encounter-slots` | 8-encounter run structure | Sequence: developer · Refactor: Pi | PENDING |
+| C5 | `run-length-and-encounter-slots` | 8-encounter run structure | Sequence: developer · Refactor: Pi | **DONE** — `5534524` |
 | C6 | `enemy-roster-and-economy-intents` | 5 new enemies + economy-touching intents | Table: developer · Apply: Pi | PENDING |
 | C7 | `between-fight-node` | Gold's job outside combat | Mixed — supervise the render/input half (no headless coverage there) | PENDING — **now urgent**: Gold has no sink at all on `develop` |
 | C8 | `balance-pass-1` | Tune constants until success criteria are met | Pi (measurable target via simulator) | PENDING |
@@ -308,6 +308,6 @@ above ~70%, tighten Execution before investing further down the sequence.
 
 ---
 
-*Last updated: 2026-08-27 — Keep this file in sync with code. C2 and C4 have landed; the next
-required update lands with C5 (`run-length-and-encounter-slots`) or with whichever change
-resolves C3's scope, whichever comes first.*
+*Last updated: 2026-08-27 — Keep this file in sync with code. C2, C4 and C5 have landed; the next
+required update lands with whichever change resolves C3's scope, or with C6/C7/C8, whichever
+comes first.*

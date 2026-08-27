@@ -298,7 +298,9 @@ Manifest (deleted, verbatim):
 gradle.properties (deleted): android.enableJetifier=true
 ```
 
-Baseline test count **N = 124** (failures 0, errors 0, skipped 0, 10 classes).
+Baseline test count **N = 124** (failures 0, errors 0, skipped 0, 10 classes) as measured at the
+time this rollback point was authored. At develop tip `b142528` (post-integration-rebase) the
+current baseline is **131/0/0 across 11 classes** — see the post-integration note above.
 
 ## Consequences
 
@@ -474,6 +476,14 @@ One variable per rung, full suite after each (baseline N = 124, all green at 124
 | 4.4 | `copyAndroidNatives` -> `Sync` task | PASS 124/0/0 |
 | 4.5 | compileSdk/targetSdk 34 -> 36 | PASS 124/0/0 |
 | 4.6 | LibGDX 1.12.1 -> 1.14.2 (trigger T1) | PASS 124/0/0 |
+
+**Post-integration note (2026-08-27, sdd-verify P1):** the 124/0/0 figures above are the ladder as
+actually run, against the tree P1 was originally authored on. After the `play-store-launch`
+integration rebase onto `develop`, the base tree also carries C5's `RunSequenceTest`, so the
+current baseline at develop tip `b142528` measures **131/0/0 across 11 classes**, not 124/10. This
+does not change any rung's PASS verdict — each rung's test *surface* was unaffected by the platform
+bump either way — it only means 124/10 is no longer the live number to quote elsewhere; see
+`docs/HARNESS.md` and `docs/TRACKING.md` for the corrected baseline.
 
 ### Compiler warning triage
 
