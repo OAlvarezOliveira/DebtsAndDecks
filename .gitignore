@@ -39,6 +39,8 @@ Thumbs.db
 # Local Pi runtime state
 .atl/
 .pi/settings.json
+.pi/gentle-ai/
+.codegraph/
 # Local Engram project config (machine-local tool config, not part of the repo)
 .engram/
 

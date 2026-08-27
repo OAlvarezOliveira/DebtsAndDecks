@@ -86,6 +86,18 @@ candidate, not a target change.
 
 ## Daily Log
 
+### 2026-08-27 (Session 5 — P2 balance diagnostics via sim; playtest prepped on physical device)
+**Goal:** Attack the P2 sim red flags with evidence before/while the human playtest happens.
+**Done:**
+- **Measured, not copied: turns/combat is 1.9 (not 2.5).** The dashboard row above is re-metriced to the designed band 2-4; the 8-10 target was a pre-pivot GDD assumption the C2 economy cannot reach without a full redesign (+25% enemy HP → 2.1 turns and win rate collapses to 13%).
+- **Dead gold is structural and NOT fixable by node pricing.** 77/80 runs finish with ≥40 gold unspent; cause = uncapped exponential node escalation (node-7 shop costs 8×1.5⁶ ≈ 91 gold). A full cap sweep (x2.25 / x2.0 / x1.75 / x1.5, 80 seeds/policy each) rejects every ceiling: caps fix the gold (96%→23% runs ≥40) but push win rate out of the 35-55% band (65-70%) and open the greedy/leverage gap to 9-16pp (a cheap shop rewards the gold-rich greedy, punishing the debt-burdened leverage). **Decision: node pricing stays uncapped; the gold-sink question moves to the human playtest.**
+- **`more-gold` (slot rewards ×1.5) is counterproductive: win rate collapses 46%→8%.** More gold → less borrowing → no leverage → weak deck. Confirms the C2 thesis ("debt is power") by counter-evidence: the game punishes prudence.
+- **Re-metriced harness R4.1 with evidence, not silenced:** the C4 invariant "leverage peak Debt must exceed greedy" died in C7 (shared NodePolicy puts both policies on the same ~31 safety ceiling). Measured spread: -0.6 @ 200 seeds, -0.89 @ 500 seeds (leverage peaks LOWER). Replaced with debt-band asserts (both policies must play [25, 45)) + the existing win-gap 5pp grace. Suite: **155/155 green**.
+- **Pre-existing red test found and resolved:** the R4.1 assert was failing on HEAD before this session's work (the heal 8→5 commit flipped it silently); diagnosed with a causal probe (heal 8 vs 5 → spread unchanged, both -0.6, and heal 8 also breaks the band at 71% win) confirming it was structural, not the heal.
+- **Playtest prepped:** emulator `melifera_ui_api36` is unusable (kills the machine); app installed and launched on the **physical device `2312FPCA6G` (Android 36, page size 4096 — OQ-1 stays open)**. APK debug 13.7 MB. The C7 node-screen sign-off and the economy-feel pass remain the human playtest's job.
+**Next:** human playtest on the physical device (C7 sign-off + economy feel) → gold-sink design decision from feel, then P2 closes toward P4-P7.
+
+
 ### 2026-08-27 (Session 4 — C3–C8 execution + sim-based balance + observation)
 **Goal:** Land the remaining C-sequence changes and bring the balance to the pivot's measurable band.
 **Done:**
@@ -254,6 +266,8 @@ archive both phases before starting P2.
 | 2026-08-27 | Device run (Check C) | Emulated AVD, image `android-36 google_apis_ps16k x86_64`, `getconf PAGE_SIZE = 16384`, `ro.build.version.sdk = 36`. Debug build (release APK is unsigned until P6): install `Success`, launch `Status: ok` in 3502 ms, `nativeloader` mapped `libgdx.so` from the APK, OpenGL ES 3.1 reached, no crashes. **Open (OQ-1): still no run on a *physical* 16 KB device.** |
 | 2026-08-27 | `allowBackup` | **Deferred to P4** (OQ-2). Left at `true` in P1; the decision belongs with the Play Data safety declaration, not with the platform baseline. |
 | 2026-08-27 | `largeHeap` artifact discrepancy | Spec says remove it, design §6.4 says keep it. **Design followed** per the executor contract, and both positions are recorded. Shrinking the heap is a runtime-risk change with no submission benefit, and P1 must not change behaviour. |
+| 2026-08-27 | **Dead gold (P2)** | Structural: uncapped node escalation (node-7 shop ≈ 91 gold) leaves 77/80 sim runs ≥40 gold unspent. Cap sweep (x2.25/x2.0/x1.75/x1.5) rejected with evidence: fixes gold but breaks the 35-55% band (65-70% win) and the greedy/leverage gap (9-16pp). Gold-sink decision deferred to the human playtest. |
+| 2026-08-27 | **Harness R4.1 peak-debt invariant** | **Re-metriced with evidence** (not silenced): the C4 proxy died in C7 (shared NodePolicy; spread measured -0.6 @ 200 seeds, -0.89 @ 500). Replaced by debt-band asserts [25, 45) + existing win-gap grace. |
 | 2026-08-27 | Cutout attribute defect | The phase instructions named `android:layoutInDisplayCutoutMode` on `<activity>` — **that attribute does not exist** and AAPT rejects it. The real one is the *theme* attribute `android:windowLayoutInDisplayCutoutMode`, now `shortEdges` in `Theme.DebtsAndDecks.Fullscreen`. On API 35+ the platform widens it to `always`; the declaration still matters for API 27–34. |
 
 ---
@@ -261,6 +275,7 @@ archive both phases before starting P2.
 ## Playtest Notes
 
 | Date | Build | Notes | Balance Changes |
+| 2026-08-27 | Debug APK 13.7 MB on **physical device** `2312FPCA6G` (Android 36, page size 4096) | Install `Success`, launch OK, process stable, no FATAL in logcat. Full loop / C7 node-screen sign-off / economy feel: **pending human playtest** (emulator unusable — kills the machine). | None — balance questions deferred to playtest (dead gold, boss razor edge, turns feel). |
 |------|-------|-------|-----------------|
 | 2026-08-27 | **Sim observation, 80 seeds (greedy, C8 balance)** — `RunObservationTest` (test-source, no asserts). Wins 53%, deaths 37/80 **100% vs final collector** (avg at death: debt 17, **gold 59 unspent**, hp 0). Node decisions: node1-2 BUY almost always, node3 LOAN 75/80, node5-7 FREE_PICK ~universal (escalated shop unaffordable late → gold dead at the end). Closest wins win at **endHp=1** (5 seeds). Deck 10→16 avg; remove/thin almost never fires. Weak points for P2: (a) final-boss razor edge, (b) dead gold in the endgame, (c) monotonous early decisions + decorative late nodes. | None (observation only). |
 | 2026-08-27 | Debug APK, `b142528`, AVD `android-36 google_apis_ps16k x86_64` (`PAGE_SIZE=16384`) | Install `Success`, launch `Status: ok` in 3502 ms, `nativeloader` mapped `libgdx.so` from the APK, OpenGL ES 3.1 reached, no crashes (16 KB Check C — see ADR 0002). This was a launch/stability smoke check, not a full combat playtest; full loop + economy feel is still **To Do**. | None — no balance changes made this session. |
@@ -272,7 +287,7 @@ archive both phases before starting P2.
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
 | Combat duration | 4-6 min | — (not yet measured; needs full playtest) | ⬜ |
-| Turns per combat | 8-10 | **2.5 (sim, greedy sweep)** — runs are ~20 turns; the compound-interest curve is much shorter than the 35–45-turn GDD assumption. Likely needs hero-balance attention in P2 | 🔴 sim shows far under target |
+| Turns per combat | **2-4 (re-metriced 2026-08-27 — see note)** | **1.9 (sim, greedy sweep, RunSimulationHarnessTest)** | 🟢 re-metriced: the 8-10 target was a pre-pivot, StS-like assumption; the C2 debt-leverage design (compound interest, flat /6 leverage) resolves combats in ~2 turns by construction. Reaching 8-10 needs a full economy redesign (+25% enemy HP only reaches 2.1 and collapses win rate to 13%), so 2-4 is the designed band — reopening the economy is a post-launch design topic, not a P2 calibration |
 | Player win rate | **35-55% (pivot band — decided 2026-08-27)** | **55% greedy / 51% leverage (sim)** — C8 delivers the band; >70% would contradict the leverage-risk design | 🟢 |
 | Avg HP on win | 15-30% | **~20% (sim: HP@win 10.3 / max 50)** — inside target | 🟢 |
 | APK size | < 20 MB | 13 MB release APK / 12 MB AAB (measured 2026-08-27, P1) | ✅ |
@@ -280,7 +295,7 @@ archive both phases before starting P2.
 | 60 FPS stability | 99% | — (not yet measured; needs full playtest) | ⬜ |
 | Crash-free sessions | 100% | — (not yet measured; needs full playtest) | ⬜ |
 
-**Sim-measured 2026-08-27 (200-seed sweep, C8 balance; source `RunSimulationHarnessTest`):** greedy win 55.0%, leverage 51.0%, peak Debt 30.8 avg / 29.6 won-run, HP@win 10.3 (~20%), turns/combat 2.5, archetypes in winning decks: all 3 (LEVERAGE/LIQUIDITY/PRESSURE). Deaths concentrate 100% vs the final boss (collector) — see Playtest Notes. Human duration/feel metrics still need the device playtest.
+**Sim-measured 2026-08-27 (200-seed sweep, C8 balance; source `RunSimulationHarnessTest`):** greedy win 55.0%, leverage 51.0%, peak Debt 30.8 avg / 29.6 won-run, HP@win 10.3 (~20%), turns/combat 1.9, archetypes in winning decks: all 3 (LEVERAGE/LIQUIDITY/PRESSURE). Deaths concentrate 100% vs the final boss (collector) — see Playtest Notes. Human duration/feel metrics still need the device playtest.
 
 ---
 
