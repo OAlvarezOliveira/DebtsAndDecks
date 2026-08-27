@@ -9,11 +9,13 @@ import com.badlogic.gdx.utils.viewport.Viewport
 import com.debtsdecks.core.cards.CardRegistry
 import com.debtsdecks.core.combat.CombatEngine
 import com.debtsdecks.core.combat.RunManager
+import com.debtsdecks.core.data.AssetSource
 import com.debtsdecks.core.data.DataLoader
 import com.debtsdecks.core.enemies.EnemyDefinition
 import com.debtsdecks.core.i18n.Localizer
 import com.debtsdecks.gdx.GameScreen
 import com.debtsdecks.gdx.audio.SoundManager
+import com.debtsdecks.gdx.data.AndroidAssetSource
 import com.debtsdecks.gdx.i18n.BundleLocalizer
 import com.debtsdecks.gdx.input.CombatInputHandler
 import com.debtsdecks.gdx.render.CombatRenderer
@@ -22,10 +24,14 @@ import org.koin.dsl.module
 import kotlin.random.Random
 
 val coreModule = module {
-    single<CardRegistry> { DataLoader.createCardRegistry(androidContext()) }
+    // Core classes declare only the pure-Kotlin AssetSource; the Android adapter is registered
+    // here (where androidContext() is valid) and keeps core/ free of android.* imports per
+    // CONVENTIONS.md Architecture Rule #1 (same split as Localizer/BundleLocalizer below).
+    single<AssetSource> { AndroidAssetSource(androidContext()) }
+    single<CardRegistry> { DataLoader.createCardRegistry(get()) }
     single<Random> { Random(System.currentTimeMillis()) }
-    single<List<EnemyDefinition>> { DataLoader.loadEnemies(androidContext()) }
-    single<com.debtsdecks.core.model.RunSequence> { DataLoader.loadRunSequence(androidContext()) }
+    single<List<EnemyDefinition>> { DataLoader.loadEnemies(get()) }
+    single<com.debtsdecks.core.model.RunSequence> { DataLoader.loadRunSequence(get()) }
     single { CombatEngine(get(), get(), get()) }
     single { RunManager(get(), get(), get(), get(), get()) }
 }
