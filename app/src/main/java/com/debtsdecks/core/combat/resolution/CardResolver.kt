@@ -85,13 +85,26 @@ class CardResolver(private val l10n: Localizer) {
                     )
                 }
 
-                // Liquidation — Ejecución: deals damage equal to current Debt, then wipes it.
+                // Liquidation — Ejecución: damage equal to HALF the current Debt, then wipes it all.
+                // The wipe is what you pay for, so the damage is halved (see EXECUTION_DAMAGE_DIVISOR):
+                // at 1:1 this card dominated every other play and turned Debt into a free battery.
                 if (card.definition.tags.contains("execution_damage")) {
+                    val executed = state.debt / DebtConfig.EXECUTION_DAMAGE_DIVISOR
                     for (t in targets) {
-                        effects.add(Effect.Damage(t, state.debt))
+                        effects.add(Effect.Damage(t, executed))
                     }
                     effects.add(Effect.WipeDebt)
-                    logEntries.add(CombatLogEntry.create(l10n.format("log.execution_damage", state.debt), state.turnNumber))
+                    // This branch returns early, so the shared `exhaust` handler further down is
+                    // unreachable from here; emit it explicitly to honour the card's tag.
+                    if (card.definition.tags.contains("exhaust")) {
+                        effects.add(Effect.ExhaustSelf)
+                    }
+                    logEntries.add(
+                        CombatLogEntry.create(
+                            l10n.format("log.execution_damage", executed, state.debt),
+                            state.turnNumber
+                        )
+                    )
                     return ResolutionResult(effects, logEntries)
                 }
 

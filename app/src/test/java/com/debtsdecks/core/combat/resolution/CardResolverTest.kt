@@ -304,21 +304,55 @@ class CardResolverTest {
 
     // --- Liquidation: Ejecución (execution_damage) ---
 
-    @Test
-    fun `ejecucion deals damage equal to debt and wipes it`() {
-        val def = CardDefinition(
-            id = "ejecucion", name = "Foreclosure", type = CardType.ATTACK, cost = 2,
-            targetType = TargetType.ENEMY, description = "Damage = Debt, then wipe.",
-            rarity = Rarity.RARE, tags = setOf("execution_damage")
-        )
-        val card = CardInstance(def)
+    private fun ejecucionDef() = CardDefinition(
+        id = "ejecucion", name = "Foreclosure", type = CardType.ATTACK, cost = 2,
+        targetType = TargetType.ENEMY, description = "Damage = half Debt, then wipe. Exhaust.",
+        rarity = Rarity.RARE, tags = setOf("execution_damage", "exhaust")
+    )
 
-        val result = resolver.resolve(card, "enemy-1", testState(debt = 22))
+    @Test
+    fun `ejecucion deals damage equal to half the debt and wipes it`() {
+        val result = resolver.resolve(CardInstance(ejecucionDef()), "enemy-1", testState(debt = 22))
 
         val damages = result.effects.filterIsInstance<CardResolver.Effect.Damage>()
         assertEquals(1, damages.size)
-        assertEquals(22, damages.single().amount)
+        assertEquals(11, damages.single().amount)
         assertTrue(result.effects.contains(CardResolver.Effect.WipeDebt))
+    }
+
+    @Test
+    fun `ejecucion exhausts itself so the wipe is once per combat`() {
+        val result = resolver.resolve(CardInstance(ejecucionDef()), "enemy-1", testState(debt = 22))
+
+        assertTrue(result.effects.contains(CardResolver.Effect.ExhaustSelf))
+    }
+
+    @Test
+    fun `ejecucion floors the halved damage on odd debt`() {
+        val result = resolver.resolve(CardInstance(ejecucionDef()), "enemy-1", testState(debt = 49))
+
+        assertEquals(24, result.effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount)
+    }
+
+    @Test
+    fun `ejecucion never out-damages its keep-the-band sibling at the same debt`() {
+        val payoffDef = CardDefinition(
+            id = "asset_bubble", name = "Asset Bubble", type = CardType.ATTACK, cost = 1,
+            targetType = TargetType.ENEMY, description = "Half Debt as damage; keep the Debt.",
+            rarity = Rarity.RARE, tags = setOf("debt_payoff")
+        )
+
+        for (debt in intArrayOf(6, 22, 30, 49)) {
+            val exec = resolver.resolve(CardInstance(ejecucionDef()), "enemy-1", testState(debt = debt))
+                .effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount
+            val payoff = resolver.resolve(CardInstance(payoffDef), "enemy-1", testState(debt = debt))
+                .effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount
+
+            assertTrue(
+                exec <= payoff,
+                "at debt=$debt Ejecucion dealt $exec and also wipes, vs $payoff for the sibling that keeps the Debt"
+            )
+        }
     }
 
     // --- Liquidation: Refinanciar (refinance) ---

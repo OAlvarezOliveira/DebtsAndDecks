@@ -54,6 +54,19 @@ object DebtConfig {
      *  `execution_damage` wipe. */
     const val DEBT_PAYOFF_DIVISOR: Int = 2
 
+    /**
+     * Divisor for `execution_damage` damage = floor(debt / N), paired WITH the full wipe.
+     *
+     * The wipe is the reward, so the damage cannot also be the maximum: at 1:1 the card dealt the
+     * whole Debt AND cleared it, which strictly dominated its designed counterweight
+     * ([DEBT_PAYOFF_DIVISOR], same divisor but NO wipe) and inverted the Debt axis — parking at
+     * [EXECUTION_THRESHOLD] - 1 became optimal because interest compounded into free damage.
+     * Sharing the divisor with `debt_payoff` makes the trade explicit: identical raw damage, but
+     * `debt_payoff` adds the flat leverage bonus and keeps the engine hot, while this one resets
+     * the pressure and exhausts.
+     */
+    const val EXECUTION_DAMAGE_DIVISOR: Int = 2
+
     /** Divisor for `debt_draw` cards: draw = [DEBT_DRAW_BASE] + floor(debt / N). */
     const val DEBT_DRAW_DIVISOR: Int = 10
 

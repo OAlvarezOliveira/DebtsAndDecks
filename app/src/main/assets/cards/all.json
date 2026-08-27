@@ -366,7 +366,8 @@
     "description": "card.ejecucion.description",
     "rarity": "RARE",
     "tags": [
-      "execution_damage"
+      "execution_damage",
+      "exhaust"
     ]
   },
   {
