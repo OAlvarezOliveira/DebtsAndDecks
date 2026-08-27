@@ -31,7 +31,7 @@ object DebtConfig {
     const val EXECUTION_THRESHOLD: Int = 50
 
     /** Maximum fraction of a Gold reward that garnishment can redirect toward Debt repayment. */
-    const val MAX_GARNISH_RATE: Double = 0.75
+    const val MAX_GARNISH_RATE: Double = 0.6
 
 
     // --- C4 leverage-payoff-cards constants ---
@@ -39,7 +39,10 @@ object DebtConfig {
     /** Extra damage per hit for `debt_scaling` ATTACK cards: floor(debt / N), ON TOP of the
      *  unconditional flat Leverage bonus (floor(debt / 5)) every attack already gets. Tagged
      *  attacks thus double-dip by design (flat /5 + tag /10). */
-    const val DEBT_SCALING_ATTACK_DIVISOR: Int = 10
+    const val DEBT_SCALING_ATTACK_DIVISOR: Int = 8
+
+    /** Flat leverage on ALL attacks: +floor(debt / N) per hit (the pivot's unconditional bonus). */
+    const val LEVERAGE_DIVISOR: Int = 6
 
     /** Divisor for `debt_payoff` cards (ATTACK damage or SKILL Block) = floor(debt / N).
      *  Deliberately NO wipe and NO repayment: the "keep the band" sibling of the all-in

@@ -36,15 +36,15 @@ class DebtConfigTest {
 
     @Test
     fun `garnishAmount ramps up with debt below the break threshold`() {
-        // debt=15 is half of BREAK_THRESHOLD(30) -> rate = 0.5 * MAX_GARNISH_RATE(0.75) = 0.375
-        assertEquals(37, DebtConfig.garnishAmount(rawGold = 100, debt = 15))
+        // debt=15 is half of BREAK_THRESHOLD(30) -> rate = 0.5 * MAX_GARNISH_RATE(0.6) = 0.30
+        assertEquals(30, DebtConfig.garnishAmount(rawGold = 100, debt = 15))
     }
 
     @Test
     fun `garnishAmount caps at MAX_GARNISH_RATE once debt reaches the break threshold`() {
-        assertEquals(75, DebtConfig.garnishAmount(rawGold = 100, debt = DebtConfig.BREAK_THRESHOLD))
+        assertEquals(60, DebtConfig.garnishAmount(rawGold = 100, debt = DebtConfig.BREAK_THRESHOLD))
         // Debt well beyond the threshold still caps at the same max rate, never exceeding it.
-        assertEquals(75, DebtConfig.garnishAmount(rawGold = 100, debt = DebtConfig.BREAK_THRESHOLD * 4))
+        assertEquals(60, DebtConfig.garnishAmount(rawGold = 100, debt = DebtConfig.BREAK_THRESHOLD * 4))
     }
 
     @Test

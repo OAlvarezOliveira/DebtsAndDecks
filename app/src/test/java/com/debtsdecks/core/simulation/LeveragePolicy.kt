@@ -106,7 +106,7 @@ object LeveragePolicy : RunPolicy {
      * multiplication — the resolver returns early for these cards).
      */
     private fun projectedDamage(attack: CardInstance, debt: Int): Int {
-        val flat = debt / 5
+        val flat = debt / DebtConfig.LEVERAGE_DIVISOR
         return when {
             attack.definition.tags.contains("debt_payoff") -> debt / DebtConfig.DEBT_PAYOFF_DIVISOR + flat
             attack.definition.tags.contains("debt_scaling") -> attack.baseDamage + debt / DebtConfig.DEBT_SCALING_ATTACK_DIVISOR + flat

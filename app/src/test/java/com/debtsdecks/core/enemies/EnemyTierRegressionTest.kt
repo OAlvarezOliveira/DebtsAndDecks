@@ -39,6 +39,6 @@ class EnemyTierRegressionTest {
     fun `collector remains the sole BOSS and thug the sole NORMAL floor`() {
         val enemies = loadEnemies()
         assertFalse(enemies.any { it.tier == EnemyTier.BOSS && it.id != "collector" })
-        assertEquals(56, enemies.first { it.tier == EnemyTier.BOSS }.hp)
+        assertEquals(52, enemies.first { it.tier == EnemyTier.BOSS }.hp)
     }
 }

@@ -4,46 +4,64 @@ import com.debtsdecks.core.combat.NodeConfig
 import com.debtsdecks.core.combat.RunManager
 
 /**
- * C7 node policy for the headless simulator (test-source). Deterministic, stateless proxy for "what
- * does a competent player do at the between-fight node". Mirrors the design's survival-first logic:
- * repay when the debt band is hot, take the loan when gold-starved (but never above Execution),
- * thin the deck late, otherwise shop (archetype-biased offer from the run).
+ * C8 balance-pass-1: competent-player NodePolicy — the MEASUREMENT floor for balance tuning, not a
+ * design directive. Deterministic + stateless proxy for a greedy-but-competent player at the node.
+ *
+ * Priority ladder (design obs 1516):
+ * 1. Shop EARLY (nodes ≤ 3) when the offer is affordable — the escalation curve cheapens early buys.
+ * 2. Loan when gold-starved and safe (never above Execution; the loan is the conscious survival move).
+ * 3. Repay when the debt band is hot and affordable.
+ * 4. Thin the deck late (starters) when it's wide.
+ * 5. Shop otherwise. 6. Free-pick fallback (always terminates the node).
  */
 object NodePolicy {
 
-    /** One node decision; returns the RunManager action that was actually taken (some are no-ops). */
+    /** One node decision; always leaves the run in COMBAT (every action ends the node). */
     fun act(run: RunManager) {
+        val buyCost = NodeConfig.escalatedCost(NodeConfig.BUY_BASE, run.nodeIndex)
         val loanGold = NodeConfig.escalatedCost(NodeConfig.LOAN_GOLD_BASE, run.nodeIndex)
         val loanDebt = NodeConfig.escalatedCost(NodeConfig.LOAN_DEBT_BASE, run.nodeIndex)
 
-        when {
-            // Survive: gold-starved and the loan won't cross Execution (guard inside takeLoan too).
-            run.gold < 8 && run.debt + loanDebt <= DebtThresholdSafe -> run.takeLoan()
-            // Debt is the hot band: repay it (affordability is checked inside; falls through if broke).
-            run.debt >= 20 -> run.repayViaNode() || buyOrRemove(run)
-            // Late game deck too wide: thin it (only if affordable).
-            run.deckSize > 14 && run.nodeIndex >= 3 -> run.removeCardFromDeck(deterministicRemoval(run)) || buyOrRemove(run)
-            // Default: shop (free pick is never chosen by this policy — the sim's deck-greedy line).
-            else -> buyOrRemove(run)
+        val shopNow = run.nodeShopChoices.isNotEmpty() && run.gold >= buyCost
+
+        // Every action below may legitimately no-op (unaffordable / unsafe / Execution guard).
+        // Chain with a guaranteed free-pick fallback so the node ALWAYS ends — a no-op that returns
+        // would leave the sim spinning in NODE forever (caught as "run exceeded max actions").
+        val acted =
+            // 1. Front-load value while the shop is cheap AND affordable.
+            (shopNow && run.nodeIndex <= 3 && run.buyCard(run.nodeShopChoices.first())) ||
+            // 2. Survival loan: gold-poor, safe band.
+            (run.gold < LOAN_GOLD_NEED && run.debt + loanDebt <= SAFE_AFTER_LOAN && run.takeLoan()) ||
+            // 3. Hot debt: repay when affordable (fee included).
+            (run.debt >= REPAY_BAND && run.gold >= run.debt + feeAt(run) && run.repayViaNode()) ||
+            // 4. Thin late wide decks (remove a starter if offered).
+            (run.deckSize > THIN_DECK && run.nodeIndex >= THIN_NODE && run.gold >= removeAt(run) &&
+                run.removeCardFromDeck(deterministicRemoval(run))) ||
+            // 5. Shop.
+            (shopNow && run.buyCard(run.nodeShopChoices.first()))
+
+        if (!acted) {
+            // 6. Free pick (guaranteed termination).
+            run.takeNodeFreePick(run.rewardChoices.first())
         }
     }
 
-    private val DebtThresholdSafe = 45
+    // C8 experiment (measurement floor): a debt-leveraging player takes the loan unless gold is
+    // comfortable — the loan is THE progression engine (survive + buy), and the pivot wants wins to
+    // involve real Debt (peak > 25). Conservative floor: still won't borrow into Execution.
+    private const val LOAN_GOLD_NEED = 20
+    private const val SAFE_AFTER_LOAN = 45
+    private const val REPAY_BAND = 25
+    private const val THIN_DECK = 14
+    private const val THIN_NODE = 4
 
-    /** Deterministic removal: prefer thinning a starter "defend" (weakest long-run), else last pick. */
+    private fun feeAt(run: RunManager): Int =
+        NodeConfig.escalatedCost(NodeConfig.REPAY_FEE_BASE, run.nodeIndex)
+
+    private fun removeAt(run: RunManager): Int =
+        NodeConfig.escalatedCost(NodeConfig.REMOVE_BASE, run.nodeIndex)
+
+    /** Deterministic removal: prefer thinning a starter "defend" (weakest long-run), else first offer. */
     private fun deterministicRemoval(run: RunManager): String =
         run.nodeRemoveChoices.firstOrNull { it == "defend" } ?: run.nodeRemoveChoices.first()
-
-    /** Buy the shop's first card when affordable, else free-pick. Guarantees the node always ends. */
-    private fun buyOrRemove(run: RunManager): Boolean {
-        val cost = NodeConfig.escalatedCost(NodeConfig.BUY_BASE, run.nodeIndex)
-        val card = run.nodeShopChoices.firstOrNull()
-        return if (card != null && run.gold >= cost) {
-            run.buyCard(card)
-        } else {
-            val pick = run.rewardChoices.firstOrNull() ?: error("node has no free pick offer")
-            run.takeNodeFreePick(pick)
-            true
-        }
-    }
 }

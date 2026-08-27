@@ -100,7 +100,7 @@ class CardResolver(private val l10n: Localizer) {
                 // band" sibling of execution_damage (same place in the ATTACK branch, no wipe).
                 if (card.definition.tags.contains("debt_payoff")) {
                     val payoff = state.debt / DebtConfig.DEBT_PAYOFF_DIVISOR
-                    val withLeverage = payoff + state.debt / 5
+                    val withLeverage = payoff + state.debt / DebtConfig.LEVERAGE_DIVISOR
                     for (t in targets) {
                         effects.add(Effect.Damage(t, withLeverage))
                     }
@@ -115,7 +115,7 @@ class CardResolver(private val l10n: Localizer) {
                         val enemy = enemies[t] ?: continue
                         // Debt-as-Leverage: every ATTACK hit gains floor(debt / 5) bonus damage
                         // unconditionally (no tag/opt-out) — the debt economy scales aggression.
-                        val leverageBonus = state.debt / 5
+                        val leverageBonus = state.debt / DebtConfig.LEVERAGE_DIVISOR
                         // C4: `debt_scaling` ATTACK cards double-dip — extra per-hit damage
                         // floor(debt / DEBT_SCALING_ATTACK_DIVISOR) on top of the flat bonus.
                         val taggedScale = if (card.definition.tags.contains("debt_scaling")) {
