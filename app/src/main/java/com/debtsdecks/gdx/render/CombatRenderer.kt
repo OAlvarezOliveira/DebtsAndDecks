@@ -115,10 +115,12 @@ class CombatRenderer(private val bundle: I18NBundle) {
     // Input and render share this via [setNodeMode]/[nodeMode].
     enum class NodeMode { CHOICES, SHOP, REMOVE, LOAN, UPGRADE }
     private var nodeMode: NodeMode = NodeMode.CHOICES
+    private var lastFrameWasNode = false
     fun setNodeMode(mode: NodeMode) { nodeMode = mode }
     fun getNodeMode(): NodeMode = nodeMode
 
     fun render(state: CombatState, batch: SpriteBatch) {
+        lastFrameWasNode = false
         // ShapeRenderer defaults to a raw screen-pixel projection; without this it draws
         // out of sync with the batch text, which uses the viewport's world-space camera.
         shapeRenderer.projectionMatrix = batch.projectionMatrix
@@ -436,13 +438,24 @@ class CombatRenderer(private val bundle: I18NBundle) {
         font.draw(batch, bundle.format("hud.credit", state.energy, state.maxEnergy), energyX, energyY)
         batch.end()
 
-        // R9: Debt/Gold HUD readout, flagged in a distinct at-risk color once Debt reaches the
-        // shared break-threshold constant (same one that schedules the collector encounter).
-        val debtAtRisk = state.debt >= DebtConfig.BREAK_THRESHOLD
+        // R9: Debt/Gold HUD readout, flagged at both thresholds with distinct signals:
+        // amber at BREAK (the collector is coming), hard red + explicit warning past EXECUTION
+        // (any debt-raising action is instant death there; the interest tick is exempt —
+        // NEW-5 playtest: the execution zone was invisible before).
+        val debtColor = when {
+            state.debt >= DebtConfig.EXECUTION_THRESHOLD -> Color.RED
+            state.debt >= DebtConfig.BREAK_THRESHOLD -> Color(1f, 0.6f, 0.1f, 1f) // amber
+            else -> Color.WHITE
+        }
         batch.begin()
-        font.setColor(if (debtAtRisk) Color.RED else Color.WHITE)
+        font.setColor(debtColor)
         font.draw(batch, bundle.format("hud.debt_gold", state.debt, state.gold), energyX, debtGoldY)
         font.setColor(Color.WHITE)
+        if (state.debt >= DebtConfig.EXECUTION_THRESHOLD) {
+            smallFont.setColor(Color.RED)
+            smallFont.draw(batch, bundle.get("hud.execution_warning"), energyX, debtGoldY - 22f)
+            smallFont.setColor(Color.WHITE)
+        }
         batch.end()
 
         // End Turn Button
@@ -476,6 +489,11 @@ class CombatRenderer(private val bundle: I18NBundle) {
     // --- C7 between-fight node screen (logic in RunManager; pure presentation here) ---
 
     fun renderNode(run: RunManager, batch: SpriteBatch) {
+        // NEW-1 (playtest): a node must open on the MAIN choices, never inherit the previous
+        // node's sub-mode (stuck SHOP/REMOVE/UPGRADE screen). Reset on the combat->node
+        // transition; survives restartRun() because restart renders a combat frame first.
+        if (!lastFrameWasNode) nodeMode = NodeMode.CHOICES
+        lastFrameWasNode = true
         shapeRenderer.projectionMatrix = batch.projectionMatrix
         drawBackground()
 
