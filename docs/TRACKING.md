@@ -27,8 +27,11 @@ signing, store listing and closed testing. See **BD-1** below — v1 ships free.
 - [ ] `play-store-launch` P2 (next phase)
 
 ### Done
-- [x] **Platform** `play-store-launch` P1 `android-platform-modernization` — compileSdk/targetSdk 36, AGP 8.10.1, Gradle 8.11.1, Kotlin 2.2.20, LibGDX 1.14.2; 16 KB verdict `ALIGNED-AFTER-FALLBACK` verified on shipping bytes and on a 16 KB device (2026-08-27, see ADR 0002)
+- [x] **SDD** `play-store-launch` P0 `docs-resync-current-state` — **archived** 2026-08-27 (two verify passes, both findings fixed and merged: `82b37d2`; archive report in Engram `sdd/play-store-launch/archive-report`)
+- [x] **SDD** `play-store-launch` P1 `android-platform-modernization` — **archived** 2026-08-27 (same archive report)
+- [x] **Platform** `play-store-launch` P1 `android-platform-modernization` — compileSdk/targetSdk 36, AGP 8.10.1, Gradle 8.11.1, Kotlin 2.2.20, LibGDX 1.14.2; 16 KB verdict `ALIGNED-AFTER-FALLBACK` verified on shipping bytes and on a 16 KB **AVD emulator** (2026-08-27, see ADR 0002). *Physical-device run still outstanding — see OQ-1 below.*
 - [x] **Build** APK builds, installs and runs — **13 MB** release APK / 12 MB AAB, under the `< 20 MB` target (2026-08-27). *Run was on a 16 KB **emulator**; a physical-device run is still outstanding (OQ-1).*
+- [x] **Core** `core/data/DataLoader.kt` core-purity fix (2026-08-27, PR #5, `db14f9c`) — extracted `AssetSource` interface in `core/data/`, `AndroidAssetSource` adapter in `gdx/data/`, mirroring the `Localizer`/`BundleLocalizer` split; `core/` is free of `android.*` imports again (`grep -rn "com.badlogic\|android\." core/` returns no import matches)
 - [x] **Delivery** Commit debt-economy work (delivered — `38d584d`, `5f0cc3e`, `d07196b`; verified 2026-08-27 via `git log`)
 - [x] **Delivery** Merge combat-progression-i18n stack (pr1–pr7, 8 commits) into `develop`
 - [x] **Setup** Gradle project with LibGDX + Kotlin + Serialization + Koin
@@ -125,6 +128,31 @@ page-size question with measured bytes, not version numbers.
   `docs/ADR/0002-16kb-page-size-and-platform-baseline.md`.
 **Next:** P2. Deferred on purpose: `allowBackup` → **P4**; `numSamples` and any cutout restyling →
 **P5**; app signing → **P6**; headless render/GL harness and version catalogs → **P7**.
+
+### 2026-08-27 (Session 3 — P0/P1 verify fixes, DataLoader fix, archive)
+**Goal:** Close out P0/P1 for real — resolve `sdd-verify` findings, fix the last owned tech debt, then
+archive both phases before starting P2.
+**Done:**
+- Two `sdd-verify` passes each for P0 and P1 found and fixed: stale C5/C7 status in `GDD.md`, stale
+  test counts (measured with `--rerun-tasks` to force a real run, not a cached `UP-TO-DATE`), empty
+  Playtest/Metrics tables in this file, and the "real device" mislabeling of the 16 KB AVD check.
+  Fixed in `docs/p0-p1-verify-fixes`, merged as **PR #4** (`82b37d2`).
+- **`core/data/DataLoader.kt` core-purity fix** (the tech-debt line this file carried above): extracted
+  a pure `AssetSource` interface in `core/data/`, added the `Context`-backed `AndroidAssetSource`
+  adapter in `gdx/data/`, rewired the 3 call sites in `di/Module.kt` — mirrors the existing
+  `Localizer`/`BundleLocalizer` split exactly. `grep -rn "com.badlogic\|android\." core/` now returns
+  no import matches. Merged as **PR #5** (`db14f9c`), suite still 153/153.
+- **OQ-1 checked against real hardware, twice, and confirmed unresolvable right now**: two different
+  physical Android devices (Redmi Note 7 / Android 10 / SDK 29, and a second device on SDK 36) both
+  report `getconf PAGE_SIZE = 4096`. Page size is a kernel property fixed at build time, not
+  something `adb` or app config can change — OQ-1 stays explicitly deferred until qualifying 16 KB
+  hardware is available, not treated as a documentation gap.
+- P0 and P1 **archived** via `sdd-archive` (archive report in Engram, project `debtsanddecks`, topic
+  `sdd/play-store-launch/archive-report`).
+- Git note: a `git checkout -B develop origin/develop` in the isolated worktree briefly let `develop`
+  end up checked out in two worktrees at once; caught immediately, no files were touched in the other
+  worktree, fixed with `git checkout --detach`.
+**Next:** P2 (next `play-store-launch` phase, not yet started).
 
 ### 2026-08-25 (Session 2 — delivery, fallback harness, Pi/gentle-engram)
 **Goal:** Deliver the pending debt-economy work to `develop`.
@@ -236,7 +264,7 @@ page-size question with measured bytes, not version numbers.
 - [ ] Settings / Pause / Accessibility
 - [ ] Sound / Music / Particles
 - [ ] Tutorial / Encyclopedia
-- [ ] **Tech debt** `core/data/DataLoader.kt` imports `android.content.Context` (since `9d72ca3`) — violates the `core/` purity rule; correctly deferred by both P0 and P1 as out of scope, but no phase owns fixing it yet. Assign an owning phase before it is inherited a third time.
+- [x] ~~**Tech debt** `core/data/DataLoader.kt` imports `android.content.Context`~~ — **fixed** 2026-08-27, PR #5 (`db14f9c`), see Task Board "Done" above.
 
 ---
 
