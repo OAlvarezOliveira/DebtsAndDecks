@@ -3,6 +3,7 @@ package com.debtsdecks.gdx.input
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.viewport.Viewport
+import com.debtsdecks.core.combat.NodeConfig
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.combat.CombatEngine
 import com.debtsdecks.core.combat.RunManager
@@ -60,7 +61,19 @@ class CombatInputHandler(
                         2 -> { renderer.setNodeMode(CombatRenderer.NodeMode.SHOP); true }
                         3 -> { renderer.setNodeMode(CombatRenderer.NodeMode.REMOVE); true }
                         4 -> { renderer.setNodeMode(CombatRenderer.NodeMode.LOAN); true }
-                        5 -> { renderer.setNodeMode(CombatRenderer.NodeMode.UPGRADE); true }
+                        5 -> {
+                            // P1-E: the 6th button is only actionable while an upgrade is available;
+                            // otherwise the tap silently does nothing (button renders disabled).
+                            val upgradeAvailable = runManager.gold >= NodeConfig.UPGRADE_BASE &&
+                                runManager.upgradesRemaining > 0 &&
+                                runManager.resolveNodeUpgradeCards().isNotEmpty()
+                            if (upgradeAvailable) {
+                                renderer.setNodeMode(CombatRenderer.NodeMode.UPGRADE)
+                                true
+                            } else {
+                                false
+                            }
+                        }
                         else -> false
                     }
                 }

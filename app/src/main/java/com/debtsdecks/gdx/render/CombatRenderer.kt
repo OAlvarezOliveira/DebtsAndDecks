@@ -401,7 +401,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
                 shapeRenderer.end()
                 batch.begin()
                 batch.color = Color(0.25f, 0.18f, 0f, 1f)
-                smallFont.draw(batch, "UPGRADED", x + cardWidth - 86f, y + cardHeight - 8f)
+                smallFont.draw(batch, bundle.get("node.upgraded"), x + cardWidth - 86f, y + cardHeight - 8f)
                 batch.color = Color.WHITE
                 batch.end()
             }
@@ -498,6 +498,10 @@ class CombatRenderer(private val bundle: I18NBundle) {
                 drawNodeButton(3, bundle.get("node.button.remove"), run.gold >= removeCost, batch)
                 val affordableLoan = run.debt + loanDebt <= DebtConfig.EXECUTION_THRESHOLD
                 drawNodeButton(4, bundle.get("node.button.loan"), affordableLoan, batch)
+                // card-upgrades R9: 6th action — flat upgrade, capped, gold-gated.
+                val upgradeEnabled = run.gold >= NodeConfig.UPGRADE_BASE &&
+                    run.upgradesRemaining > 0 && run.resolveNodeUpgradeCards().isNotEmpty()
+                drawNodeButton(5, bundle.get("node.button.upgrade"), upgradeEnabled, batch)
             }
             NodeMode.SHOP -> {
                 batch.begin()

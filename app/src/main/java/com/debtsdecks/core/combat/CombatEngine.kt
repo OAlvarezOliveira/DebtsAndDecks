@@ -91,7 +91,7 @@ class CombatEngine(
         startingGold: Int = 0,
         startingDebt: Int = 0,
         startingHp: Int = PlayerState().maxHp,
-        upgradedCardIds: Set<String> = emptySet()
+        upgradedCopiesById: Map<String, Int> = emptyMap()
     ) {
         // Create enemies
         enemies = enemyDefinitions.map { EnemyInstance(it, l10n) }.toMutableList()
@@ -101,10 +101,15 @@ class CombatEngine(
         player = PlayerState(hp = startingHp)
 
         // Build draw pile from starter deck
+        // card-upgrades (decision A): the upgraded-copies map selects the FIRST N copies of each
+        // id (one upgrade = one copy); track created instances per id while building the pile.
+        val createdBy = mutableMapOf<String, Int>()
         drawPile = ArrayDeque(starterDeck.map { cardId ->
             val def = cardRegistry.getOrThrow(cardId)
+            val created = createdBy[cardId] ?: 0
+            createdBy[cardId] = created + 1
             CardInstance(def).apply {
-                upgraded = cardId in upgradedCardIds
+                upgraded = created < (upgradedCopiesById[cardId] ?: 0)
                 // R6: cost-2+ upgraded cards gain the cost cut, never the stat bonus.
                 if (upgraded && def.cost >= 2) cost = def.cost - 1
             }

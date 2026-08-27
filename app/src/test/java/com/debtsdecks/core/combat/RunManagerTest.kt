@@ -1,6 +1,7 @@
 package com.debtsdecks.core.combat
 
 import com.debtsdecks.core.cards.CardRegistry
+import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.i18n.testLocalizer
 import com.debtsdecks.core.enemies.EnemyDefinition
 import com.debtsdecks.core.enemies.EnemyRewards
@@ -119,6 +120,11 @@ class RunManagerTest {
         cardRegistry = CardRegistry.create(makeStarterCards() + rewardCards)
         combatEngine = CombatEngine(cardRegistry, testLocalizer(), rng)
         runManager = RunManager(combatEngine, cardRegistry, enemies, sequence, rng)
+    }
+
+    private fun upgradeTurnToRefresh() {
+        combatEngine.endPlayerTurn()
+        runManager.refresh()
     }
 
     private fun killCurrentEnemy() {
@@ -562,7 +568,22 @@ class RunManagerTest {
         assertEquals(20 - NodeConfig.UPGRADE_BASE, runManager.gold)
         assertEquals(1, runManager.upgradesRemaining)
         assertEquals(RunManager.Phase.COMBAT, runManager.phase) // one purchase ends the node
-        assertFalse(runManager.resolveNodeUpgradeCards().any { it.id == "strike" }) // R2: never re-offered
+    }
+
+    @Test
+    fun `upgraded card is never re-offered in a later node`() {
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // gold 20
+
+        runManager.upgradeCard("survive") // single copy: upgrading it exhausts its copies
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // next NODE
+
+        assertFalse(runManager.resolveNodeUpgradeCards().any { it.id == "survive" },
+            "a card whose only copy is upgraded must not be re-offered (R2, decision A)")
+        assertTrue(runManager.upgradeEligible("strike"), "strike still has 4 un-upgraded copies")
     }
 
     @Test
@@ -625,5 +646,69 @@ class RunManagerTest {
         killCurrentEnemy() // gold 20 again
 
         assertTrue(runManager.upgradeCard("strike"))
+    }
+
+
+    // --- card-upgrades regression (playtest P0-A/B/C): the RunManager->CombatEngine handoff ---
+
+    @Test
+    fun `upgraded card carries into the next combat with effective values`() {
+        // P0-B regression: upgrades must reach NORMAL combats (not only the forced collector).
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // gold 20
+
+        assertTrue(runManager.upgradeCard("strike"))
+        assertEquals(RunManager.Phase.COMBAT, runManager.phase) // slot 2 already running
+
+        // decision A: ONE of the five strikes is upgraded; the others stay vanilla.
+        var guard = 0
+        var upgradedStrike: CardInstance? = null
+        while (upgradedStrike == null && guard < 40) {
+            guard++
+            upgradeTurnToRefresh()
+            upgradedStrike = combatEngine.getState().hand.firstOrNull { it.cardId == "strike" && it.upgraded }
+        }
+        assertTrue(upgradedStrike != null, "an upgraded strike must reach the hand")
+        assertEquals(9, upgradedStrike!!.effectiveDamage)
+        val strikesInHand = combatEngine.getState().hand.filter { it.cardId == "strike" }
+        if (strikesInHand.size >= 2) {
+            assertTrue(strikesInHand.any { !it.upgraded }, "the other copies stay vanilla")
+        }
+    }
+
+    @Test
+    fun `cost2 card upgrade reduces its cost in the next combat`() {
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // gold 20
+
+        assertTrue(runManager.upgradeCard("bash"))
+
+        // bash may start in the draw pile; play until it reaches the hand (guard bounded).
+        var guard = 0
+        var bash = combatEngine.getState().hand.firstOrNull { it.cardId == "bash" }
+        while (bash == null && guard < 40) {
+            guard++
+            combatEngine.endPlayerTurn()
+            runManager.refresh()
+            bash = combatEngine.getState().hand.firstOrNull { it.cardId == "bash" }
+        }
+        assertTrue(bash != null, "bash must reach the hand within the bounded draw")
+        assertEquals(1, bash!!.cost, "cost-2 upgraded card must cost 1 in the next combat")
+        assertTrue(bash!!.upgraded)
+    }
+
+    @Test
+    fun `upgrade offer order is stable across calls`() {
+        // P0-C regression: resolveNodeUpgradeCards must NOT re-shuffle per call.
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // NODE gold 20
+
+        val first = runManager.resolveNodeUpgradeCards().map { it.id }
+        val second = runManager.resolveNodeUpgradeCards().map { it.id }
+        assertEquals(first, second, "the offered upgrade order must be stable (tapped card == offered card)")
+        assertEquals(3, first.size)
     }
 }

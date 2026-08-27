@@ -63,12 +63,15 @@ class NodePolicyTest {
     }
 
     @Test
-    fun `ladder buys the upgrade when gold and cap allow`() {
-        val run = runAtNode(2) // slots 0+1 thugs = 20 gold
+    fun `ladder buys the upgrade first when gold and cap allow`() {
+        // Upgrade sits at position 3 (after cheap early shop + survival loan): reach a node where
+        // upgrading is the best affordance — late gold, no cheap shop slot, cap open.
+        val run = runAtNode(2) // upgrade sits FIRST in the ladder: gold 20 (10+10) >= 15 and cap open
+        val gold0 = run.gold
 
         NodePolicy.act(run, ScriptedPolicy)
 
-        assertEquals(20 - NodeConfig.UPGRADE_BASE, run.gold)
+        assertEquals(NodeConfig.UPGRADE_BASE, gold0 - run.gold, "ladder spends exactly the flat upgrade cost")
         assertEquals(1, run.upgradesRemaining)
         assertEquals(RunManager.Phase.COMBAT, run.phase) // one purchase ends the node
     }

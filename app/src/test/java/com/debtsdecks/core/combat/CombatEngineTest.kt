@@ -544,7 +544,7 @@ class CombatEngineTest {
         engine = CombatEngine(cardRegistry, testLocalizer(), rng)
 
         val thug = thugDef()
-        engine.startCombat(listOf(thug), listOf("strike", "bash", "defend"), upgradedCardIds = setOf("strike", "bash"))
+        engine.startCombat(listOf(thug), listOf("strike", "bash", "defend"), upgradedCopiesById = mapOf("strike" to 1, "bash" to 1))
 
         val state = engine.getState()
         val strikeInst = state.hand.first { it.cardId == "strike" }
@@ -554,6 +554,18 @@ class CombatEngineTest {
         assertEquals(1, bashInst.cost, "upgraded bash costs 1 (cost 2 -> 1)")
         // Vanilla card in the same combat stays untouched.
         assertTrue(!state.hand.first { it.cardId == "defend" }.upgraded)
+    }
+
+    @Test
+    fun `one upgraded copy of two leaves the other vanilla`() {
+        val thug = thugDef()
+        engine.startCombat(listOf(thug), listOf("strike", "strike"), upgradedCopiesById = mapOf("strike" to 1))
+
+        val state = engine.getState()
+        val strikes = state.hand.filter { it.cardId == "strike" }
+        assertEquals(2, strikes.size)
+        assertEquals(1, strikes.count { it.upgraded }, "exactly one of the two copies is upgraded")
+        assertEquals(1, strikes.count { !it.upgraded }, "the other copy stays vanilla")
     }
 
     @Test

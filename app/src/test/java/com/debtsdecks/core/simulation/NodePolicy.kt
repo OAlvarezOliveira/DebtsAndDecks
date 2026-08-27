@@ -35,8 +35,7 @@ object NodePolicy {
         // Chain with a guaranteed free-pick fallback so the node ALWAYS ends — a no-op that returns
         // would leave the sim spinning in NODE forever (caught as "run exceeded max actions").
         val acted =
-                // 1. UPGRADE first: durable power, flat 15 gold, hard-capped at 2/run — the cap is the
-                // scarcest resource, so the ladder takes it before the cheap early shop consumes the gold.
+                // 1. UPGRADE first (card-upgrades): durable power, flat 15 gold, capped at 2/run.
                 (run.gold >= NodeConfig.UPGRADE_BASE && run.upgradesRemaining > 0 &&
                     run.resolveNodeUpgradeCards().isNotEmpty() &&
                     run.upgradeCard(upgradePick(run))) ||

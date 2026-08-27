@@ -86,6 +86,17 @@ candidate, not a target change.
 
 ## Daily Log
 
+### 2026-08-27 (Session 5 fix — playtest P0s fixed + decision A: ONE copy per upgrade)
+**Goal:** Address the playtest findings (temp/playtest/2026-08-27/RESUMEN.md): the card-upgrades feature compiled but was non-functional, and the multi-copy upgrade trivialized the game.
+**Done:**
+- **P0-A fixed**: the 6th MEJORAR button was never drawn (hitbox existed — feature was undiscoverable). Now drawn in CHOICES with enabled-gating.
+- **P0-B fixed**: `advanceToNextCombat()` and `beginRun()` omitted the upgraded state in the NORMAL branch (only the collector one passed it) — default `emptyMap()` masked it silently. All three call sites now pass the state.
+- **P0-C fixed**: the upgrade offer re-shuffled on every call, so the tapped card was not the offered one; now fixed once in `enterNode` (`nodeUpgradeChoices`), like REMOVE.
+- **Decision A (balance root cause, from the sim sweep)**: the upgrade marked the card ID, upgrading ALL copies (5 strikes = +3 dmg x5 ≈ +60% flat) — the sim perfect player trivialized runs (68-89%, price/pick/ladder sweeps all fail the band). Changed to per-copy state (`upgradedCopiesById` map selects the first N copies; one upgrade = one copy). Harness re-measured with ladder pos 1: **greedy 52.5% / leverage 51.5% (band 35-55%), gap 1pp**.
+- **Regression tests added** (the gap the playtest exposed: RunManager->CombatEngine handoff had no end-to-end coverage): upgraded card carries effective values into the next NORMAL combat; cost-2 card reduced cost next combat; one-of-two copies upgraded; offer order stable; single-copy exhaustion. 180->181 tests green.
+**Next:** re-playtest the fixed feature on device; then P4-P7.
+
+
 ### 2026-08-27 (Session 5 — SDD change \`card-upgrades\` applied: between-fight node upgrade action)
 **Goal:** Ship the deck-builder pillar of card upgrades as a durable gold sink (P2 dead-gold finding) while keeping the balance invariants green.
 **Done:**
@@ -290,6 +301,11 @@ archive both phases before starting P2.
 |------|-------|-------|-----------------|
 | 2026-08-27 | **Sim observation, 80 seeds (greedy, C8 balance)** — `RunObservationTest` (test-source, no asserts). Wins 53%, deaths 37/80 **100% vs final collector** (avg at death: debt 17, **gold 59 unspent**, hp 0). Node decisions: node1-2 BUY almost always, node3 LOAN 75/80, node5-7 FREE_PICK ~universal (escalated shop unaffordable late → gold dead at the end). Closest wins win at **endHp=1** (5 seeds). Deck 10→16 avg; remove/thin almost never fires. Weak points for P2: (a) final-boss razor edge, (b) dead gold in the endgame, (c) monotonous early decisions + decorative late nodes. | None (observation only). |
 | 2026-08-27 | Debug APK, `b142528`, AVD `android-36 google_apis_ps16k x86_64` (`PAGE_SIZE=16384`) | Install `Success`, launch `Status: ok` in 3502 ms, `nativeloader` mapped `libgdx.so` from the APK, OpenGL ES 3.1 reached, no crashes (16 KB Check C — see ADR 0002). This was a launch/stability smoke check, not a full combat playtest; full loop + economy feel is still **To Do**. | None — no balance changes made this session. |
+| 2026-08-27 | **`card-upgrades` device playtest, run 1/4** — `develop` @ `c578ec9`, physical `w8ono7aimjzlgyus` (ES locale) | Aborted (a notification stole focus; end screen missed). Fights 1/3/3 turns. Debt peaked at **7** and one node tap wiped it — trivial pressure. Gold 10→16→48→**55 unspent** while COMPRAR escalated 8→12→40 and MEJORAR stayed flat at 15. **Two upgrades bought, 30 gold, zero effect** (`Golpe` still 6 dmg, `Defensa` still 5 block, no badge). | None — no balance value touched. |
+| 2026-08-27 | **`card-upgrades` device playtest, run 2/4** — same build/device | **Defeat** (`EMBARGADO...`) vs Matón on slot 1, by design: every turn passed with no card played. Took **9 turns to die doing nothing** — fight 1 has no lethality. Debt stayed 0 throughout: debt is fully opt-in, a cautious player never meets the core mechanic. | None. |
+| 2026-08-27 | **`card-upgrades` device playtest, run 3/4** — same build/device | **Defeat** ~node 5 on the naive line: attack only, TOMAR CARTA at every node, never spend. Gold ended fully unspent. Confirms the sim's "dead gold" finding on device — **the free node option is the trap line**. | None. |
+| 2026-08-27 | **`card-upgrades` device playtest, run 4/4** — same build/device | **Victory** (`¡HAS SALDADO TU DEUDA!`), 7 nodes, on the inverse line: PAGAR DEUDA + COMPRAR at every node, gold ended ~0. Collector felt **fair, not a wall**. Runs 3 and 4 differ in exactly one decision (take-free vs buy) and it flips the outcome — difficulty is decided at the nodes, not at the boss. | None. |
+| 2026-08-27 | **`card-upgrades` verdict — DO NOT SHIP** (see `temp/playtest/2026-08-27/RESUMEN.md`) | Feature is inert, 3× P0: (A) the 6th MEJORAR button is **never drawn** (`renderNode()` draws 0..4; the hitbox exists, so it is reachable only by tapping empty space); (B) `advanceToNextCombat()` **omits `upgradedIds`** on the normal branch — silent because `startCombat` defaults it to `emptySet()` — so upgrades never reach a normal combat; (C) `resolveNodeUpgradeCards()` **re-shuffles on every call**, so the tap upgrades a random card, not the one offered. Test gap: units are covered in isolation, the RunManager→CombatEngine handoff is not. Plus 5× P1 / 5× P2 (header overlap, invisible CANCEL hitbox, checkerboard/black card art, no cap feedback, `enemy.thug.name` raw key in the combat log, hardcoded `"UPGRADED"`, text overflow, no run summary on end screens). Perf clean: **~119 fps**, zero FATAL. | None — playtest only; price/cap retuning (15→25–30, keep flat) deferred until the feature actually works. |
 
 ---
 

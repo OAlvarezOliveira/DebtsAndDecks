@@ -43,6 +43,12 @@ class RunManager(
     var nodeRemoveChoices: List<String> = emptyList()
         private set
 
+    /** Fixed 3-card ids offered for UPGRADE at the node (set once in [enterNode], cleared on
+     *  advance — the upgrade sub-screen order must be stable across renderer + input calls,
+     *  fixing the re-shuffle bug where the tapped card was not the offered one). */
+    var nodeUpgradeChoices: List<String> = emptyList()
+        private set
+
     /** Which node we're on (1-based); drives cost escalation. */
     var nodeIndex: Int = 0
         private set
@@ -62,23 +68,28 @@ class RunManager(
 
     /** Up to 3 eligible (not-yet-upgraded) deck cards, shuffled - the node upgrade offer (R2). */
     fun resolveNodeUpgradeCards(): List<CardDefinition> =
-        deck.distinct().filter { it !in upgradedIds }.mapNotNull { cardRegistry.get(it) }
-            .shuffled(rng)
-            .take(NodeConfig.REMOVE_OFFER_SIZE)
+        nodeUpgradeChoices.mapNotNull { cardRegistry.get(it) }
+
+    /** Copies of [cardId] currently in the deck. */
+    private fun copiesInDeck(cardId: String): Int = deck.count { it == cardId }
+
+    /** Whether at least one copy of [cardId] can still be upgraded this run. */
+    fun upgradeEligible(cardId: String): Boolean =
+        (upgradedCopiesById[cardId] ?: 0) < copiesInDeck(cardId)
 
     /**
-     * Upgrades [cardId] for a flat [NodeConfig.UPGRADE_BASE] gold (R3): marks every copy of the
-     * id in the deck as upgraded and ends the node (one purchase per node, like buy/remove).
-     * No-op (false) when the card is absent, already upgraded, the run cap is reached, or gold
-     * is insufficient.
+     * Upgrades ONE copy of [cardId] for a flat [NodeConfig.UPGRADE_BASE] gold (R3, decision A):
+     * increments the upgraded-copies count and ends the node (one purchase per node).
+     * No-op (false) when the card is absent, all its copies are upgraded, the run cap is
+     * reached, or gold is insufficient.
      */
     fun upgradeCard(cardId: String): Boolean {
         if (cardId !in deck) return false
-        if (cardId in upgradedIds) return false
+        if (!upgradeEligible(cardId)) return false
         if (upgradesUsed >= MAX_UPGRADES_PER_RUN) return false
         if (gold < NodeConfig.UPGRADE_BASE) return false
         gold -= NodeConfig.UPGRADE_BASE
-        upgradedIds += cardId
+        upgradedCopiesById[cardId] = (upgradedCopiesById[cardId] ?: 0) + 1
         upgradesUsed++
         advanceToNextCombat()
         return true
@@ -108,9 +119,10 @@ class RunManager(
     private var slotIndex = 0
     private var deck: List<String> = CombatEngine.STARTER_DECK
 
-    /** Card ids upgraded this run (card-upgrades R1). Flat per-id: upgrades every copy of the
-     *  id in the run deck (deck stores ids, instances are rebuilt per combat). */
-    private val upgradedIds = mutableSetOf<String>()
+    /** Upgraded-copies per card id this run (card-upgrades R1, decision A: ONE copy per upgrade).
+     *  The deck stores ids; the count selects WHICH copies are upgraded (the first N of each id),
+     *  so improving one strike of five upgrades exactly one copy. */
+    private val upgradedCopiesById = mutableMapOf<String, Int>()
 
     /** Upgrades purchased this run; hard-capped by [MAX_UPGRADES_PER_RUN] (R3). */
     private var upgradesUsed = 0
@@ -173,6 +185,9 @@ class RunManager(
             .take(freePickCount)
         nodeShopChoices = archetypeBiasedOffer()
         nodeRemoveChoices = deck.shuffled(rng).take(NodeConfig.REMOVE_OFFER_SIZE)
+        nodeUpgradeChoices = deck.distinct().filter { upgradeEligible(it) }
+            .shuffled(rng)
+            .take(NodeConfig.REMOVE_OFFER_SIZE)
         phase = Phase.NODE
     }
 
@@ -282,11 +297,11 @@ class RunManager(
                 gold,
                 debt,
                 hp,
-                upgradedIds
+                upgradedCopiesById
             )
         } else {
             slotIndex++
-            combatEngine.startCombat(listOf(enemyById(runSequence.slots[slotIndex].enemyId)), deck, gold, debt, hp)
+            combatEngine.startCombat(listOf(enemyById(runSequence.slots[slotIndex].enemyId)), deck, gold, debt, hp, upgradedCopiesById)
         }
     }
 
@@ -298,18 +313,19 @@ class RunManager(
         slotIndex = 0
         nodeIndex = 0
         deck = CombatEngine.STARTER_DECK
-        upgradedIds.clear()
+        upgradedCopiesById.clear()
         upgradesUsed = 0
         rewardChoices = emptyList()
         nodeShopChoices = emptyList()
         nodeRemoveChoices = emptyList()
+        nodeUpgradeChoices = emptyList()
         phase = Phase.COMBAT
         debt = 0
         gold = 0
         hp = PlayerState().maxHp
         pendingBreakEncounter = false
         breakEncounterUsedThisRun = false
-        combatEngine.startCombat(listOf(enemyById(runSequence.slots[slotIndex].enemyId)), deck)
+        combatEngine.startCombat(listOf(enemyById(runSequence.slots[slotIndex].enemyId)), deck, upgradedCopiesById = upgradedCopiesById)
     }
 
     private fun enemyById(id: String): EnemyDefinition =
