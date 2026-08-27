@@ -18,6 +18,11 @@ object DebtConfig {
     /** Hard cap Debt can never exceed, whether from a borrow or an interest tick. */
     const val INTEREST_CAP: Int = 200
 
+    /** Debt the run starts with (design D: debt is NOT optional — the title demands it).
+     *  The interest tick and garnishment thus pressure every run from turn 1; a defensive
+     *  zero-debt walk is no longer free. Calibrated by the sim harness sweep. */
+    const val STARTING_DEBT: Int = 6
+
     /** Debt level that schedules the forced "collector" encounter and the garnishment ramp ceiling. */
     const val BREAK_THRESHOLD: Int = 30
 

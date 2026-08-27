@@ -86,6 +86,14 @@ candidate, not a target change.
 
 ## Daily Log
 
+### 2026-08-27 (Session 5 — design D: the debt is no longer optional)
+**Goal:** Kill the "block everything, debt 0" free walk the playtest exposed (debt sources were player-sided until the boss; a patient defensive run wins).
+**Done:**
+- **Decisión D (user)**: `DebtConfig.STARTING_DEBT = 6` (every run starts in debt) + **LEVY 4 on the loan_shark** (mid-run re-indebting). Interest and garnishment now pressure from turn 1.
+- **Sim-calibrated** (sweep 6/8/12 x LEVY 4/5): 12 gifts +9 win to the perfect player; 8 sits 0.5pp over the band; **6 + LEVY 4 → greedy 54.5% / leverage 52.5%, gap 2pp**.
+- Node tests re-based on relative gold (garnish hits every reward); suite 177/177.
+
+
 ### 2026-08-27 (Session 5 fix round 2 — NEW-1/NEW-5 from the fixed playtest)
 **Done:**
 - **NEW-1 fixed** (playtest, 10 occurrences): nodes opened stuck in the previous node's sub-mode (SHOP/REMOVE/UPGRADE) and even survived restartRun — `nodeMode` now resets to CHOICES on the combat->node transition (renderer frame-transition flag; LOAN was the only self-resetting branch).

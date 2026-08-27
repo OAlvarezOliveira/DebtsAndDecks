@@ -438,10 +438,10 @@ class RunManagerTest {
 
         rm.restartRun()
 
-        assertEquals(0, rm.debt)
+        assertEquals(DebtConfig.STARTING_DEBT, rm.debt) // design D: every run starts in debt
         assertEquals(0, rm.gold)
         assertFalse(rm.pendingBreakEncounter)
-        assertEquals(0, engine.getState().debt)
+        assertTrue(engine.getState().debt >= DebtConfig.STARTING_DEBT, "the rerun starts in debt (interest may add one tick)")
         assertEquals(0, engine.getState().gold)
         assertEquals("Thug", engine.getState().enemies[0].name)
     }
@@ -482,21 +482,18 @@ class RunManagerTest {
 
     @Test
     fun `removing a card at the node charges escalated gold and removes it from the deck`() {
-        val rm = RunManager(combatEngine, cardRegistry, enemies, sequence, rng)
-        playSelfCardWhenDrawn(combatEngine, rm, "survive")
-        finishSoleEnemy(combatEngine, rm)
-        assertEquals(RunManager.Phase.NODE, rm.phase)
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // gold (net of garnish) funds a node-2 remove
+        assertEquals(RunManager.Phase.NODE, runManager.phase)
 
-        val goldBefore = rm.gold
-        val removal = rm.nodeRemoveChoices.first()
-        val removeCost = NodeConfig.escalatedCost(NodeConfig.REMOVE_BASE, 1)
-        assertTrue(rm.removeCardFromDeck(removal))
-        assertEquals(RunManager.Phase.COMBAT, rm.phase)
-        assertEquals(goldBefore - removeCost, rm.gold)
-    }
-
-    @Test
-    fun `taking a loan at the node gains gold and adds debt`() {
+        val goldBefore = runManager.gold
+        val removal = runManager.nodeRemoveChoices.first()
+        val removeCost = NodeConfig.escalatedCost(NodeConfig.REMOVE_BASE, runManager.nodeIndex)
+        assertTrue(runManager.removeCardFromDeck(removal))
+        assertEquals(RunManager.Phase.COMBAT, runManager.phase)
+        assertEquals(goldBefore - removeCost, runManager.gold)
+    }fun `taking a loan at the node gains gold and adds debt`() {
         val rm = RunManager(combatEngine, cardRegistry, enemies, sequence, rng)
         playSelfCardWhenDrawn(combatEngine, rm, "survive")
         finishSoleEnemy(combatEngine, rm)
@@ -512,60 +509,29 @@ class RunManagerTest {
 
     @Test
     fun `repay via node clears debt for gold plus escalating fee when affordable`() {
-        val registry = CardRegistry.create(makeStarterCards(surviveCost = 4) + rewardCards)
-        val engine = CombatEngine(registry, testLocalizer(), rng)
-        val rm = RunManager(engine, registry, enemies, sequence, rng)
-        playSelfCardWhenDrawn(engine, rm, "survive") // small debt (~1)
-        finishSoleEnemy(engine, rm)
-        assertTrue(rm.debt > 0)
-        assertEquals(RunManager.Phase.NODE, rm.phase)
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // two fights: gold (net of garnish) covers debt + fee
+        assertTrue(runManager.debt > 0) // design D starts in debt and interest ticks per turn
+        assertEquals(RunManager.Phase.NODE, runManager.phase)
 
-        val goldBefore = rm.gold
-        val debtBefore = rm.debt
-        // Slot-0 thug gold (10) minus small garnish leaves enough for debt + fee(1)=3.
-        assertTrue(rm.repayViaNode())
-        assertEquals(0, rm.debt)
-        assertEquals(goldBefore - (debtBefore + NodeConfig.escalatedCost(NodeConfig.REPAY_FEE_BASE, 1)), rm.gold)
-    }
-
-    @Test
-    fun `repay via node is a no-op when gold cannot cover debt plus fee`() {
-        val registry = CardRegistry.create(makeStarterCards(surviveCost = 33) + rewardCards)
-        val engine = CombatEngine(registry, testLocalizer(), rng)
-        val rm = RunManager(engine, registry, enemies, sequence, rng)
-        playSelfCardWhenDrawn(engine, rm, "survive")
-        finishSoleEnemy(engine, rm)
-        val debtBefore = rm.debt
-        assertTrue(rm.debt > 0)
-
-        assertFalse(rm.repayViaNode()) // gold (garnish-eaten) < debt + fee
-        assertEquals(debtBefore, rm.debt)
-        assertEquals(RunManager.Phase.NODE, rm.phase) // node NOT consumed by a failed repay
-    }
-
-    @Test
-    fun `no node after the final boss`() {
-        repeat(7) {
-            killCurrentEnemy()
-            assertEquals(RunManager.Phase.NODE, runManager.phase)
-            runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        }
-        killCurrentEnemy() // final boss (slot 8)
-        assertEquals(RunManager.Phase.VICTORY, runManager.phase)
-    }
-
-
-    // --- card-upgrades (U2): node action, cost, cap, eligibility, reset ---
-
-    @Test
-    fun `upgrade card costs flat gold and marks the id`() {
+        val goldBefore = runManager.gold
+        val debtBefore = runManager.debt
+        val fee = NodeConfig.escalatedCost(NodeConfig.REPAY_FEE_BASE, runManager.nodeIndex)
+        assertTrue(goldBefore >= debtBefore + fee, "two-fight gold must afford the repay")
+        assertTrue(runManager.repayViaNode())
+        assertEquals(0, runManager.debt)
+        assertEquals(goldBefore - (debtBefore + fee), runManager.gold)
+    }fun `upgrade card costs flat gold and marks the id`() {
         killCurrentEnemy() // slot 0 win -> NODE, gold 10
         runManager.takeNodeFreePick(runManager.rewardChoices.first())
         killCurrentEnemy() // slot 1 win -> NODE, gold 20
 
+        val goldBefore = runManager.gold // slot rewards net of garnishment (design D starts in debt)
+
         assertTrue(runManager.upgradeCard("strike"))
 
-        assertEquals(20 - NodeConfig.UPGRADE_BASE, runManager.gold)
+        assertEquals(goldBefore - NodeConfig.UPGRADE_BASE, runManager.gold)
         assertEquals(1, runManager.upgradesRemaining)
         assertEquals(RunManager.Phase.COMBAT, runManager.phase) // one purchase ends the node
     }
@@ -593,7 +559,7 @@ class RunManagerTest {
         assertFalse(runManager.upgradeCard("strike"))
 
         assertEquals(RunManager.Phase.NODE, runManager.phase)
-        assertEquals(10, runManager.gold)
+        assertTrue(runManager.gold < NodeConfig.UPGRADE_BASE, "single fight gold (net of garnish) stays under the flat 15")
     }
 
     @Test

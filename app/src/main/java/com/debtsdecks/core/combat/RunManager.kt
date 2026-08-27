@@ -320,12 +320,17 @@ class RunManager(
         nodeRemoveChoices = emptyList()
         nodeUpgradeChoices = emptyList()
         phase = Phase.COMBAT
-        debt = 0
+        debt = DebtConfig.STARTING_DEBT
         gold = 0
         hp = PlayerState().maxHp
         pendingBreakEncounter = false
         breakEncounterUsedThisRun = false
-        combatEngine.startCombat(listOf(enemyById(runSequence.slots[slotIndex].enemyId)), deck, upgradedCopiesById = upgradedCopiesById)
+        combatEngine.startCombat(
+            listOf(enemyById(runSequence.slots[slotIndex].enemyId)),
+            deck,
+            startingDebt = DebtConfig.STARTING_DEBT,
+            upgradedCopiesById = upgradedCopiesById
+        )
     }
 
     private fun enemyById(id: String): EnemyDefinition =
