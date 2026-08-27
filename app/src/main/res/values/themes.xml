@@ -7,5 +7,9 @@
     <style name="Theme.DebtsAndDecks.Fullscreen" parent="Theme.DebtsAndDecks">
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowNoTitle">true</item>
+        <!-- Render into the display cutout on the short edges. Honoured from API 27;
+             silently ignored on API 24-26. Declared here because libGDX 1.14.1 stopped
+             setting LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES itself on Android 35+. -->
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>

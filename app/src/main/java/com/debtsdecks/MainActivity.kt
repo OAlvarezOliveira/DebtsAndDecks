@@ -13,6 +13,9 @@ class MainActivity : AndroidApplication() {
             depth = 16; stencil = 8
             useImmersiveMode = true
             numSamples = 2
+            useAccelerometer = false
+            useCompass = false
+            useGyroscope = false
         }
 
         initialize(GameApp(), config)

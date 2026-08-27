@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.debtsdecks"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.debtsdecks"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0.0-mvp"
 
@@ -34,20 +34,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-Xopt-in=kotlin.RequiresOptIn",
-            "-Xjsr305=strict"
-        )
-    }
-
     buildFeatures {
         viewBinding = false
         compose = false
     }
 
-    packagingOptions {
+    packaging {
         resources {
             excludes += "/META-INF/*.kotlin_module"
         }
@@ -60,8 +52,15 @@ android {
     }
 }
 
-val gdxVersion = "1.12.1"
-val kotlinVersion = "1.9.22"
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        freeCompilerArgs.add("-Xjsr305=strict")
+    }
+}
+
+val gdxVersion = "1.14.2"
+val kotlinVersion = "2.2.20"
 val koinVersion = "3.5.3"
 val kotlinxSerializationVersion = "1.6.3"
 val kotlinxCoroutinesVersion = "1.7.3"
@@ -100,36 +99,24 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions {
-        freeCompilerArgs += "-Xjsr305=strict"
-    }
-}
-
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
 
-val copyAndroidNatives by tasks.registering {
-    val abiDirs = mapOf(
-        "natives-armeabi-v7a.jar" to "armeabi-v7a",
-        "natives-arm64-v8a.jar" to "arm64-v8a",
-        "natives-x86.jar" to "x86",
-        "natives-x86_64.jar" to "x86_64"
-    )
+val nativeAbiJars = mapOf(
+    "natives-armeabi-v7a.jar" to "armeabi-v7a",
+    "natives-arm64-v8a.jar" to "arm64-v8a",
+    "natives-x86.jar" to "x86",
+    "natives-x86_64.jar" to "x86_64"
+)
 
-    doFirst {
-        abiDirs.values.forEach { abi -> file("libs/$abi").mkdirs() }
-
-        natives.files.forEach { jar ->
-            val abi = abiDirs.entries.firstOrNull { jar.name.endsWith(it.key) }?.value
-            if (abi != null) {
-                copy {
-                    from(zipTree(jar))
-                    into(file("libs/$abi"))
-                    include("*.so")
-                }
-            }
+val copyAndroidNatives by tasks.registering(Sync::class) {
+    description = "Unpacks the libGDX native libraries into app/libs/<abi>/."
+    into(layout.projectDirectory.dir("libs"))
+    nativeAbiJars.forEach { (jarSuffix, abi) ->
+        from(natives.files.filter { it.name.endsWith(jarSuffix) }.map { zipTree(it) }) {
+            include("*.so")
+            into(abi)
         }
     }
 }
