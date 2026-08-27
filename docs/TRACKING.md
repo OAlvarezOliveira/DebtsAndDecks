@@ -50,7 +50,7 @@ signing, store listing and closed testing. See **BD-1** below — v1 ships free.
 - [x] **Integration** Wire Core ↔ GDX via DI (Module.kt), MainActivity launches GameScreen
 - [x] **Polish** Win/Lose screens
 - [x] **Polish** Card reward screen (pick 1 of 3; pool = 23 non-starter cards, starters excluded)
-- [x] **Test** Unit tests: CombatEngine, CardResolver, CardInstance, EnemyInstance, RunManager, DebtConfig, EnemyTierRegression, I18nBundle, LeveragePayoffCardsData, RunSimulationHarness (124/124 green across 10 classes, measured 2026-08-27 via `:app:testDebugUnitTest`)
+- [x] **Test** Unit tests: CombatEngine, CardResolver, CardInstance, EnemyInstance, RunManager, DebtConfig, EnemyTierRegression, I18nBundle, LeveragePayoffCardsData, RunSimulationHarness, RunSequenceTest (131/131 green across 11 classes, measured 2026-08-27 via `:app:testDebugUnitTest` at develop tip `b142528`)
 - [x] **SDD** Change `debt-economy-cards-and-boss-interest`: verify PASS (7/7 requirements, 12/12 scenarios) — delivered (`38d584d`)
 - [x] **SDD** Change `combat-progression-and-i18n`: verify completed (core-purity CRITICAL resolved via `Localizer`)
 - [x] **SDD** Change C1 `run-simulation-harness`: headless balance simulator (`dc65f08`, `9615b5e`) — `RunSimulationHarnessTest`, `RunSimulator`, `LeveragePolicy` under `core/simulation/`
@@ -95,7 +95,9 @@ page-size question with measured bytes, not version numbers.
 - Toolchain resolved from primary sources *before* editing, then applied one variable per rung with
   the full suite after each: Gradle 8.9 → **8.11.1**, Kotlin 1.9.22 → **2.2.20**, AGP 8.4.0 →
   **8.10.1**, compileSdk/targetSdk 34 → **36**, LibGDX 1.12.1 → **1.14.2**. `minSdk` stays **24**.
-  All seven rungs green at **124/124**, so the count P0 measured did not move.
+  All seven rungs green — measured **131/131** across 11 classes at develop tip `b142528`; the
+  test *surface* did not move across the seven rungs, but the 124/10 figure P0 recorded was itself
+  stale (it predated C5's `RunSequenceTest`), so the correct baseline is 131/11, not 124/10.
 - All three 16 KB layers verified on the **shipping bytes**: Check A on the `.so` extracted from the
   release APK (PASS), Check B `zipalign -c -P 16 -v 4` (exit 0, all four `.so` `Stored` and on exact
   16384-byte boundaries), and **Check C on a real 16 KB device** — AVD with
@@ -181,7 +183,7 @@ page-size question with measured bytes, not version numbers.
 | 2026-08-27 | **BD-1 — v1 ships free** | v1 ships **free**: no billing, no IAP, no ads, no analytics, no third-party SDKs. Two permanent consequences: (1) the Play **Data safety** declaration stays "no data collected, no data shared" for as long as no analytics/ads/billing SDK is added — adding one **reopens BD-1**; (2) publication uses a **personal** developer account, so **closed testing with 12 opted-in testers for 14 continuous days** is required before production access can be requested *(policy verified 2026-08-27 — re-check the Play Console requirement page before relying on it for a release date)*. |
 | 2026-08-27 | C3 `remove-free-debt-valve` status | **NEEDS RE-VERIFICATION.** `rg "RepayMode\|repayDebt\|REPAY_DISCARD_VALUE\|USURY_HP_RATIO" app/src/` returns zero matches and `9afd532` removed the valve, so C3's scope may already be satisfied by C2/C4 — or C3 may be mis-scoped. P0 records the evidence and deliberately does not decide. |
 | 2026-08-27 | Card art format | Reverted to PNG by `fe281e1`; 19 files, all genuine PNG, ~355–470 KB each. APK-size impact against the `< 20 MB` target is handed to P1. — *answered by P1 2026-08-27: release APK **13 MB**, AAB **12 MB**; the budget holds, no action needed.* |
-| 2026-08-27 | **16 KB page-size compliance** | **`ALIGNED-AFTER-FALLBACK`.** LibGDX 1.12.1 ships 64-bit `.so` with `p_align 0x1000`; Play requires `>= 0x4000` for `targetSdk >= 35`. Measured every release: **1.13.0 is the floor**, pinned **1.14.2** (trigger **T1**). Verified on shipping bytes at all three layers — ELF alignment, `zipalign -P 16`, and a real device with `PAGE_SIZE = 16384`. **No shortcut was used**: 64-bit ABIs kept, `useLegacyPackaging` never set, no warning suppressed, `targetSdk` never lowered. Evidence in ADR 0002. |
+| 2026-08-27 | **16 KB page-size compliance** | **`ALIGNED-AFTER-FALLBACK`.** LibGDX 1.12.1 ships 64-bit `.so` with `p_align 0x1000`; Play requires `>= 0x4000` for `targetSdk >= 35`. Measured every release: **1.13.0 is the floor**, pinned **1.14.2** (trigger **T1**). Verified on shipping bytes at all three layers — ELF alignment, `zipalign -P 16`, and an **AVD emulator** with `PAGE_SIZE = 16384` (OQ-1: physical device still outstanding). **No shortcut was used**: 64-bit ABIs kept, `useLegacyPackaging` never set, no warning suppressed, `targetSdk` never lowered. Evidence in ADR 0002. |
 | 2026-08-27 | Toolchain baseline | Gradle **8.11.1**, AGP **8.10.1**, Kotlin **2.2.20**, LibGDX **1.14.2**, compileSdk/targetSdk **36**, minSdk **24** (unchanged). Each rung is forced by the one above it, not chosen for recency — AGP 8.10 is the lowest stable line supporting API 36, and it dictates the Gradle and Kotlin floors. Suite green at 124/124 after every rung. |
 | 2026-08-27 | Gradle wrapper status | **Not broken, and no repair pulled forward from P7.** The JAR is a valid 43 KB archive; it only ever pointed at a Gradle too old for AGP 8.10.1. Bumping `distributionUrl` to 8.11.1 is sufficient and `./gradlew` is the canonical invocation. A standalone 8.11.1 (SHA-256 verified) was installed while resolving this and is retained as a fallback only. |
 | 2026-08-27 | Device run (Check C) | Emulated AVD, image `android-36 google_apis_ps16k x86_64`, `getconf PAGE_SIZE = 16384`, `ro.build.version.sdk = 36`. Debug build (release APK is unsigned until P6): install `Success`, launch `Status: ok` in 3502 ms, `nativeloader` mapped `libgdx.so` from the APK, OpenGL ES 3.1 reached, no crashes. **Open (OQ-1): still no run on a *physical* 16 KB device.** |
@@ -195,7 +197,7 @@ page-size question with measured bytes, not version numbers.
 
 | Date | Build | Notes | Balance Changes |
 |------|-------|-------|-----------------|
-| — | — | — | — |
+| 2026-08-27 | Debug APK, `b142528`, AVD `android-36 google_apis_ps16k x86_64` (`PAGE_SIZE=16384`) | Install `Success`, launch `Status: ok` in 3502 ms, `nativeloader` mapped `libgdx.so` from the APK, OpenGL ES 3.1 reached, no crashes (16 KB Check C — see ADR 0002). This was a launch/stability smoke check, not a full combat playtest; full loop + economy feel is still **To Do**. | None — no balance changes made this session. |
 
 ---
 
@@ -203,14 +205,14 @@ page-size question with measured bytes, not version numbers.
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| Combat duration | 4-6 min | — | ⬜ |
-| Turns per combat | 8-10 | — | ⬜ |
-| Player win rate | 60-70% | — | ⬜ |
-| Avg HP on win | 15-30% | — | ⬜ |
-| APK size | < 20 MB | — | ⬜ |
-| Launch time | < 2 sec | — | ⬜ |
-| 60 FPS stability | 99% | — | ⬜ |
-| Crash-free sessions | 100% | — | ⬜ |
+| Combat duration | 4-6 min | — (not yet measured; needs full playtest) | ⬜ |
+| Turns per combat | 8-10 | — (not yet measured; needs full playtest) | ⬜ |
+| Player win rate | 60-70% | — (not yet measured; needs full playtest) | ⬜ |
+| Avg HP on win | 15-30% | — (not yet measured; needs full playtest) | ⬜ |
+| APK size | < 20 MB | 13 MB release APK / 12 MB AAB (measured 2026-08-27, P1) | ✅ |
+| Launch time | < 2 sec | **3502 ms** on AVD (measured 2026-08-27, Check C, debug build) | 🔴 over target — release/signed build not yet timed (P6); re-measure before treating this as final |
+| 60 FPS stability | 99% | — (not yet measured; needs full playtest) | ⬜ |
+| Crash-free sessions | 100% | — (not yet measured; needs full playtest) | ⬜ |
 
 ---
 
@@ -229,6 +231,7 @@ page-size question with measured bytes, not version numbers.
 - [ ] Settings / Pause / Accessibility
 - [ ] Sound / Music / Particles
 - [ ] Tutorial / Encyclopedia
+- [ ] **Tech debt** `core/data/DataLoader.kt` imports `android.content.Context` (since `9d72ca3`) — violates the `core/` purity rule; correctly deferred by both P0 and P1 as out of scope, but no phase owns fixing it yet. Assign an owning phase before it is inherited a third time.
 
 ---
 
