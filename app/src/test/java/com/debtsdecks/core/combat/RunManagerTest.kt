@@ -547,4 +547,83 @@ class RunManagerTest {
         killCurrentEnemy() // final boss (slot 8)
         assertEquals(RunManager.Phase.VICTORY, runManager.phase)
     }
+
+
+    // --- card-upgrades (U2): node action, cost, cap, eligibility, reset ---
+
+    @Test
+    fun `upgrade card costs flat gold and marks the id`() {
+        killCurrentEnemy() // slot 0 win -> NODE, gold 10
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // slot 1 win -> NODE, gold 20
+
+        assertTrue(runManager.upgradeCard("strike"))
+
+        assertEquals(20 - NodeConfig.UPGRADE_BASE, runManager.gold)
+        assertEquals(1, runManager.upgradesRemaining)
+        assertEquals(RunManager.Phase.COMBAT, runManager.phase) // one purchase ends the node
+        assertFalse(runManager.resolveNodeUpgradeCards().any { it.id == "strike" }) // R2: never re-offered
+    }
+
+    @Test
+    fun `upgrade card fails when gold is insufficient and does not advance`() {
+        killCurrentEnemy() // gold 10 < 15
+
+        assertFalse(runManager.upgradeCard("strike"))
+
+        assertEquals(RunManager.Phase.NODE, runManager.phase)
+        assertEquals(10, runManager.gold)
+    }
+
+    @Test
+    fun `upgrade card fails for an unknown card`() {
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // gold 20
+
+        assertFalse(runManager.upgradeCard("does_not_exist"))
+    }
+
+    @Test
+    fun `upgrading the same card twice is blocked`() {
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // gold 20
+
+        assertTrue(runManager.upgradeCard("strike"))
+        assertFalse(runManager.upgradeCard("strike")) // already upgraded (R2/S4)
+    }
+
+    @Test
+    fun `upgrade cap is two per run`() {
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // gold 35 (10+10+15)
+
+        assertTrue(runManager.upgradeCard("strike"))
+        assertTrue(runManager.upgradeCard("defend"))
+        assertEquals(0, runManager.upgradesRemaining)
+        assertFalse(runManager.upgradeCard("bash")) // cap reached (R3/S5)
+    }
+
+    @Test
+    fun `restart resets upgrade state`() {
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // gold 20
+
+        runManager.upgradeCard("strike")
+        runManager.restartRun()
+
+        assertEquals(2, runManager.upgradesRemaining)
+
+        // R11: a fresh run can upgrade the same id again (proved functionally: earn gold, then upgrade).
+        killCurrentEnemy()
+        runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        killCurrentEnemy() // gold 20 again
+
+        assertTrue(runManager.upgradeCard("strike"))
+    }
 }

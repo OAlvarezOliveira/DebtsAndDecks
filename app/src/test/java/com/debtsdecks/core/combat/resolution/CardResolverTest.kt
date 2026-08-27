@@ -504,4 +504,52 @@ class CardResolverTest {
         val r25 = resolver.resolve(card, null, testState(debt = 25))
         assertEquals(3, r25.effects.filterIsInstance<CardResolver.Effect.Draw>().single().count)
     }
+    
+
+    // --- card-upgrades (U3): effective values at resolution ---
+
+    @Test
+    fun `upgraded attack resolves 3 bonus damage`() {
+        val def = CardDefinition(
+            id = "strike", name = "Strike", type = CardType.ATTACK, cost = 1, damage = 6,
+            targetType = TargetType.ENEMY, description = "Deal 6", rarity = Rarity.BASIC
+        )
+        val card = CardInstance(def)
+        card.upgraded = true
+
+        val result = resolver.resolve(card, "enemy-1", testState(debt = 0))
+
+        val damage = result.effects.filterIsInstance<CardResolver.Effect.Damage>().first()
+        assertEquals(9, damage.amount)
     }
+
+    @Test
+    fun `upgraded block skill resolves 2 bonus block`() {
+        val def = CardDefinition(
+            id = "defend", name = "Defend", type = CardType.SKILL, cost = 1, block = 5,
+            targetType = TargetType.SELF, description = "Block 5", rarity = Rarity.BASIC
+        )
+        val card = CardInstance(def)
+        card.upgraded = true
+
+        val result = resolver.resolve(card, null, testState())
+
+        val block = result.effects.filterIsInstance<CardResolver.Effect.Block>().first()
+        assertEquals(7, block.amount)
+    }
+
+    @Test
+    fun `upgraded draw skill resolves 1 bonus draw`() {
+        val def = CardDefinition(
+            id = "drawer", name = "Drawer", type = CardType.SKILL, cost = 1, draw = 1,
+            targetType = TargetType.SELF, description = "Draw 1", rarity = Rarity.BASIC
+        )
+        val card = CardInstance(def)
+        card.upgraded = true
+
+        val result = resolver.resolve(card, null, testState())
+
+        val draw = result.effects.filterIsInstance<CardResolver.Effect.Draw>().first()
+        assertEquals(2, draw.count)
+    }
+}

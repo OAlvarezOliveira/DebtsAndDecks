@@ -86,6 +86,16 @@ candidate, not a target change.
 
 ## Daily Log
 
+### 2026-08-27 (Session 5 — SDD change \`card-upgrades\` applied: between-fight node upgrade action)
+**Goal:** Ship the deck-builder pillar of card upgrades as a durable gold sink (P2 dead-gold finding) while keeping the balance invariants green.
+**Done:**
+- **SDD pipeline** init→explore→proposal→spec→design→tasks→apply (engram store, interactive, single-pr) for the change \`card-upgrades\`. Preflight confirmed by user this session.
+- **Implemented (per spec R1-R11):** run-level upgraded-ids set in \`RunManager\` (flat 15 gold, hard cap 2/run, one purchase ends the node); \`CombatEngine.startCombat\` accepts the set and marks instances + applies the -1-cost priority; \`CardInstance\` effective getters (+3 ATK / +2 BLK / +1 draw, guarded by cost<2) read by \`CardResolver\` at its 3 verified injection points; node UI: 6th button (x=990) + \`NodeMode.UPGRADE\` sub-screen + gold upgrade badge in hand; i18n EN/ES (\`node.button.upgrade\` etc.); sim \`NodePolicy\` ladder — upgrade first (scarce cap), reordering proven necessary by the sim itself (shop-early captured the gold at node≤3).
+- **Balance gate (R10): harness sweep green AND improved.** Greedy 53.5% / leverage 51.0% (pivot band 35-55% ✓), policy gap —— 2.5pp (was 8pp pre-change; the upgrade sink rebalanced debt-as-power in favor of the leverage policy), peak debt 34/35 in [25,45) ✓, payoff cards picked ✓.
+- **Suite: 176/176 green** (155 baseline + 21 new: CardInstance 8, RunManager 6, CombatEngine 2, CardResolver 3, NodePolicy 2). TDD evidence per unit (RED → GREEN), full \`--rerun-tasks\` at close.
+**Next:** human playtest of the new node option (feel), verify/archive the change (session close), then P4-P7.
+
+
 ### 2026-08-27 (Session 5 — P2 balance diagnostics via sim; playtest prepped on physical device)
 **Goal:** Attack the P2 sim red flags with evidence before/while the human playtest happens.
 **Done:**
@@ -266,6 +276,7 @@ archive both phases before starting P2.
 | 2026-08-27 | Device run (Check C) | Emulated AVD, image `android-36 google_apis_ps16k x86_64`, `getconf PAGE_SIZE = 16384`, `ro.build.version.sdk = 36`. Debug build (release APK is unsigned until P6): install `Success`, launch `Status: ok` in 3502 ms, `nativeloader` mapped `libgdx.so` from the APK, OpenGL ES 3.1 reached, no crashes. **Open (OQ-1): still no run on a *physical* 16 KB device.** |
 | 2026-08-27 | `allowBackup` | **Deferred to P4** (OQ-2). Left at `true` in P1; the decision belongs with the Play Data safety declaration, not with the platform baseline. |
 | 2026-08-27 | `largeHeap` artifact discrepancy | Spec says remove it, design §6.4 says keep it. **Design followed** per the executor contract, and both positions are recorded. Shrinking the heap is a runtime-risk change with no submission benefit, and P1 must not change behaviour. |
+| 2026-08-27 | **Card upgrades (dead-gold sink, delivered)** | \`card-upgrades\` SDD change: 6th node action, flat 15 gold, +3 ATK/+2 BLK/-1 cost, once per card id, cap 2/run. Balance re-measured: greedy 53.5%/leverage 51.0% in band, policy gap 8pp→2.5pp. The sink is deliberate-delimited (2×15 per run): residual endgame gold remains, but now converts into durable power. |
 | 2026-08-27 | **Dead gold (P2)** | Structural: uncapped node escalation (node-7 shop ≈ 91 gold) leaves 77/80 sim runs ≥40 gold unspent. Cap sweep (x2.25/x2.0/x1.75/x1.5) rejected with evidence: fixes gold but breaks the 35-55% band (65-70% win) and the greedy/leverage gap (9-16pp). Gold-sink decision deferred to the human playtest. |
 | 2026-08-27 | **Harness R4.1 peak-debt invariant** | **Re-metriced with evidence** (not silenced): the C4 proxy died in C7 (shared NodePolicy; spread measured -0.6 @ 200 seeds, -0.89 @ 500). Replaced by debt-band asserts [25, 45) + existing win-gap grace. |
 | 2026-08-27 | Cutout attribute defect | The phase instructions named `android:layoutInDisplayCutoutMode` on `<activity>` — **that attribute does not exist** and AAPT rejects it. The real one is the *theme* attribute `android:windowLayoutInDisplayCutoutMode`, now `shortEdges` in `Theme.DebtsAndDecks.Fullscreen`. On API 35+ the platform widens it to `always`; the declaration still matters for API 27–34. |

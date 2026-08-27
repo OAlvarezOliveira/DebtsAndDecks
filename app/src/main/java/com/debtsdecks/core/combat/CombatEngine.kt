@@ -90,7 +90,8 @@ class CombatEngine(
         starterDeck: List<String>,
         startingGold: Int = 0,
         startingDebt: Int = 0,
-        startingHp: Int = PlayerState().maxHp
+        startingHp: Int = PlayerState().maxHp,
+        upgradedCardIds: Set<String> = emptySet()
     ) {
         // Create enemies
         enemies = enemyDefinitions.map { EnemyInstance(it, l10n) }.toMutableList()
@@ -102,7 +103,11 @@ class CombatEngine(
         // Build draw pile from starter deck
         drawPile = ArrayDeque(starterDeck.map { cardId ->
             val def = cardRegistry.getOrThrow(cardId)
-            CardInstance(def)
+            CardInstance(def).apply {
+                upgraded = cardId in upgradedCardIds
+                // R6: cost-2+ upgraded cards gain the cost cut, never the stat bonus.
+                if (upgraded && def.cost >= 2) cost = def.cost - 1
+            }
         }.shuffled(rng))
 
         discardPile.clear()

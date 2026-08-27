@@ -113,7 +113,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
 
     // C7 node screen: which sub-view is active (main choices vs shop/remove/loan sub-offers).
     // Input and render share this via [setNodeMode]/[nodeMode].
-    enum class NodeMode { CHOICES, SHOP, REMOVE, LOAN }
+    enum class NodeMode { CHOICES, SHOP, REMOVE, LOAN, UPGRADE }
     private var nodeMode: NodeMode = NodeMode.CHOICES
     fun setNodeMode(mode: NodeMode) { nodeMode = mode }
     fun getNodeMode(): NodeMode = nodeMode
@@ -393,6 +393,19 @@ class CombatRenderer(private val bundle: I18NBundle) {
                 batch.end()
             }
 
+            // card-upgrades R7: upgrade badge (gold banner, top-right, behind the content layer)
+            if (card.upgraded) {
+                shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+                shapeRenderer.setColor(1f, 0.8f, 0.1f, 0.9f)
+                shapeRenderer.rect(x + cardWidth - 92f, y + cardHeight - 24f, 84f, 22f)
+                shapeRenderer.end()
+                batch.begin()
+                batch.color = Color(0.25f, 0.18f, 0f, 1f)
+                smallFont.draw(batch, "UPGRADED", x + cardWidth - 86f, y + cardHeight - 8f)
+                batch.color = Color.WHITE
+                batch.end()
+            }
+
             // Card content
             batch.begin()
             // Cost
@@ -500,6 +513,13 @@ class CombatRenderer(private val bundle: I18NBundle) {
                 batch.end()
                 drawCardOffers(run.resolveNodeRemoveCards(), batch)
             }
+            NodeMode.UPGRADE -> {
+                batch.begin()
+                font.draw(batch, bundle.get("node.upgrade.title"), 50f, 690f)
+                font.draw(batch, bundle.format("node.upgrade_offer", NodeConfig.UPGRADE_BASE), 50f, 660f)
+                batch.end()
+                drawCardOffers(run.resolveNodeUpgradeCards(), batch)
+            }
             NodeMode.LOAN -> {
                 batch.begin()
                 font.draw(batch, bundle.get("node.loan.title"), 50f, 690f)
@@ -543,7 +563,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
     // --- Node layout helpers (shared with CombatInputHandler via the public bounds fn) ---
 
     fun nodeChoiceBounds(index: Int): Rectangle {
-        val x = listOf(40f, 230f, 420f, 610f, 800f)[index]
+        val x = listOf(40f, 230f, 420f, 610f, 800f, 990f)[index]
         return Rectangle(x, 120f, 170f, 50f)
     }
 

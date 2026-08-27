@@ -52,7 +52,7 @@ class CombatInputHandler(
         val mode = renderer.getNodeMode()
         if (mode == CombatRenderer.NodeMode.CHOICES) {
             // Main choice buttons (0..4).
-            for (i in 0..4) {
+            for (i in 0..5) {
                 if (renderer.nodeChoiceBounds(i).contains(x, y)) {
                     return when (i) {
                         0 -> { runManager.takeNodeFreePick(runManager.rewardChoices.first()); true }
@@ -60,6 +60,7 @@ class CombatInputHandler(
                         2 -> { renderer.setNodeMode(CombatRenderer.NodeMode.SHOP); true }
                         3 -> { renderer.setNodeMode(CombatRenderer.NodeMode.REMOVE); true }
                         4 -> { renderer.setNodeMode(CombatRenderer.NodeMode.LOAN); true }
+                        5 -> { renderer.setNodeMode(CombatRenderer.NodeMode.UPGRADE); true }
                         else -> false
                     }
                 }
@@ -85,6 +86,15 @@ class CombatInputHandler(
                 removeCards.forEachIndexed { index, card ->
                     if (renderer.nodeSubCardBounds(index, removeCards.size).contains(x, y)) {
                         return runManager.removeCardFromDeck(card.id)
+                    }
+                }
+                false
+            }
+            CombatRenderer.NodeMode.UPGRADE -> {
+                val upgradeCards = runManager.resolveNodeUpgradeCards()
+                upgradeCards.forEachIndexed { index, card ->
+                    if (renderer.nodeSubCardBounds(index, upgradeCards.size).contains(x, y)) {
+                        return runManager.upgradeCard(card.id)
                     }
                 }
                 false

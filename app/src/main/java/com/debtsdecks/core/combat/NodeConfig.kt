@@ -33,6 +33,21 @@ object NodeConfig {
     /** How many random deck cards are offered when removing. */
     const val REMOVE_OFFER_SIZE: Int = 3
 
+    // --- Card upgrades (card-upgrades) ---
+
+    /** Flat gold cost to upgrade one card at a node — deliberately NOT escalated (dead-gold sink
+     *  reachable late run; bounded by the 2-per-run cap in RunManager). */
+    const val UPGRADE_BASE: Int = 15
+
+    /** Bonus damage added to an upgraded cost-1 ATTACK at resolution. */
+    const val UPGRADE_ATTACK_DAMAGE: Int = 3
+
+    /** Bonus block added to an upgraded cost-1 block SKILL at resolution. */
+    const val UPGRADE_SKILL_BLOCK: Int = 2
+
+    /** Bonus draw added to an upgraded cost-1 non-block SKILL at resolution. */
+    const val UPGRADE_SKILL_DRAW: Int = 1
+
     /** Escalated floor cost of a [base] cost at 1-based [nodeIndex]. */
     fun escalatedCost(base: Int, nodeIndex: Int): Int =
         (base * Math.pow(ESCALATION, (nodeIndex - 1).toDouble())).toInt()

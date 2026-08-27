@@ -123,7 +123,7 @@ class CardResolver(private val l10n: Localizer) {
                         } else {
                             0
                         }
-                        val baseDamage = ((card.baseDamage + player.strength + leverageBonus + taggedScale) * if (player.weak > 0) 0.75 else 1.0).toInt()
+                        val baseDamage = ((card.effectiveDamage + player.strength + leverageBonus + taggedScale) * if (player.weak > 0) 0.75 else 1.0).toInt()
                         val effectiveDamage = if (enemy.vulnerable > 0) (baseDamage * 1.5).toInt() else baseDamage
                         effects.add(Effect.Damage(t, effectiveDamage))
                         landedHits++
@@ -160,13 +160,13 @@ class CardResolver(private val l10n: Localizer) {
                 }
             }
             com.debtsdecks.core.model.CardType.SKILL, com.debtsdecks.core.model.CardType.POWER -> {
-                if (card.baseBlock > 0) {
-                    effects.add(Effect.Block(card.baseBlock))
-                    logEntries.add(CombatLogEntry.create(l10n.format("log.gained_block", card.baseBlock), state.turnNumber))
+                if (card.effectiveBlock > 0) {
+                    effects.add(Effect.Block(card.effectiveBlock))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.gained_block", card.effectiveBlock), state.turnNumber))
                 }
-                if (card.baseDraw > 0) {
-                    effects.add(Effect.Draw(card.baseDraw))
-                    logEntries.add(CombatLogEntry.create(l10n.format("log.drew_cards", card.baseDraw), state.turnNumber))
+                if (card.effectiveDraw > 0) {
+                    effects.add(Effect.Draw(card.effectiveDraw))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.drew_cards", card.effectiveDraw), state.turnNumber))
                 }
                 // Compound Interest scales Strength off current Debt instead of a flat amount:
                 // 1 Strength per 10 Debt, floor-rounded. Replaces the flat baseStrengthGain path

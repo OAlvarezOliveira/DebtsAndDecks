@@ -530,4 +530,55 @@ class CombatEngineTest {
             "expected levy execution log"
         )
     }
+
+
+    // --- card-upgrades (U2): startCombat applies the run-level upgraded set ---
+
+    @Test
+    fun `start combat marks upgraded instances and cuts cost of cost2 cards`() {
+        val bashDef = CardDefinition(
+            id = "bash", name = "Bash", type = CardType.ATTACK, cost = 2, damage = 8,
+            targetType = TargetType.ENEMY, description = "Deal 8", rarity = Rarity.BASIC
+        )
+        cardRegistry = CardRegistry.create(listOf(bashDef, strikeDef(), defendDef()))
+        engine = CombatEngine(cardRegistry, testLocalizer(), rng)
+
+        val thug = thugDef()
+        engine.startCombat(listOf(thug), listOf("strike", "bash", "defend"), upgradedCardIds = setOf("strike", "bash"))
+
+        val state = engine.getState()
+        val strikeInst = state.hand.first { it.cardId == "strike" }
+        val bashInst = state.hand.first { it.cardId == "bash" }
+
+        assertTrue(strikeInst.upgraded, "strike must be upgraded")
+        assertEquals(1, bashInst.cost, "upgraded bash costs 1 (cost 2 -> 1)")
+        // Vanilla card in the same combat stays untouched.
+        assertTrue(!state.hand.first { it.cardId == "defend" }.upgraded)
+    }
+
+    @Test
+    fun `start combat without an upgraded set keeps instances vanilla`() {
+        engine.startCombat(listOf(thugDef()), listOf("strike", "defend"))
+        // strike vanilla: no upgrade flag, original cost
+        val strikeInst = engine.getState().hand.first { it.cardId == "strike" }
+        assertTrue(!strikeInst.upgraded)
+        assertEquals(1, strikeInst.cost)
+        assertEquals(6, strikeInst.baseDamage)
+    }
+
+    private fun strikeDef(): CardDefinition = CardDefinition(
+        id = "strike", name = "Strike", type = CardType.ATTACK, cost = 1, damage = 6,
+        targetType = TargetType.ENEMY, description = "Deal 6", rarity = Rarity.BASIC
+    )
+
+    private fun defendDef(): CardDefinition = CardDefinition(
+        id = "defend", name = "Defend", type = CardType.SKILL, cost = 1, block = 5,
+        targetType = TargetType.SELF, description = "Block 5", rarity = Rarity.BASIC
+    )
+
+    private fun thugDef(): EnemyDefinition = EnemyDefinition(
+        id = "thug", name = "Thug", hp = 24,
+        intentPattern = listOf(IntentStep(IntentType.ATTACK, 6)),
+        rewards = EnemyRewards(gold = 10, cardChoices = 3)
+    )
 }

@@ -3,12 +3,17 @@ package com.debtsdecks.core.cards
 import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.model.CardType
 import com.debtsdecks.core.model.TargetType
+import com.debtsdecks.core.combat.NodeConfig
 
 class CardInstance(
     val definition: CardDefinition,
     val instanceId: String = java.util.UUID.randomUUID().toString()
 ) {
     var cost: Int = definition.cost
+
+    /** Cost as defined in [definition], captured before any upgrade reduction is applied. */
+    val baseCost: Int = definition.cost
+
     var exhausted: Boolean = false
     var upgraded: Boolean = false
 
@@ -60,6 +65,19 @@ class CardInstance(
     val baseHits: Int
         get() = definition.hits
 
+    // --- Upgrade bonuses (card-upgrades, R4/R5/R6): effective values read by CardResolver.
+    // The baseCost < 2 guard enforces the -1-cost priority (R6): cost-2+ cards get ONLY the
+    // cost reduction at instance creation, never a stat bonus.
+
+    val effectiveDamage: Int
+        get() = baseDamage + if (upgraded && baseCost < 2 && type == CardType.ATTACK) NodeConfig.UPGRADE_ATTACK_DAMAGE else 0
+
+    val effectiveBlock: Int
+        get() = baseBlock + if (upgraded && baseCost < 2 && type == CardType.SKILL && baseBlock > 0) NodeConfig.UPGRADE_SKILL_BLOCK else 0
+
+    val effectiveDraw: Int
+        get() = baseDraw + if (upgraded && baseCost < 2 && type == CardType.SKILL && baseBlock == 0) NodeConfig.UPGRADE_SKILL_DRAW else 0
+
     val description: String
         get() = definition.description
 
@@ -86,6 +104,7 @@ class CardInstance(
         val copy = CardInstance(definition, instanceId).apply {
             cost = newCost ?: this.cost
             exhausted = newExhausted ?: this.exhausted
+            upgraded = this@CardInstance.upgraded
         }
         return copy
     }

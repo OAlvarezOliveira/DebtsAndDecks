@@ -24,6 +24,15 @@ class CardInstanceTest {
         return CardInstance(def)
     }
 
+    private fun skillCard(cost: Int, block: Int = 0, draw: Int = 0): CardInstance {
+        val def = CardDefinition(
+            id = "test_skill", name = "Test Skill", type = CardType.SKILL, cost = cost,
+            block = block, draw = draw, targetType = TargetType.SELF, description = "Skill",
+            rarity = Rarity.BASIC
+        )
+        return CardInstance(def)
+    }
+
     @Test
     fun `isPlayable is true for a fresh card regardless of cost`() {
         assertTrue(card(cost = 99).isPlayable())
@@ -82,5 +91,65 @@ class CardInstanceTest {
                 tags = setOf("starter")
             )
         )
+    }
+
+
+    // --- card-upgrades: effective values (R4/R5/R6) ---
+
+    @Test
+    fun `upgraded cost1 attack gains 3 damage`() {
+        val instance = card(cost = 1)
+        assertEquals(6, instance.effectiveDamage)
+        instance.upgraded = true
+        assertEquals(9, instance.effectiveDamage)
+    }
+
+    @Test
+    fun `non-upgraded attack keeps base damage`() {
+        assertEquals(6, card(cost = 1).effectiveDamage)
+        assertEquals(6, card(cost = 2).effectiveDamage)
+    }
+
+    @Test
+    fun `cost2 attack upgraded gets no stat bonus - cost reduction priority`() {
+        val instance = card(cost = 2)
+        instance.upgraded = true
+        assertEquals(6, instance.effectiveDamage)
+    }
+
+    @Test
+    fun `upgraded block skill gains 2 block`() {
+        val skill = skillCard(cost = 1, block = 5)
+        skill.upgraded = true
+        assertEquals(7, skill.effectiveBlock)
+    }
+
+    @Test
+    fun `upgraded draw skill gains 1 draw`() {
+        val skill = skillCard(cost = 1, draw = 1)
+        skill.upgraded = true
+        assertEquals(2, skill.effectiveDraw)
+    }
+
+    @Test
+    fun `upgraded block skill does not gain draw`() {
+        val skill = skillCard(cost = 1, block = 5, draw = 1)
+        skill.upgraded = true
+        assertEquals(1, skill.effectiveDraw)  // no draw bonus when block > 0
+    }
+
+    @Test
+    fun `non-upgraded skills keep base values`() {
+        val blockSkill = skillCard(cost = 1, block = 5)
+        assertEquals(5, blockSkill.effectiveBlock)
+        val drawSkill = skillCard(cost = 1, draw = 1)
+        assertEquals(1, drawSkill.effectiveDraw)
+    }
+
+    @Test
+    fun `baseCost captures the definition cost even after mutation`() {
+        val instance = card(cost = 2)
+        instance.cost = 1
+        assertEquals(2, instance.baseCost)
     }
 }

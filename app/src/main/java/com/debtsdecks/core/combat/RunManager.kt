@@ -57,6 +57,33 @@ class RunManager(
     fun resolveNodeRemoveCards(): List<CardDefinition> =
         nodeRemoveChoices.mapNotNull { cardRegistry.get(it) }
 
+    /** Upgrades bought this run (R3). */
+    val upgradesRemaining: Int get() = MAX_UPGRADES_PER_RUN - upgradesUsed
+
+    /** Up to 3 eligible (not-yet-upgraded) deck cards, shuffled - the node upgrade offer (R2). */
+    fun resolveNodeUpgradeCards(): List<CardDefinition> =
+        deck.distinct().filter { it !in upgradedIds }.mapNotNull { cardRegistry.get(it) }
+            .shuffled(rng)
+            .take(NodeConfig.REMOVE_OFFER_SIZE)
+
+    /**
+     * Upgrades [cardId] for a flat [NodeConfig.UPGRADE_BASE] gold (R3): marks every copy of the
+     * id in the deck as upgraded and ends the node (one purchase per node, like buy/remove).
+     * No-op (false) when the card is absent, already upgraded, the run cap is reached, or gold
+     * is insufficient.
+     */
+    fun upgradeCard(cardId: String): Boolean {
+        if (cardId !in deck) return false
+        if (cardId in upgradedIds) return false
+        if (upgradesUsed >= MAX_UPGRADES_PER_RUN) return false
+        if (gold < NodeConfig.UPGRADE_BASE) return false
+        gold -= NodeConfig.UPGRADE_BASE
+        upgradedIds += cardId
+        upgradesUsed++
+        advanceToNextCombat()
+        return true
+    }
+
     /** Run-persistent liability, mirrored from [combatEngine] on every [refresh] while in combat. */
     var debt: Int = 0
         private set
@@ -80,6 +107,13 @@ class RunManager(
     private var breakEncounterUsedThisRun = false
     private var slotIndex = 0
     private var deck: List<String> = CombatEngine.STARTER_DECK
+
+    /** Card ids upgraded this run (card-upgrades R1). Flat per-id: upgrades every copy of the
+     *  id in the run deck (deck stores ids, instances are rebuilt per combat). */
+    private val upgradedIds = mutableSetOf<String>()
+
+    /** Upgrades purchased this run; hard-capped by [MAX_UPGRADES_PER_RUN] (R3). */
+    private var upgradesUsed = 0
 
     init {
         beginRun()
@@ -247,7 +281,8 @@ class RunManager(
                 deck,
                 gold,
                 debt,
-                hp
+                hp,
+                upgradedIds
             )
         } else {
             slotIndex++
@@ -263,6 +298,8 @@ class RunManager(
         slotIndex = 0
         nodeIndex = 0
         deck = CombatEngine.STARTER_DECK
+        upgradedIds.clear()
+        upgradesUsed = 0
         rewardChoices = emptyList()
         nodeShopChoices = emptyList()
         nodeRemoveChoices = emptyList()
@@ -279,6 +316,7 @@ class RunManager(
         enemyDefinitions.first { it.id == id }
 
     companion object {
+        private const val MAX_UPGRADES_PER_RUN: Int = 2
         // Starter cards are already guaranteed in the deck, so they're excluded from rewards.
         private val REWARD_EXCLUDED_TAGS = setOf("starter")
     }
