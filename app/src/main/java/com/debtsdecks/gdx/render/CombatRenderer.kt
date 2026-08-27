@@ -507,8 +507,26 @@ class CombatRenderer(private val bundle: I18NBundle) {
         shapeRenderer.end()
 
         if (art != null) {
+            // objectFit: cover. The illustrations are square (512x512) and the art window is
+            // landscape, so a plain draw() stretches them horizontally. Crop a centred slice of
+            // the source at the window's aspect instead and scale that.
+            val windowAspect = innerW / artH
+            val srcAspect = art.width.toFloat() / art.height.toFloat()
+            val srcW: Int
+            val srcH: Int
+            if (srcAspect > windowAspect) {
+                srcH = art.height
+                srcW = (art.height * windowAspect).toInt()
+            } else {
+                srcW = art.width
+                srcH = (art.width / windowAspect).toInt()
+            }
             batch.begin()
-            batch.draw(art, innerX, innerY + panelH, innerW, artH)
+            batch.draw(
+                art, innerX, innerY + panelH, innerW, artH,
+                (art.width - srcW) / 2, (art.height - srcH) / 2, srcW, srcH,
+                false, false
+            )
             batch.end()
         } else {
             gradientRect(innerX, innerY + panelH, innerW, artH, darken(typeColor, 0.35f), darken(typeColor, 0.7f))
