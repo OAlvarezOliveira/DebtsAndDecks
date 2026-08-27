@@ -48,8 +48,11 @@
   Older SDD artifacts that mandate the cached-binary path as the *only* working invocation are
   stale on this point.
 - Ignore harmless daemon-socket stderr noise ("Unexpected type tag 71").
-- Baseline suite: **131/131 green** across **11 test classes** (measured 2026-08-27 via
-  `:app:testDebugUnitTest` at develop tip `b142528`; the figure previously recorded here was stale).
+- Baseline suite: **153/153 green** across **13 test classes** (measured 2026-08-27 via
+  `:app:testDebugUnitTest --rerun-tasks`, after C7 `between-fight-node` landed on `develop`; two
+  prior figures recorded here — 124/10 and 131/11 — were both already stale by the time they were
+  written, since `develop` kept advancing under a concurrent change stream. Re-measure with the
+  command above rather than trusting any fixed number in this file, including this one.
   Render/art has no headless GL harness — verified by build + manual playtest (disclosed gap).
 
 ## Non-obvious gotchas (learned the hard way)
