@@ -33,6 +33,9 @@ class GameScreen(
 
         viewport.apply()
         batch.projectionMatrix = viewport.camera.combined
+        // ExtendViewport gives a different world width per device aspect; the renderer anchors its
+        // right-hand column and every centred row off this, so it has to be current before drawing.
+        renderer.worldWidth = viewport.worldWidth
 
         // NOTE: CombatRenderer's draw methods manage their own batch.begin()/end() pairs
         // (interleaved with ShapeRenderer calls), so this must NOT wrap them in an outer
@@ -46,10 +49,10 @@ class GameScreen(
     }
 
     override fun resize(width: Int, height: Int) {
-        // Viewport.update() letterboxes to preserve the 1280x720 aspect ratio AND
-        // records the actual on-screen viewport rect, which CombatInputHandler needs
-        // for correct touch-to-world unprojection (a manual glViewport call does not
-        // expose that rect, so unproject() silently assumes the full screen instead).
+        // Viewport.update() keeps the 720-unit world height and extends the width to the device
+        // aspect (no letterboxing), AND records the actual on-screen viewport rect, which
+        // CombatInputHandler needs for correct touch-to-world unprojection (a manual glViewport
+        // call does not expose that rect, so unproject() silently assumes the full screen instead).
         viewport.update(width, height, true)
     }
 

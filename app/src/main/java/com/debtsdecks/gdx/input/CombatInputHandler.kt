@@ -12,6 +12,7 @@ import com.debtsdecks.core.model.TargetType
 import com.debtsdecks.core.model.TurnPhase
 import com.debtsdecks.gdx.audio.SoundManager
 import com.debtsdecks.gdx.render.CombatRenderer
+import com.debtsdecks.gdx.render.HandLayout
 
 class CombatInputHandler(
     private val combatEngine: CombatEngine,
@@ -126,7 +127,7 @@ class CombatInputHandler(
     }
 
     private fun handlePlayerAction(x: Float, y: Float, state: CombatState): Boolean {
-        if (CombatRenderer.endTurnButtonBounds.contains(x, y)) {
+        if (renderer.endTurnButtonBounds().contains(x, y)) {
             soundManager.playEndTurn()
             combatEngine.endPlayerTurn()
             refreshAndAnnounce()
@@ -159,12 +160,10 @@ class CombatInputHandler(
     }
 
     private fun handCardAt(x: Float, y: Float, hand: List<CardInstance>): CardInstance? {
-        val totalWidth = hand.size * CARD_WIDTH + (hand.size - 1) * CARD_SPACING
-        val startX = (WORLD_WIDTH - totalWidth) / 2
-
+        // Geometry comes from HandLayout, the same object CombatRenderer draws from, so the
+        // hitboxes track any card resize instead of drifting behind the art.
         hand.forEachIndexed { index, card ->
-            val cardX = startX + index * (CARD_WIDTH + CARD_SPACING)
-            if (x in cardX..cardX + CARD_WIDTH && y in HAND_Y..HAND_Y + CARD_HEIGHT) {
+            if (HandLayout.cardBounds(index, hand.size, viewport.worldWidth).contains(x, y)) {
                 return card
             }
         }
@@ -175,7 +174,7 @@ class CombatInputHandler(
         // Mirrors CombatRenderer.drawEnemies' layout exactly: centering uses ENEMY_CENTERING_WIDTH
         // per slot while the per-index step is the wider ENEMY_STEP_X (matches the renderer's own
         // 200f/220f split) so hitboxes stay aligned with what's actually drawn.
-        val startX = (WORLD_WIDTH - (enemies.size * ENEMY_CENTERING_WIDTH + (enemies.size - 1) * ENEMY_SLOT_GAP)) / 2
+        val startX = (viewport.worldWidth - (enemies.size * ENEMY_CENTERING_WIDTH + (enemies.size - 1) * ENEMY_SLOT_GAP)) / 2
 
         enemies.forEachIndexed { index, enemy ->
             if (enemy.hp <= 0) return@forEachIndexed
@@ -229,11 +228,6 @@ class CombatInputHandler(
     override fun keyTyped(character: Char): Boolean = false
 
     companion object {
-        private const val WORLD_WIDTH = 1280f
-        private const val CARD_WIDTH = 140f
-        private const val CARD_HEIGHT = 200f
-        private const val CARD_SPACING = 10f
-        private const val HAND_Y = 50f
         private const val ENEMY_WIDTH = 180f
         private const val ENEMY_HEIGHT = 220f
         private const val ENEMY_CENTERING_WIDTH = 200f

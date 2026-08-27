@@ -62,8 +62,23 @@ class CombatRenderer(private val bundle: I18NBundle) {
         "intent_attack" to loadTexture("art/intent_attack.png"),
         "intent_buff" to loadTexture("art/intent_buff.png"),
         "intent_debuff" to loadTexture("art/intent_debuff.png"),
-        "intent_multi" to loadTexture("art/intent_multi.png")
+        "intent_multi" to loadTexture("art/intent_multi.png"),
+        "intent_levy" to loadTexture("art/intent_levy.png")
     )
+
+    // Screen backdrops, keyed by screen. A missing file falls back to the original
+    // gradient instead of crashing, same contract as the card art below.
+    private val backgroundTextures: Map<String, Texture> = run {
+        val m = mutableMapOf<String, Texture>()
+        for (id in listOf("bg_combat", "bg_reststop")) {
+            try {
+                m[id] = loadTexture("art/backgrounds/$id.png")
+            } catch (t: Throwable) {
+                Gdx.app.error("DebtsDecks", "background load failed: art/backgrounds/" + id)
+            }
+        }
+        m
+    }
     
     // Per-card art, keyed by CardDefinition.id. Missing assets are skipped at construction
     // so a missing art/cards/<id>.png falls back to the frame-only card (no hard crash).
@@ -73,7 +88,9 @@ class CombatRenderer(private val bundle: I18NBundle) {
                 "compound_interest", "subprime_loan", "debt_forgiveness", "partial_forgiveness",
             "tactical_bankruptcy", "reverse_mortgage", "foreclosure_express", "ghost_collector",
             "golden_credit", "mortgage_collateral", "asset_auction", "risky_investment",
-            "bounced_check", "zombie_debt", "eternal_debt"
+            "bounced_check", "zombie_debt", "eternal_debt",
+            "leverage_strike", "asset_bubble", "repo_expert", "refinanciar",
+            "overdraft", "collateral_hold", "emergency_fund", "ejecucion"
         )
         val m = mutableMapOf<String, Texture>()
         for (id in ids) {
@@ -89,12 +106,13 @@ class CombatRenderer(private val bundle: I18NBundle) {
     }
 
     // Layout constants
-    private val screenWidth = 1280f
+    /**
+     * Live world width, pushed in by GameScreen every frame from the ExtendViewport. The viewport
+     * stops pillarboxing to 1280 and hands us the device's real aspect instead, so every centring
+     * and right-edge anchor reads this rather than a constant.
+     */
+    var worldWidth: Float = 1280f
     private val screenHeight = 720f
-    private val cardWidth = 140f
-    private val cardHeight = 200f
-    private val cardSpacing = 10f
-    private val handY = 50f
     private val enemyAreaY = 450f
     private val playerAreaY = 50f
     private val energyX = 50f
@@ -111,6 +129,13 @@ class CombatRenderer(private val bundle: I18NBundle) {
     // documented choice — see apply-progress-phase3.
     private val borrowTintColor = Color(1f, 0.55f, 0.15f, 1f)
 
+    // Design-system tokens (tokens/colors.css) used by the card face.
+    private val navy950 = Color.valueOf("0c0c18")
+    private val navy900 = Color.valueOf("14142a")
+    private val ink100 = Color.valueOf("eef0fb")
+    private val ink300 = Color.valueOf("c7c9e0")
+    private val brass500 = Color.valueOf("c9a227")
+
     // C7 node screen: which sub-view is active (main choices vs shop/remove/loan sub-offers).
     // Input and render share this via [setNodeMode]/[nodeMode].
     enum class NodeMode { CHOICES, SHOP, REMOVE, LOAN, UPGRADE }
@@ -126,7 +151,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         shapeRenderer.projectionMatrix = batch.projectionMatrix
 
         // Background
-        drawBackground()
+        drawBackground(batch, "bg_combat")
 
         // Enemy area
         drawEnemies(state.enemies, batch)
@@ -173,12 +198,23 @@ class CombatRenderer(private val bundle: I18NBundle) {
         CardType.POWER -> Color(0.8f, 0.6f, 0.15f, 1f)
     }
 
-    private fun drawBackground() {
-        gradientRect(0f, 0f, screenWidth, screenHeight, Color(0.07f, 0.07f, 0.11f, 1f), Color(0.16f, 0.14f, 0.22f, 1f))
+    private fun drawBackground(batch: SpriteBatch, id: String) {
+        val backdrop = backgroundTextures[id]
+        if (backdrop == null) {
+            gradientRect(0f, 0f, worldWidth, screenHeight, Color(0.07f, 0.07f, 0.11f, 1f), Color(0.16f, 0.14f, 0.22f, 1f))
+            return
+        }
+        // Cover, not stretch: the backdrops are authored at 1280x720, so on a wider world we scale
+        // both axes by the same factor and let the extra height fall off the top and bottom.
+        val coverScale = maxOf(worldWidth / 1280f, 1f)
+        val drawH = 720f * coverScale
+        batch.begin()
+        batch.draw(backdrop, 0f, (screenHeight - drawH) / 2f, worldWidth, drawH)
+        batch.end()
     }
 
     private fun drawEnemies(enemies: List<EnemyState>, batch: SpriteBatch) {
-        val startX = (screenWidth - (enemies.size * 200f + (enemies.size - 1) * 20f)) / 2
+        val startX = (worldWidth - (enemies.size * 200f + (enemies.size - 1) * 20f)) / 2
 
         enemies.forEachIndexed { index, enemy ->
             val x = startX + index * 220f
@@ -273,87 +309,126 @@ class CombatRenderer(private val bundle: I18NBundle) {
         batch.end()
     }
 
+    /**
+     * Every player-facing number in one panel anchored to the bottom-left corner.
+     *
+     * Credit, Debt and Gold used to float loose over the artwork near the top-left while the panel
+     * itself sat mid-screen holding only an HP bar. Collecting them here frees the whole upper area
+     * for the fight and keeps the readouts out of the hand's way.
+     */
     private fun drawPlayer(state: CombatState, batch: SpriteBatch) {
-        val x = 50f
-        val y = 280f
-        val w = 200f
-        val h = 140f
+        val panel = CombatLayout.playerPanel(worldWidth)
+        val x = panel.x
+        val y = panel.y
+        val w = panel.width
+        val h = panel.height
+        val pad = 12f
+        val barW = w - 2f * pad
 
-        // Player panel
-        shadowRect(x, y, w, h)
-        gradientRect(x, y, w, h, Color(0.16f, 0.16f, 0.24f, 1f), Color(0.28f, 0.28f, 0.4f, 1f))
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-        shapeRenderer.setColor(0.5f, 0.5f, 0.65f, 1f)
+        // Row positions are laid out top-down in one pass first, because ShapeRenderer and
+        // SpriteBatch cannot interleave: the bars have to be drawn before any text begins.
+        var cursor = y + h - pad
+        val labelY = cursor
+        cursor -= 22f
+        val hpTextY = cursor
+        // BitmapFont.draw() takes y as the TOP of the line, not the baseline, so the gap has to
+        // clear the glyph descent or the HP bar rides up into the text.
+        cursor -= 22f
+        val hpBarY = cursor - 14f
+        cursor = hpBarY - 24f
+        val creditY = cursor
+        cursor -= 24f
+        val blockBarY = if (state.player.block > 0) (cursor - 18f).also { cursor = it - 24f } else null
+        val debtY = cursor
+        cursor -= 22f
+        val warningY = cursor
+
+        panelBackdrop(x, y, w, h)
+        drawHPBar(x + pad, hpBarY, barW, 14f, state.player.hpPercent, Color.RED, Color.GREEN)
+        if (blockBarY != null) {
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+            shapeRenderer.setColor(0.3f, 0.6f, 1f, 0.85f)
+            shapeRenderer.rect(x + pad, blockBarY, barW, 18f)
+            shapeRenderer.end()
+        }
+
+        val debtColor = when {
+            state.debt >= DebtConfig.EXECUTION_THRESHOLD -> Color.RED
+            state.debt >= DebtConfig.BREAK_THRESHOLD -> Color(1f, 0.6f, 0.1f, 1f) // amber
+            else -> ink100
+        }
+
+        batch.begin()
+        smallFont.data.setScale(0.78f)
+        smallFont.color = ink300
+        smallFont.draw(batch, bundle.get("hud.player.label"), x + pad, labelY)
+        smallFont.color = ink100
+        smallFont.draw(batch, bundle.format("hud.player.hp", state.player.hp, state.player.maxHp), x + pad, hpTextY)
+        smallFont.draw(batch, bundle.format("hud.credit", state.energy, state.maxEnergy), x + pad, creditY)
+        if (blockBarY != null) {
+            smallFont.color = navy950
+            smallFont.draw(batch, bundle.format("hud.status.block", state.player.block), x + pad + 4f, blockBarY + 14f)
+        }
+
+        // R9: Debt/Gold flagged at both thresholds — amber at BREAK (the collector is coming),
+        // hard red plus an explicit warning past EXECUTION, where any debt-raising action is
+        // instant death (the interest tick is exempt). NEW-5 playtest: the zone was invisible.
+        smallFont.color = debtColor
+        smallFont.draw(batch, bundle.format("hud.debt_gold", state.debt, state.gold), x + pad, debtY)
+        if (state.debt >= DebtConfig.EXECUTION_THRESHOLD) {
+            smallFont.color = Color.RED
+            smallFont.data.setScale(0.66f)
+            smallFont.draw(batch, bundle.get("hud.execution_warning"), x + pad, warningY, barW, Align.left, true)
+            smallFont.data.setScale(0.78f)
+        }
+
+        // Status effects stack up from the panel floor so a long list grows into the empty middle
+        // instead of running off the bottom edge.
+        smallFont.data.setScale(0.7f)
+        var statusY = y + pad + 14f
+        val statuses = buildList {
+            if (state.player.strength != 0) add(bundle.format("hud.status.strength", state.player.strength) to brass500)
+            if (state.player.weak > 0) add(bundle.format("hud.status.weak", state.player.weak) to Color(0.7f, 0.5f, 0.9f, 1f))
+            if (state.player.vulnerable > 0) add(bundle.format("hud.status.vulnerable", state.player.vulnerable) to Color(1f, 0.45f, 0.35f, 1f))
+            if (state.player.poison > 0) add(bundle.format("hud.status.poison", state.player.poison) to Color(0.4f, 0.85f, 0.4f, 1f))
+            if (state.player.thorns > 0) add(bundle.format("hud.status.thorns", state.player.thorns) to Color(0.75f, 0.75f, 0.85f, 1f))
+            if (state.player.regen > 0) add(bundle.format("hud.status.regen", state.player.regen) to Color(0.45f, 0.9f, 0.7f, 1f))
+        }
+        statuses.reversed().forEach { (text, color) ->
+            smallFont.color = color
+            smallFont.draw(batch, text, x + pad, statusY)
+            statusY += 18f
+        }
+        smallFont.color = Color.WHITE
+        smallFont.data.setScale(1f)
+        batch.end()
+    }
+
+    /** Shared chrome for the two side panels: translucent fill plus a thin cool border. */
+    private fun panelBackdrop(x: Float, y: Float, w: Float, h: Float) {
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(navy950.r, navy950.g, navy950.b, 0.72f)
         shapeRenderer.rect(x, y, w, h)
         shapeRenderer.end()
-
-        // HP
-        batch.begin()
-        font.draw(batch, bundle.get("hud.player.label"), x + 10f, y + h - 10f)
-        font.draw(batch, bundle.format("hud.player.hp", state.player.hp, state.player.maxHp), x + 10f, y + h - 40f)
-        batch.end()
-
-        // HP bar
-        drawHPBar(x, y + h - 55f, w, 20f, state.player.hpPercent, Color.RED, Color.GREEN)
-
-        // Block
-        if (state.player.block > 0) {
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-            shapeRenderer.setColor(0.3f, 0.6f, 1f, 1f)
-            shapeRenderer.rect(x, y + h - 80f, w, 20f)
-            shapeRenderer.end()
-            batch.begin()
-            font.draw(batch, bundle.format("hud.status.block", state.player.block), x + 10f, y + h - 65f)
-            batch.end()
-        }
-
-        // Strength/Weak/Vulnerable
-        var statusY = y + 10f
-        if (state.player.strength != 0) {
-            batch.begin()
-            font.draw(batch, bundle.format("hud.status.strength", state.player.strength), x + 10f, statusY)
-            batch.end()
-            statusY += 25f
-        }
-        if (state.player.weak > 0) {
-            batch.begin()
-            smallFont.draw(batch, bundle.format("hud.status.weak", state.player.weak), x + 10f, statusY)
-            batch.end()
-            statusY += 20f
-        }
-        if (state.player.vulnerable > 0) {
-            batch.begin()
-            smallFont.draw(batch, bundle.format("hud.status.vulnerable", state.player.vulnerable), x + 10f, statusY)
-            batch.end()
-            statusY += 20f
-        }
-        if (state.player.poison > 0) {
-            batch.begin()
-            smallFont.draw(batch, bundle.format("hud.status.poison", state.player.poison), x + 10f, statusY)
-            batch.end()
-            statusY += 20f
-        }
-        if (state.player.thorns > 0) {
-            batch.begin()
-            smallFont.draw(batch, bundle.format("hud.status.thorns", state.player.thorns), x + 10f, statusY)
-            batch.end()
-            statusY += 20f
-        }
-        if (state.player.regen > 0) {
-            batch.begin()
-            smallFont.draw(batch, bundle.format("hud.status.regen", state.player.regen), x + 10f, statusY)
-            batch.end()
-        }
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.setColor(0.42f, 0.44f, 0.6f, 0.85f)
+        shapeRenderer.rect(x, y, w, h)
+        shapeRenderer.end()
     }
+
+    private var inputHandlerSelectedCard: CardInstance? = null
+
+    fun setSelectedCard(card: CardInstance?) { inputHandlerSelectedCard = card }
 
     private fun drawHand(hand: List<CardInstance>, energy: Int, debt: Int, batch: SpriteBatch, phase: TurnPhase) {
         val canAct = phase == TurnPhase.PLAYER_ACTION
-        val totalWidth = hand.size * cardWidth + (hand.size - 1) * cardSpacing
-        val startX = (screenWidth - totalWidth) / 2
 
         hand.forEachIndexed { index, card ->
-            val x = startX + index * (cardWidth + cardSpacing)
-            val y = handY
+            val slot = HandLayout.cardBounds(index, hand.size, worldWidth)
+            val x = slot.x
+            val y = slot.y
+            val w = slot.width
+            val h = slot.height
             val selected = inputHandlerSelectedCard?.id == card.id
             // R8: identical isPlayable()/shortfall() pair CombatEngine.playCard and
             // CombatInputHandler use — no card is ever cost-blocked (GRAY only means "not your
@@ -366,123 +441,244 @@ class CombatRenderer(private val bundle: I18NBundle) {
                 else -> Color.WHITE
             }
 
-            // Card background — real frame art per type, tinted for selection/affordability
-            shadowRect(x, y, cardWidth, cardHeight)
-            val frame = cardFrameTextures[card.type]
-            if (frame != null) {
-                batch.begin()
-                batch.color = tint
-                batch.draw(frame, x, y, cardWidth, cardHeight)
-                batch.color = Color.WHITE
-                batch.end()
-            } else {
-                gradientRect(x, y, cardWidth, cardHeight, darken(tint, 0.75f), tint)
-                shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-                shapeRenderer.setColor(0f, 0f, 0f, 1f)
-                shapeRenderer.rect(x, y, cardWidth, cardHeight)
-                shapeRenderer.end()
-                shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-                shapeRenderer.setColor(cardTypeColor(card.type))
-                shapeRenderer.rect(x, y, 6f, cardHeight)
-                shapeRenderer.end()
-            }
+            drawCardFace(
+                batch, x, y, w, h,
+                art = cardTextures[card.cardId],
+                frame = cardFrameTextures[card.type],
+                tint = tint,
+                cost = card.cost,
+                name = bundle.get(card.name),
+                description = bundle.get(card.description),
+                type = card.type,
+                upgraded = card.upgraded
+            )
+        }
+    }
 
-            // Per-card art over the frame (falls back to frame-only when absent)
-            val cardArt = cardTextures[card.cardId]
-            if (cardArt != null) {
-                batch.begin()
-                batch.draw(cardArt, x + 6f, y + 6f, cardWidth - 12f, cardHeight - 12f)
-                batch.end()
-            }
+    /**
+     * Draws one card as three separate zones — cost roundel, art window, text panel — instead of
+     * stacking every glyph straight on top of a full-bleed illustration.
+     *
+     * The old layout drew the art across the whole card and then the cost, name, description and
+     * type tag over it, which is what made the copy unreadable and let a long description run into
+     * the type tag (playtest bugs #4/#5). Here the art is clipped to the upper slice, the lower
+     * slice is an opaque panel, and the description is hard-clamped to three lines so it can never
+     * push the tag out of the card.
+     *
+     * Draw order matters: backing, art, panel, then the frame PNG last over the full bounds. The
+     * frames are ornate borders with a fully transparent middle (measured: the border eats 13.7% of
+     * the width and 12.9% of the height per side), so content lives inside that hole and the frame
+     * paints on top of everything without hiding it. The cost roundel goes after the frame on
+     * purpose, breaking the top-left corner.
+     */
+    private fun drawCardFace(
+        batch: SpriteBatch,
+        x: Float,
+        y: Float,
+        w: Float,
+        h: Float,
+        art: Texture?,
+        frame: Texture?,
+        tint: Color,
+        cost: Int,
+        name: String,
+        description: String,
+        type: CardType,
+        upgraded: Boolean
+    ) {
+        val s = w / HandLayout.BASE_WIDTH
+        val innerX = x + w * FRAME_INSET_X
+        val innerW = w * (1f - 2f * FRAME_INSET_X)
+        val innerY = y + h * FRAME_INSET_Y
+        val innerH = h * (1f - 2f * FRAME_INSET_Y)
+        val panelH = innerH * TEXT_PANEL_FRACTION
+        val artH = innerH - panelH
+        val pad = innerW * 0.06f
+        val textW = innerW - 2f * pad
+        val typeColor = cardTypeColor(type)
 
-            // card-upgrades R7: upgrade badge (gold banner, top-right, behind the content layer)
-            if (card.upgraded) {
-                shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-                shapeRenderer.setColor(1f, 0.8f, 0.1f, 0.9f)
-                shapeRenderer.rect(x + cardWidth - 92f, y + cardHeight - 24f, 84f, 22f)
-                shapeRenderer.end()
-                batch.begin()
-                batch.color = Color(0.25f, 0.18f, 0f, 1f)
-                smallFont.draw(batch, bundle.get("node.upgraded"), x + cardWidth - 86f, y + cardHeight - 8f)
-                batch.color = Color.WHITE
-                batch.end()
-            }
+        shadowRect(x, y, w, h)
 
-            // Card content
+        // Opaque backing: the card art carries real alpha since the checkerboard strip, so without
+        // this the battlefield would show through the illustration.
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(navy950)
+        shapeRenderer.rect(innerX, innerY, innerW, innerH)
+        shapeRenderer.end()
+
+        if (art != null) {
             batch.begin()
-            // Cost
-            font.draw(batch, card.cost.toString(), x + 10f, y + cardHeight - 10f)
-            // Name
-            font.draw(batch, bundle.get(card.name), x + 10f, y + cardHeight - 40f)
-            // Description (wrapped)
-            val descY = y + 80f
-            val descWidth = cardWidth - 20f
-            val cardDescription = bundle.get(card.description)
-            smallFont.draw(batch, cardDescription, x + 10f, descY, descWidth, Align.left, true)
-            // Type indicator — positioned below the wrapped description so multi-line
-            // descriptions (longer new cards) don't collide with a fixed offset
-            val descLayout = GlyphLayout(smallFont, cardDescription, Color.WHITE, descWidth, Align.left, true)
-            val typeY = (descY - descLayout.height - 10f).coerceAtLeast(y + 10f)
-            smallFont.draw(batch, card.type.name, x + 10f, typeY)
+            batch.draw(art, innerX, innerY + panelH, innerW, artH)
+            batch.end()
+        } else {
+            gradientRect(innerX, innerY + panelH, innerW, artH, darken(typeColor, 0.35f), darken(typeColor, 0.7f))
+        }
+
+        // Text panel — solid, never translucent, so nothing bleeds through the copy.
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(navy900)
+        shapeRenderer.rect(innerX, innerY, innerW, panelH)
+        shapeRenderer.end()
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(typeColor)
+        shapeRenderer.rect(innerX, innerY + panelH - 2f * s, innerW, 2f * s)
+        shapeRenderer.end()
+
+        // Frame last, over the full card bounds.
+        if (frame != null) {
+            batch.begin()
+            batch.color = tint
+            batch.draw(frame, x, y, w, h)
+            batch.color = Color.WHITE
+            batch.end()
+        } else {
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+            shapeRenderer.setColor(tint)
+            shapeRenderer.rect(x, y, w, h)
+            shapeRenderer.end()
+        }
+
+        batch.begin()
+        // Name: one line, ellipsised rather than wrapped, so the row height is fixed.
+        font.data.setScale(0.85f * s)
+        val nameText = ellipsize(font, name, textW)
+        val nameLayout = GlyphLayout(font, nameText)
+        font.color = ink100
+        font.draw(batch, nameText, innerX + pad, innerY + panelH - pad)
+        font.color = Color.WHITE
+        font.data.setScale(1f)
+
+        // Type tag on its own row at the panel floor — the description above can never reach it.
+        smallFont.data.setScale(0.62f * s)
+        val typeText = type.name
+        val typeLayout = GlyphLayout(smallFont, typeText)
+        smallFont.color = typeColor
+        smallFont.draw(batch, typeText, innerX + pad, innerY + pad + typeLayout.height)
+        smallFont.color = Color.WHITE
+        smallFont.data.setScale(1f)
+
+        // Description: hard-clamped to three lines in the gap the other two rows leave over.
+        smallFont.data.setScale(0.68f * s)
+        val descTop = innerY + panelH - pad - nameLayout.height - 6f * s
+        val descText = clampLines(smallFont, description, textW, DESCRIPTION_MAX_LINES)
+        smallFont.color = ink300
+        smallFont.draw(batch, descText, innerX + pad, descTop, textW, Align.left, true)
+        smallFont.color = Color.WHITE
+        smallFont.data.setScale(1f)
+        batch.end()
+
+        // Cost roundel, breaking the top-left corner of the frame.
+        val radius = w * 0.11f
+        val cx = x + w * 0.115f
+        val cy = y + h - h * 0.085f
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(navy950)
+        shapeRenderer.circle(cx, cy, radius + 2.5f * s)
+        shapeRenderer.setColor(typeColor)
+        shapeRenderer.circle(cx, cy, radius)
+        shapeRenderer.end()
+
+        batch.begin()
+        font.data.setScale(0.95f * s)
+        val costText = cost.toString()
+        val costLayout = GlyphLayout(font, costText)
+        font.color = ink100
+        font.draw(batch, costText, cx - costLayout.width / 2f, cy + costLayout.height / 2f)
+        font.color = Color.WHITE
+        font.data.setScale(1f)
+        batch.end()
+
+        // card-upgrades R7: brass badge, bottom-right of the text panel, opposite the type tag.
+        if (upgraded) {
+            smallFont.data.setScale(0.58f * s)
+            val badgeText = bundle.get("node.upgraded")
+            val badgeLayout = GlyphLayout(smallFont, badgeText)
+            val badgeW = badgeLayout.width + 8f * s
+            val badgeH = badgeLayout.height + 6f * s
+            val badgeX = innerX + innerW - pad - badgeW
+            val badgeY = innerY + pad - 3f * s
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+            shapeRenderer.setColor(brass500)
+            shapeRenderer.rect(badgeX, badgeY, badgeW, badgeH)
+            shapeRenderer.end()
+            batch.begin()
+            smallFont.color = navy950
+            smallFont.draw(batch, badgeText, badgeX + 4f * s, badgeY + badgeH - 3f * s)
+            smallFont.color = Color.WHITE
+            smallFont.data.setScale(1f)
             batch.end()
         }
     }
 
-    private var inputHandlerSelectedCard: CardInstance? = null
-    fun setSelectedCard(card: CardInstance?) { inputHandlerSelectedCard = card }
+    /** Trims [text] with an ellipsis until it fits [maxWidth] on a single line at [f]'s scale. */
+    private fun ellipsize(f: BitmapFont, text: String, maxWidth: Float): String {
+        if (GlyphLayout(f, text).width <= maxWidth) return text
+        var candidate = text
+        while (candidate.length > 1) {
+            candidate = candidate.substring(0, candidate.length - 1)
+            if (GlyphLayout(f, candidate + "...").width <= maxWidth) return candidate + "..."
+        }
+        return "..."
+    }
 
+    /**
+     * Wraps [text] at [width] and drops trailing words until it fits [maxLines], appending an
+     * ellipsis. Never shrinks the font: the handoff sets 11px as the readability floor, so an
+     * over-long description loses words rather than legibility.
+     */
+    private fun clampLines(f: BitmapFont, text: String, width: Float, maxLines: Int): String {
+        if (GlyphLayout(f, text, Color.WHITE, width, Align.left, true).runs.size <= maxLines) return text
+        var candidate = text
+        while (candidate.contains(' ')) {
+            candidate = candidate.substringBeforeLast(' ')
+            val trimmed = candidate + "..."
+            if (GlyphLayout(f, trimmed, Color.WHITE, width, Align.left, true).runs.size <= maxLines) return trimmed
+        }
+        return candidate
+    }
+
+    /**
+     * Only the two things that are not player state: the END TURN button and a muted turn/deck
+     * strip in the top-left. Credit, Debt and Gold moved into [drawPlayer]'s panel.
+     */
     private fun drawUI(state: CombatState, batch: SpriteBatch) {
-        // Credit — HUD label only; the backing field stays `energy`/`maxEnergy` (Money→Credit
-        // rename decision, design.md), refilled each turn, gates card play.
-        batch.begin()
-        font.draw(batch, bundle.format("hud.credit", state.energy, state.maxEnergy), energyX, energyY)
-        batch.end()
-
-        // R9: Debt/Gold HUD readout, flagged at both thresholds with distinct signals:
-        // amber at BREAK (the collector is coming), hard red + explicit warning past EXECUTION
-        // (any debt-raising action is instant death there; the interest tick is exempt —
-        // NEW-5 playtest: the execution zone was invisible before).
-        val debtColor = when {
-            state.debt >= DebtConfig.EXECUTION_THRESHOLD -> Color.RED
-            state.debt >= DebtConfig.BREAK_THRESHOLD -> Color(1f, 0.6f, 0.1f, 1f) // amber
-            else -> Color.WHITE
-        }
-        batch.begin()
-        font.setColor(debtColor)
-        font.draw(batch, bundle.format("hud.debt_gold", state.debt, state.gold), energyX, debtGoldY)
-        font.setColor(Color.WHITE)
-        if (state.debt >= DebtConfig.EXECUTION_THRESHOLD) {
-            smallFont.setColor(Color.RED)
-            smallFont.draw(batch, bundle.get("hud.execution_warning"), energyX, debtGoldY - 22f)
-            smallFont.setColor(Color.WHITE)
-        }
-        batch.end()
-
-        // End Turn Button
+        val button = endTurnButtonBounds()
         val canAct = state.currentTurn == TurnPhase.PLAYER_ACTION
-        val btnColor = if (canAct) Color.GREEN else Color.GRAY
-        shadowRect(endTurnBtnX, endTurnBtnY, endTurnBtnW, endTurnBtnH)
-        gradientRect(endTurnBtnX, endTurnBtnY, endTurnBtnW, endTurnBtnH, darken(btnColor, 0.65f), btnColor)
-
+        val btnColor = if (canAct) Color(0.16f, 0.62f, 0.32f, 1f) else Color(0.28f, 0.28f, 0.34f, 1f)
+        shadowRect(button.x, button.y, button.width, button.height)
+        gradientRect(button.x, button.y, button.width, button.height, darken(btnColor, 0.6f), btnColor)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-        shapeRenderer.setColor(0f, 0f, 0f, 1f)
-        shapeRenderer.rect(endTurnBtnX, endTurnBtnY, endTurnBtnW, endTurnBtnH)
+        shapeRenderer.setColor(navy950)
+        shapeRenderer.rect(button.x, button.y, button.width, button.height)
         shapeRenderer.end()
 
         batch.begin()
-        font.draw(batch, bundle.get("hud.button.end_turn"), endTurnBtnX + 20f, endTurnBtnY + 40f)
-        batch.end()
+        val label = bundle.get("hud.button.end_turn")
+        font.data.setScale(0.85f)
+        val labelLayout = GlyphLayout(font, label)
+        font.color = if (canAct) ink100 else Color(0.6f, 0.6f, 0.66f, 1f)
+        font.draw(
+            batch, label,
+            button.x + (button.width - labelLayout.width) / 2f,
+            button.y + (button.height + labelLayout.height) / 2f
+        )
+        font.color = Color.WHITE
+        font.data.setScale(1f)
 
-        // Turn phase indicator. state.currentTurn.name/pile counts are numeric/enum data, not
-        // authored copy — see the class KDoc for why the enum identifier itself stays untranslated.
-        batch.begin()
-        smallFont.draw(batch, bundle.format("hud.turn_phase", state.currentTurn.name), 50f, 680f)
-        smallFont.draw(batch, bundle.format("hud.turn_number", state.turnNumber), 50f, 660f)
+        // Turn phase / pile counts. The enum identifier and the counts are internal data, not
+        // authored copy — see the class KDoc for why the enum name stays untranslated. Muted and
+        // pushed into the corner so it reads as a debug strip, not as part of the HUD.
+        smallFont.data.setScale(0.72f)
+        smallFont.color = Color(1f, 1f, 1f, 0.45f)
+        smallFont.draw(batch, bundle.format("hud.turn_number", state.turnNumber), CombatLayout.MARGIN, 700f)
+        smallFont.draw(batch, bundle.format("hud.turn_phase", state.currentTurn.name), CombatLayout.MARGIN, 682f)
         smallFont.draw(
             batch,
             bundle.format("hud.pile_counts", state.drawPileCount, state.discardPileCount, state.exhaustPileCount),
-            50f, 640f
+            CombatLayout.MARGIN, 664f
         )
+        smallFont.color = Color.WHITE
+        smallFont.data.setScale(1f)
         batch.end()
     }
 
@@ -495,7 +691,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         if (!lastFrameWasNode) nodeMode = NodeMode.CHOICES
         lastFrameWasNode = true
         shapeRenderer.projectionMatrix = batch.projectionMatrix
-        drawBackground()
+        drawBackground(batch, "bg_reststop")
 
         batch.begin()
         font.draw(batch, bundle.format("node.header"), 50f, 690f)
@@ -569,24 +765,39 @@ class CombatRenderer(private val bundle: I18NBundle) {
     private fun drawCardOffers(cards: List<CardDefinition>, batch: SpriteBatch) {
         cards.forEachIndexed { index, card ->
             val bounds = nodeSubCardBounds(index, cards.size)
-            shadowRect(bounds.x, bounds.y, bounds.width, bounds.height)
-            gradientRect(bounds.x, bounds.y, bounds.width, bounds.height, Color(0.85f, 0.85f, 0.85f, 1f), Color.WHITE)
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-            shapeRenderer.setColor(0f, 0f, 0f, 1f)
-            shapeRenderer.rect(bounds.x, bounds.y, bounds.width, bounds.height)
-            shapeRenderer.end()
-            batch.begin()
-            smallFont.draw(batch, bundle.get(card.name), bounds.x + 10f, bounds.y + bounds.height - 20f)
-            smallFont.draw(batch, bundle.get(card.description), bounds.x + 10f, bounds.y + 60f)
-            batch.end()
+            drawCardFace(
+                batch, bounds.x, bounds.y, bounds.width, bounds.height,
+                art = cardTextures[card.id],
+                frame = cardFrameTextures[card.type],
+                tint = Color.WHITE,
+                cost = card.cost,
+                name = bundle.get(card.name),
+                description = bundle.get(card.description),
+                type = card.type,
+                upgraded = false
+            )
         }
     }
 
     // --- Node layout helpers (shared with CombatInputHandler via the public bounds fn) ---
 
+    /** END TURN sits in the right column, so it moves with the world's right edge. */
+    fun endTurnButtonBounds(): Rectangle = CombatLayout.endTurnButton(worldWidth)
+
+    fun rewardCardBounds(index: Int, count: Int): Rectangle {
+        val totalWidth = count * REWARD_CARD_WIDTH + (count - 1) * REWARD_CARD_SPACING
+        val startX = (worldWidth - totalWidth) / 2
+        val y = (SCREEN_HEIGHT - REWARD_CARD_HEIGHT) / 2
+        val x = startX + index * (REWARD_CARD_WIDTH + REWARD_CARD_SPACING)
+        return Rectangle(x, y, REWARD_CARD_WIDTH, REWARD_CARD_HEIGHT)
+    }
+
     fun nodeChoiceBounds(index: Int): Rectangle {
+        // The six buttons span 1120 units; centre that span on the live world instead of pinning
+        // it to the left edge, which is what a wider-than-1280 viewport would otherwise do.
+        val offset = (worldWidth - 1120f) / 2f - 40f
         val x = listOf(40f, 230f, 420f, 610f, 800f, 990f)[index]
-        return Rectangle(x, 120f, 170f, 50f)
+        return Rectangle(x + offset, 120f, 170f, 50f)
     }
 
     fun nodeSubCardBounds(index: Int, count: Int): Rectangle {
@@ -594,13 +805,13 @@ class CombatRenderer(private val bundle: I18NBundle) {
         val h = 380f
         val spacing = 40f
         val total = count * w + (count - 1) * spacing
-        val startX = (1280f - total) / 2f
+        val startX = (worldWidth - total) / 2f
         return Rectangle(startX + index * (w + spacing), 180f, w, h)
     }
 
     fun renderReward(choices: List<CardDefinition>, batch: SpriteBatch) {
         shapeRenderer.projectionMatrix = batch.projectionMatrix
-        drawBackground()
+        drawBackground(batch, "bg_combat")
 
         batch.begin()
         font.draw(batch, bundle.get("reward.header"), 50f, 680f)
@@ -608,36 +819,23 @@ class CombatRenderer(private val bundle: I18NBundle) {
 
         choices.forEachIndexed { index, card ->
             val bounds = rewardCardBounds(index, choices.size)
-
-            shadowRect(bounds.x, bounds.y, bounds.width, bounds.height)
-            gradientRect(bounds.x, bounds.y, bounds.width, bounds.height, Color(0.85f, 0.85f, 0.85f, 1f), Color.WHITE)
-
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-            shapeRenderer.setColor(0f, 0f, 0f, 1f)
-            shapeRenderer.rect(bounds.x, bounds.y, bounds.width, bounds.height)
-            shapeRenderer.end()
-
-            val cardArt = cardTextures[card.id]
-            if (cardArt != null) {
-                batch.begin()
-                batch.draw(cardArt, bounds.x + 6f, bounds.y + 6f, bounds.width - 12f, bounds.height - 12f)
-                batch.end()
-            }
-            batch.begin()
-            font.setColor(Color.BLACK)
-            font.draw(batch, bundle.get(card.name), bounds.x + 15f, bounds.y + bounds.height - 20f)
-            smallFont.setColor(Color.BLACK)
-            smallFont.draw(batch, bundle.get(card.description), bounds.x + 15f, bounds.y + bounds.height - 60f, bounds.width - 30f, Align.left, true)
-            smallFont.draw(batch, bundle.format("reward.cost", card.cost), bounds.x + 15f, bounds.y + 30f)
-            font.setColor(Color.WHITE)
-            smallFont.setColor(Color.WHITE)
-            batch.end()
+            drawCardFace(
+                batch, bounds.x, bounds.y, bounds.width, bounds.height,
+                art = cardTextures[card.id],
+                frame = cardFrameTextures[card.type],
+                tint = Color.WHITE,
+                cost = card.cost,
+                name = bundle.get(card.name),
+                description = bundle.get(card.description),
+                type = card.type,
+                upgraded = false
+            )
         }
     }
 
     fun renderRunEnd(batch: SpriteBatch, won: Boolean) {
         shapeRenderer.projectionMatrix = batch.projectionMatrix
-        drawBackground()
+        drawBackground(batch, "bg_combat")
 
         val message = bundle.get(if (won) "run_end.victory" else "run_end.defeat")
         val restartHint = bundle.get("run_end.restart_hint")
@@ -646,38 +844,36 @@ class CombatRenderer(private val bundle: I18NBundle) {
         font.getData().setScale(3f)
         font.setColor(if (won) Color.GREEN else Color.RED)
         val bounds = GlyphLayout(font, message)
-        font.draw(batch, message, (screenWidth - bounds.width) / 2, (screenHeight + bounds.height) / 2)
+        font.draw(batch, message, (worldWidth - bounds.width) / 2, (screenHeight + bounds.height) / 2)
         font.getData().setScale(1f)
         font.setColor(Color.WHITE)
-        smallFont.draw(batch, restartHint, (screenWidth - 120f) / 2, (screenHeight - bounds.height) / 2 - 50f)
+        smallFont.draw(batch, restartHint, (worldWidth - 120f) / 2, (screenHeight - bounds.height) / 2 - 50f)
         batch.end()
     }
 
     private fun drawLog(log: List<com.debtsdecks.core.model.CombatLogEntry>, batch: SpriteBatch) {
-        val x = 900f
-        val y = 260f
-        val w = 350f
-        val h = 340f
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.setColor(0f, 0f, 0f, 0.5f)
-        shapeRenderer.rect(x, y, w, h)
-        shapeRenderer.end()
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-        shapeRenderer.setColor(0.5f, 0.5f, 0.6f, 0.8f)
-        shapeRenderer.rect(x, y, w, h)
-        shapeRenderer.end()
+        val panel = CombatLayout.logPanel(worldWidth)
+        val pad = 10f
+        panelBackdrop(panel.x, panel.y, panel.width, panel.height)
 
         batch.begin()
-        smallFont.draw(batch, bundle.get("hud.combat_log_header"), x + 10f, y + h - 10f)
+        smallFont.data.setScale(0.72f)
+        smallFont.color = ink300
+        smallFont.draw(batch, bundle.get("hud.combat_log_header"), panel.x + pad, panel.y + panel.height - pad)
 
-        var lineY = y + h - 35f
-        log.reversed().take(20).forEach { entry ->
-            if (lineY < y + 20f) return@forEach
-            smallFont.draw(batch, entry.message, x + 10f, lineY, w - 20f, Align.left, true)
-            lineY -= 22f
+        // Newest first, fading with age, stopping as soon as the next entry would fall out of the
+        // panel — the old version reserved room for 20 lines in a box half the screen tall.
+        var lineY = panel.y + panel.height - 32f
+        val textW = panel.width - 2f * pad
+        for ((index, entry) in log.reversed().withIndex()) {
+            val layout = GlyphLayout(smallFont, entry.message, Color.WHITE, textW, Align.left, true)
+            if (lineY - layout.height < panel.y + pad) break
+            smallFont.color = Color(1f, 1f, 1f, (1f - index * 0.07f).coerceAtLeast(0.35f))
+            smallFont.draw(batch, entry.message, panel.x + pad, lineY, textW, Align.left, true)
+            lineY -= layout.height + 6f
         }
+        smallFont.color = Color.WHITE
+        smallFont.data.setScale(1f)
         batch.end()
     }
 
@@ -710,23 +906,27 @@ class CombatRenderer(private val bundle: I18NBundle) {
         cardFrameTextures.values.forEach { it.dispose() }
         cardTextures.values.forEach { it.dispose() }
         intentTextures.values.forEach { it.dispose() }
+        backgroundTextures.values.forEach { it.dispose() }
     }
 
     companion object {
-        val endTurnButtonBounds = com.badlogic.gdx.math.Rectangle(1100f, 50f, 150f, 60f)
+        /**
+         * How much of the card the frame PNG's opaque border covers on each side, measured off
+         * art/card_frame_attack.png (336x480): 46px of 336 horizontally, 62px of 480 vertically.
+         * Card content has to stay inside these insets or the frame paints over it.
+         */
+        private const val FRAME_INSET_X = 0.137f
+        private const val FRAME_INSET_Y = 0.129f
+
+        /** Share of the framed interior given to the text panel; the rest is the art window. */
+        private const val TEXT_PANEL_FRACTION = 0.48f
+
+        /** Hard ceiling from the handoff: clamp the copy, never shrink it below the 11px floor. */
+        private const val DESCRIPTION_MAX_LINES = 3
 
         private const val REWARD_CARD_WIDTH = 280f
         private const val REWARD_CARD_HEIGHT = 380f
         private const val REWARD_CARD_SPACING = 40f
-        private const val SCREEN_WIDTH = 1280f
         private const val SCREEN_HEIGHT = 720f
-
-        fun rewardCardBounds(index: Int, count: Int): Rectangle {
-            val totalWidth = count * REWARD_CARD_WIDTH + (count - 1) * REWARD_CARD_SPACING
-            val startX = (SCREEN_WIDTH - totalWidth) / 2
-            val y = (SCREEN_HEIGHT - REWARD_CARD_HEIGHT) / 2
-            val x = startX + index * (REWARD_CARD_WIDTH + REWARD_CARD_SPACING)
-            return Rectangle(x, y, REWARD_CARD_WIDTH, REWARD_CARD_HEIGHT)
-        }
     }
 }

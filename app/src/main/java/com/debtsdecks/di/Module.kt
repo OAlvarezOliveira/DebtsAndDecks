@@ -4,7 +4,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.utils.I18NBundle
-import com.badlogic.gdx.utils.viewport.FitViewport
+import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.badlogic.gdx.utils.viewport.Viewport
 import com.debtsdecks.core.cards.CardRegistry
 import com.debtsdecks.core.combat.CombatEngine
@@ -38,7 +38,10 @@ val coreModule = module {
 
 val gdxModule = module {
     single<Camera> { OrthographicCamera() }
-    single<Viewport> { FitViewport(1280f, 720f, get()) }
+    // ExtendViewport, not FitViewport: 720 world units tall with the width following the
+    // device aspect, so a 20:9 phone uses the whole panel instead of being pillarboxed into
+    // 1280x720 with black bars. Layout code reads the live worldWidth, never the 1280 minimum.
+    single<Viewport> { ExtendViewport(1280f, 720f, get()) }
     // Lazy (default Koin `single` behavior, not `createdAtStart`): Gdx.files is only valid after
     // AndroidApplication.initialize() runs in MainActivity, which happens after
     // DebtsAndDecksApp.onCreate()'s startKoin{} call. Lazy resolution defers the actual

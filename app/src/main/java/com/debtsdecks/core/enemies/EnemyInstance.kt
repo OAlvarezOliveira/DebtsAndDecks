@@ -54,7 +54,7 @@ class EnemyInstance(
             BUFF -> "intent_buff"
             DEBUFF -> "intent_debuff"
             MULTI_ATTACK -> "intent_multi"
-            LEVY -> "intent_debuff"
+            LEVY -> "intent_levy"
         }
 
     fun advanceIntent() {
