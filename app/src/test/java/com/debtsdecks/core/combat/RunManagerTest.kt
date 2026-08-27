@@ -148,7 +148,7 @@ class RunManagerTest {
     fun `defeating the first enemy opens a reward screen with the slot's choice count`() {
         killCurrentEnemy()
 
-        assertEquals(RunManager.Phase.REWARD, runManager.phase)
+        assertEquals(RunManager.Phase.NODE, runManager.phase)
         // Slot 0 rewards say 1 pick; the defeated thug's built-in cardChoices is 3. Slot wins.
         assertEquals(1, runManager.rewardChoices.size)
         assertTrue(runManager.rewardChoices.none { "starter" in it.tags })
@@ -177,7 +177,7 @@ class RunManagerTest {
         // Walk all 8 slots; victory must NOT fire before slot 8.
         repeat(7) { slotNumber ->
             killCurrentEnemy() // defeats the slot's enemy (fixture are all killable)
-            assertEquals(RunManager.Phase.REWARD, runManager.phase, "slot $slotNumber should reward, not win")
+            assertEquals(RunManager.Phase.NODE, runManager.phase, "slot $slotNumber should reward, not win")
             runManager.chooseReward(runManager.rewardChoices.first())
         }
         killCurrentEnemy() // slot 8: final collector
@@ -268,7 +268,7 @@ class RunManagerTest {
         playSelfCardWhenDrawn(engine, rm, "survive")
         finishSoleEnemy(engine, rm)
 
-        assertEquals(RunManager.Phase.REWARD, rm.phase)
+        assertEquals(RunManager.Phase.NODE, rm.phase)
         val debtCarried = rm.debt
         val goldCarried = rm.gold
         assertTrue(debtCarried > 0)
@@ -296,7 +296,7 @@ class RunManagerTest {
         playSelfCardWhenDrawn(engine, rm, "survive")
         finishSoleEnemy(engine, rm)
 
-        assertEquals(RunManager.Phase.REWARD, rm.phase)
+        assertEquals(RunManager.Phase.NODE, rm.phase)
         val debtBeforeGarnish = engine.getState().debt
         val rawGold = enemies[0].rewards.gold
         val expectedGarnish = DebtConfig.garnishAmount(rawGold, debtBeforeGarnish)
@@ -318,7 +318,7 @@ class RunManagerTest {
         assertTrue(rm.pendingBreakEncounter)
 
         finishSoleEnemy(engine, rm) // defeat the Thug (encounterIndex still 0)
-        assertEquals(RunManager.Phase.REWARD, rm.phase)
+        assertEquals(RunManager.Phase.NODE, rm.phase)
 
         rm.chooseReward(rm.rewardChoices.first())
 
@@ -330,7 +330,7 @@ class RunManagerTest {
         // reward again must resume the *normal* sequence at enemies[1] ("Loan Shark"), proving
         // the forced detour never desynced encounterIndex.
         finishSoleEnemy(engine, rm)
-        assertEquals(RunManager.Phase.REWARD, rm.phase)
+        assertEquals(RunManager.Phase.NODE, rm.phase)
 
         rm.chooseReward(rm.rewardChoices.first())
         assertEquals("Thug", engine.getState().enemies[0].name) // slot 1 is thug
@@ -356,7 +356,7 @@ class RunManagerTest {
         assertFalse(rm.pendingBreakEncounter)
 
         finishSoleEnemy(engine, rm)
-        assertEquals(RunManager.Phase.REWARD, rm.phase)
+        assertEquals(RunManager.Phase.NODE, rm.phase)
         assertFalse(rm.pendingBreakEncounter)
 
         rm.chooseReward(rm.rewardChoices.first())
@@ -381,15 +381,15 @@ class RunManagerTest {
         runManager.refresh()
         killCurrentEnemy()
 
-        assertEquals(RunManager.Phase.REWARD, runManager.phase)
-        val hpAtRewardScreen = runManager.hp
-        assertTrue(hpAtRewardScreen < 50)
+        assertEquals(RunManager.Phase.NODE, runManager.phase)
+        val hpAtNode = runManager.hp
+        assertTrue(hpAtNode > 0) // node heals +8 flat, may cap at 50
 
         runManager.chooseReward(runManager.rewardChoices.first())
         runManager.refresh()
 
-        assertEquals(hpAtRewardScreen, combatEngine.getState().player.hp)
-        assertEquals(hpAtRewardScreen, runManager.hp)
+        assertEquals(hpAtNode, combatEngine.getState().player.hp)
+        assertEquals(hpAtNode, runManager.hp)
     }
 
     @Test
@@ -411,7 +411,7 @@ class RunManagerTest {
         // Slots 0-3 all give 1 pick (thug/thug/loan_shark/thug).
         repeat(4) { i ->
             killCurrentEnemy()
-            assertEquals(RunManager.Phase.REWARD, runManager.phase)
+            assertEquals(RunManager.Phase.NODE, runManager.phase)
             assertEquals(1, runManager.rewardChoices.size, "slot $i should give 1 pick")
             runManager.chooseReward(runManager.rewardChoices.first())
         }
@@ -438,5 +438,113 @@ class RunManagerTest {
         assertEquals(0, engine.getState().debt)
         assertEquals(0, engine.getState().gold)
         assertEquals("Thug", engine.getState().enemies[0].name)
+    }
+
+    // --- C7 between-fight-node (T2.1 RED) ---
+
+    @Test
+    fun `winning a fight enters NODE phase and heals flat amount capped at max HP`() {
+        killCurrentEnemy() // defeats slot 0 (thug); hp stays at max since thug hp=5 dies first
+        assertEquals(RunManager.Phase.NODE, runManager.phase)
+        assertEquals(50, runManager.hp)
+    }
+
+    @Test
+    fun `applying node free pick progresses to the next slot`() {
+        killCurrentEnemy()
+        assertEquals(RunManager.Phase.NODE, runManager.phase)
+        val freePick = runManager.rewardChoices.first()
+        runManager.takeNodeFreePick(freePick)
+        assertEquals(RunManager.Phase.COMBAT, runManager.phase)
+        assertEquals("Thug", combatEngine.getState().enemies[0].name) // slot 1 = thug again
+    }
+
+    @Test
+    fun `buying at the node charges escalated gold and adds a card`() {
+        val rm = RunManager(combatEngine, cardRegistry, enemies, sequence, rng)
+        playSelfCardWhenDrawn(combatEngine, rm, "survive")
+        finishSoleEnemy(combatEngine, rm)
+        assertEquals(RunManager.Phase.NODE, rm.phase)
+
+        val goldBefore = rm.gold
+        val offer = rm.nodeShopChoices.first()
+        val buyCost = NodeConfig.escalatedCost(NodeConfig.BUY_BASE, 1)
+        assertTrue(rm.buyCard(offer))
+        assertEquals(RunManager.Phase.COMBAT, rm.phase)
+        assertEquals(goldBefore - buyCost, rm.gold)
+    }
+
+    @Test
+    fun `removing a card at the node charges escalated gold and removes it from the deck`() {
+        val rm = RunManager(combatEngine, cardRegistry, enemies, sequence, rng)
+        playSelfCardWhenDrawn(combatEngine, rm, "survive")
+        finishSoleEnemy(combatEngine, rm)
+        assertEquals(RunManager.Phase.NODE, rm.phase)
+
+        val goldBefore = rm.gold
+        val removal = rm.nodeRemoveChoices.first()
+        val removeCost = NodeConfig.escalatedCost(NodeConfig.REMOVE_BASE, 1)
+        assertTrue(rm.removeCardFromDeck(removal))
+        assertEquals(RunManager.Phase.COMBAT, rm.phase)
+        assertEquals(goldBefore - removeCost, rm.gold)
+    }
+
+    @Test
+    fun `taking a loan at the node gains gold and adds debt`() {
+        val rm = RunManager(combatEngine, cardRegistry, enemies, sequence, rng)
+        playSelfCardWhenDrawn(combatEngine, rm, "survive")
+        finishSoleEnemy(combatEngine, rm)
+        assertEquals(RunManager.Phase.NODE, rm.phase)
+
+        val goldBefore = rm.gold
+        val debtBefore = rm.debt
+        assertTrue(rm.takeLoan())
+        assertEquals(RunManager.Phase.COMBAT, rm.phase)
+        assertEquals(goldBefore + NodeConfig.escalatedCost(NodeConfig.LOAN_GOLD_BASE, 1), rm.gold)
+        assertEquals(debtBefore + NodeConfig.escalatedCost(NodeConfig.LOAN_DEBT_BASE, 1), rm.debt)
+    }
+
+    @Test
+    fun `repay via node clears debt for gold plus escalating fee when affordable`() {
+        val registry = CardRegistry.create(makeStarterCards(surviveCost = 4) + rewardCards)
+        val engine = CombatEngine(registry, testLocalizer(), rng)
+        val rm = RunManager(engine, registry, enemies, sequence, rng)
+        playSelfCardWhenDrawn(engine, rm, "survive") // small debt (~1)
+        finishSoleEnemy(engine, rm)
+        assertTrue(rm.debt > 0)
+        assertEquals(RunManager.Phase.NODE, rm.phase)
+
+        val goldBefore = rm.gold
+        val debtBefore = rm.debt
+        // Slot-0 thug gold (10) minus small garnish leaves enough for debt + fee(1)=3.
+        assertTrue(rm.repayViaNode())
+        assertEquals(0, rm.debt)
+        assertEquals(goldBefore - (debtBefore + NodeConfig.escalatedCost(NodeConfig.REPAY_FEE_BASE, 1)), rm.gold)
+    }
+
+    @Test
+    fun `repay via node is a no-op when gold cannot cover debt plus fee`() {
+        val registry = CardRegistry.create(makeStarterCards(surviveCost = 33) + rewardCards)
+        val engine = CombatEngine(registry, testLocalizer(), rng)
+        val rm = RunManager(engine, registry, enemies, sequence, rng)
+        playSelfCardWhenDrawn(engine, rm, "survive")
+        finishSoleEnemy(engine, rm)
+        val debtBefore = rm.debt
+        assertTrue(rm.debt > 0)
+
+        assertFalse(rm.repayViaNode()) // gold (garnish-eaten) < debt + fee
+        assertEquals(debtBefore, rm.debt)
+        assertEquals(RunManager.Phase.NODE, rm.phase) // node NOT consumed by a failed repay
+    }
+
+    @Test
+    fun `no node after the final boss`() {
+        repeat(7) {
+            killCurrentEnemy()
+            assertEquals(RunManager.Phase.NODE, runManager.phase)
+            runManager.takeNodeFreePick(runManager.rewardChoices.first())
+        }
+        killCurrentEnemy() // final boss (slot 8)
+        assertEquals(RunManager.Phase.VICTORY, runManager.phase)
     }
 }

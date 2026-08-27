@@ -64,11 +64,15 @@ class RunSimulator(
 
             when (run.phase) {
                 RunManager.Phase.COMBAT -> driveCombat(engine, run, state)
-                RunManager.Phase.REWARD -> {
-                    val pick = policy.chooseReward(run.rewardChoices)
-                    pickedRewardIds.add(pick.id)
-                    run.chooseReward(pick)
-                    currentCombatTurnStart = null
+                RunManager.Phase.NODE -> {
+                        // C7: the sim's node policy makes the between-fight decision. Record the
+                        // free-pick offer id (buy cards also come from the same pool) so the
+                        // "table is played" evidence (R4.3-style) keeps working.
+                        val offerId = run.rewardChoices.firstOrNull()?.id ?: "node_no_free_pick"
+                        NodePolicy.act(run)
+                        pickedRewardIds.add(offerId)
+                        currentCombatTurnStart = null
+                    
                 }
                 RunManager.Phase.VICTORY -> {
                     turnsPerCombat.add(turnsFor(currentCombatTurnStart, state.turnNumber))

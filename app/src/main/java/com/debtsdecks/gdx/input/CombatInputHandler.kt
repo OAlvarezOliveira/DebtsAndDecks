@@ -38,7 +38,7 @@ class CombatInputHandler(
                     false
                 }
             }
-            RunManager.Phase.REWARD -> handleRewardTap(worldPos.x, worldPos.y)
+            RunManager.Phase.NODE -> handleRewardTap(worldPos.x, worldPos.y) // PR2: full node tap
             RunManager.Phase.VICTORY, RunManager.Phase.DEFEAT -> {
                 runManager.restartRun()
                 deselect()

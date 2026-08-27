@@ -13,6 +13,11 @@ import kotlin.random.Random
  * calls instead of ever replacing it. The run follows [runSequence] (8 slots), NOT the roster
  * order; each slot's enemyId resolves into [enemyDefinitions] (the catalog) and that slot's
  * rewards are run-authoritative (enemy built-in rewards are inert for run logic).
+ *
+ * C7 between-fight-node: after winning fights 1-7 the run enters [Phase.NODE] — one decision screen
+ * between the free card pick (the old reward) and the Gold-spend actions (repay / buy / remove /
+ * loan, all escalating with [NodeConfig]). Entering a node heals a flat amount. There is NO node
+ * after the final boss (slot 8 → [Phase.VICTORY] directly).
  */
 class RunManager(
     private val combatEngine: CombatEngine,
@@ -21,12 +26,29 @@ class RunManager(
     private val runSequence: com.debtsdecks.core.model.RunSequence,
     private val rng: Random
 ) {
-    enum class Phase { COMBAT, REWARD, VICTORY, DEFEAT }
+    enum class Phase { COMBAT, NODE, VICTORY, DEFEAT }
 
     var phase: Phase = Phase.COMBAT
         private set
+
+    /** Free card pick offer shown at the node (the old reward screen, phase-localized to NODE). */
     var rewardChoices: List<CardDefinition> = emptyList()
         private set
+
+    /** Archetype-biased 3-card shop offer shown at the node. */
+    var nodeShopChoices: List<CardDefinition> = emptyList()
+        private set
+
+    /** Random 3-card ids from the current deck offered for removal at the node. */
+    var nodeRemoveChoices: List<String> = emptyList()
+        private set
+
+    /** Which node we're on (1-based); drives cost escalation. */
+    var nodeIndex: Int = 0
+        private set
+
+    /** Current run deck size (used by the sim's node policy / UI affordance). */
+    val deckSize: Int get() = deck.size
 
     /** Run-persistent liability, mirrored from [combatEngine] on every [refresh] while in combat. */
     var debt: Int = 0
@@ -42,8 +64,8 @@ class RunManager(
 
     /**
      * One-shot flag: set when [debt] first crosses [DebtConfig.BREAK_THRESHOLD] during this run,
-     * consumed by the next [chooseReward] call to force the "collector" encounter. Per spec, this
-     * fires at most once per run (see [breakEncounterUsedThisRun]).
+     * consumed by the next successful fight's node to force the "collector" encounter. Fires at
+     * most once per run (see [breakEncounterUsedThisRun]).
      */
     var pendingBreakEncounter: Boolean = false
         private set
@@ -92,20 +114,121 @@ class RunManager(
         debt -= garnished
         gold += rawGold - garnished
 
-        phase = if (slotIndex >= runSequence.slots.lastIndex) {
-            Phase.VICTORY
+        if (slotIndex >= runSequence.slots.lastIndex) {
+            phase = Phase.VICTORY // final boss: no node after it
         } else {
-            rewardChoices = cardRegistry.all()
-                .filter { REWARD_EXCLUDED_TAGS.none { tag -> tag in it.tags } }
-                .shuffled(rng)
-                .take(currentSlot.rewards.cardChoices)
-            Phase.REWARD
+            enterNode(currentSlot.rewards.cardChoices)
         }
     }
 
-    fun chooseReward(card: CardDefinition) {
+    private fun enterNode(freePickCount: Int) {
+        nodeIndex++
+        // Flat heal as part of the "rest", capped at max HP.
+        hp = minOf(PlayerState().maxHp, hp + NodeConfig.HEAL_AMOUNT)
+
+        rewardChoices = cardRegistry.all()
+            .filter { REWARD_EXCLUDED_TAGS.none { tag -> tag in it.tags } }
+            .shuffled(rng)
+            .take(freePickCount)
+        nodeShopChoices = archetypeBiasedOffer()
+        nodeRemoveChoices = deck.shuffled(rng).take(NodeConfig.REMOVE_OFFER_SIZE)
+        phase = Phase.NODE
+    }
+
+    /** Free pick: add [card] to the deck, then advance. Alias kept for the old reward flow. */
+    fun chooseReward(card: CardDefinition) = takeNodeFreePick(card)
+
+    fun takeNodeFreePick(card: CardDefinition) {
         deck = deck + card.id
+        advanceToNextCombat()
+    }
+
+    /**
+     * Repay Debt at the node: pays `debt + serviceFee(node)` Gold (1:1 + escalating service fee),
+     * clearing Debt to 0. No-op when unaffordable (UI disables the button).
+     */
+    fun repayViaNode(): Boolean {
+        if (debt <= 0) return false
+        val fee = NodeConfig.escalatedCost(NodeConfig.REPAY_FEE_BASE, nodeIndex)
+        val cost = debt + fee
+        if (gold < cost) return false
+        gold -= cost
+        debt = 0
+        advanceToNextCombat()
+        return true
+    }
+
+    /**
+     * Buy [card] from the node shop: costs escalated BUY_BASE Gold, adds it to the deck.
+     * No-op when unaffordable.
+     */
+    fun buyCard(card: CardDefinition): Boolean {
+        val cost = NodeConfig.escalatedCost(NodeConfig.BUY_BASE, nodeIndex)
+        if (gold < cost) return false
+        gold -= cost
+        deck = deck + card.id
+        advanceToNextCombat()
+        return true
+    }
+
+    /**
+     * Remove [cardId] from the deck: costs escalated REMOVE_BASE Gold, drops the card (first
+     * occurrence) from the run deck only — mid-combat draw piles are engine-owned, untouched.
+     * No-op when unaffordable or the id is absent.
+     */
+    fun removeCardFromDeck(cardId: String): Boolean {
+        val cost = NodeConfig.escalatedCost(NodeConfig.REMOVE_BASE, nodeIndex)
+        if (gold < cost || cardId !in deck) return false
+        gold -= cost
+        deck = deck - cardId
+        advanceToNextCombat()
+        return true
+    }
+
+    /**
+     * Take the node LOAN: gains escalated LOAN_GOLD_BASE Gold, adds escalated LOAN_DEBT_BASE Debt —
+     * the conscious "survive one more step, pay later" trade (and the collector may be armed by the
+     * debt rise). Rejected (no-op) when the added Debt crosses Execution — you cannot suicide via loan.
+     */
+    fun takeLoan(): Boolean {
+        val loanGold = NodeConfig.escalatedCost(NodeConfig.LOAN_GOLD_BASE, nodeIndex)
+        val loanDebt = NodeConfig.escalatedCost(NodeConfig.LOAN_DEBT_BASE, nodeIndex)
+        if (debt + loanDebt > DebtConfig.EXECUTION_THRESHOLD) return false
+        gold += loanGold
+        debt += loanDebt
+        if (!breakEncounterUsedThisRun && debt >= DebtConfig.BREAK_THRESHOLD) {
+            pendingBreakEncounter = true
+            breakEncounterUsedThisRun = true
+        }
+        advanceToNextCombat()
+        return true
+    }
+
+    /** Archetype-biased 3-card offer: weights pool cards by the detected deck archetype. */
+    private fun archetypeBiasedOffer(): List<CardDefinition> {
+        val pool = cardRegistry.all().filter { REWARD_EXCLUDED_TAGS.none { tag -> tag in it.tags } }
+        val archetype = playerArchetype(deck, cardRegistry)
+        val weighted = mutableListOf<CardDefinition>()
+        for (card in pool) {
+            val weight = when (archetype) {
+                Archetype.LEVERAGE ->
+                    if (card.tags.any { it in LEVERAGE_BIAS }) 3 else if (card.tags.any { it in ECONOMY_BIAS }) 1 else 2
+                Archetype.LIQUIDITY ->
+                    if (card.tags.any { it in LIQUIDITY_BIAS }) 3 else if (card.tags.any { it in ECONOMY_BIAS }) 1 else 2
+                Archetype.PRESSURE ->
+                    if (card.tags.none { it in ECONOMY_BIAS }) 3 else 1
+            }
+            repeat(weight) { weighted.add(card) }
+        }
+        return weighted.shuffled(rng)
+            .distinctBy { it.id }
+            .take(NodeConfig.SHOP_OFFER_SIZE)
+    }
+
+    private fun advanceToNextCombat() {
         rewardChoices = emptyList()
+        nodeShopChoices = emptyList()
+        nodeRemoveChoices = emptyList()
         phase = Phase.COMBAT
 
         if (pendingBreakEncounter) {
@@ -131,8 +254,11 @@ class RunManager(
 
     private fun beginRun() {
         slotIndex = 0
+        nodeIndex = 0
         deck = CombatEngine.STARTER_DECK
         rewardChoices = emptyList()
+        nodeShopChoices = emptyList()
+        nodeRemoveChoices = emptyList()
         phase = Phase.COMBAT
         debt = 0
         gold = 0
@@ -149,4 +275,11 @@ class RunManager(
         // Starter cards are already guaranteed in the deck, so they're excluded from rewards.
         private val REWARD_EXCLUDED_TAGS = setOf("starter")
     }
+
+    private val ECONOMY_BIAS = setOf(
+        "debt_scaling", "debt_payoff", "execution_damage",
+        "debt_draw", "refinance", "add_debt", "gain_credit", "gold_scaled_debt", "hand_exhaust"
+    )
+    private val LEVERAGE_BIAS = setOf("debt_scaling", "debt_payoff", "execution_damage")
+    private val LIQUIDITY_BIAS = setOf("debt_draw", "refinance", "add_debt", "gain_credit", "gold_scaled_debt", "hand_exhaust")
 }
