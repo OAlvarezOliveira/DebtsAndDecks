@@ -50,7 +50,7 @@ signing, store listing and closed testing. See **BD-1** below — v1 ships free.
 - [x] **Integration** Wire Core ↔ GDX via DI (Module.kt), MainActivity launches GameScreen
 - [x] **Polish** Win/Lose screens
 - [x] **Polish** Card reward screen (pick 1 of 3; pool = 23 non-starter cards, starters excluded)
-- [x] **Test** Unit tests: CombatEngine, CardResolver, CardInstance, EnemyInstance, RunManager, DebtConfig, EnemyTierRegression, I18nBundle, LeveragePayoffCardsData, RunSimulationHarness, RunSequenceTest (131/131 green across 11 classes, measured 2026-08-27 via `:app:testDebugUnitTest` at develop tip `b142528`)
+- [x] **Test** Unit tests: CombatEngine, CardResolver, CardInstance, EnemyInstance, RunManager, DebtConfig, EnemyTierRegression, I18nBundle, LeveragePayoffCardsData, RunSimulationHarness, RunSequence, NodeConfig, Archetype (153/153 green across 13 classes, measured 2026-08-27 via `:app:testDebugUnitTest --rerun-tasks`; re-measure rather than trust this number, `develop` is advancing under a concurrent change stream)
 - [x] **SDD** Change `debt-economy-cards-and-boss-interest`: verify PASS (7/7 requirements, 12/12 scenarios) — delivered (`38d584d`)
 - [x] **SDD** Change `combat-progression-and-i18n`: verify completed (core-purity CRITICAL resolved via `Localizer`)
 - [x] **SDD** Change C1 `run-simulation-harness`: headless balance simulator (`dc65f08`, `9615b5e`) — `RunSimulationHarnessTest`, `RunSimulator`, `LeveragePolicy` under `core/simulation/`
@@ -66,7 +66,9 @@ signing, store listing and closed testing. See **BD-1** below — v1 ships free.
 **Goal:** Make every claim in `GDD.md`, `TRACKING.md`, `HARNESS.md` and `README.md` match verified code
 state, so the launch programme starts from facts instead of stale prose.
 **Done:**
-- Measured, not copied, the real baselines: **124 unit tests green across 10 classes**, 27 cards
+- Measured, not copied, the real baselines: **124 unit tests green across 10 classes** (this
+  figure was already stale by the time C5 and C7 landed; see the 2026-08-27 correction entries
+  below and in `docs/HARNESS.md` for the current count), 27 cards
   (4 starters + 23 reward pool), 3 enemies, 19 card-art files all genuine PNG. Three different test
   counts were in circulation across HARNESS.md, TRACKING.md and an older Engram note — **all three
   were wrong**, which is why the number above was measured rather than copied.
@@ -95,12 +97,15 @@ page-size question with measured bytes, not version numbers.
 - Toolchain resolved from primary sources *before* editing, then applied one variable per rung with
   the full suite after each: Gradle 8.9 → **8.11.1**, Kotlin 1.9.22 → **2.2.20**, AGP 8.4.0 →
   **8.10.1**, compileSdk/targetSdk 34 → **36**, LibGDX 1.12.1 → **1.14.2**. `minSdk` stays **24**.
-  All seven rungs green — measured **131/131** across 11 classes at develop tip `b142528`; the
-  test *surface* did not move across the seven rungs, but the 124/10 figure P0 recorded was itself
-  stale (it predated C5's `RunSequenceTest`), so the correct baseline is 131/11, not 124/10.
+  All seven rungs green — the test *surface* did not move across the seven rungs themselves, but
+  the 124/10 figure P0 recorded predated C5's `RunSequenceTest`, and by the time this correction
+  was written C7 had also landed (`NodeConfigTest`, `ArchetypeTest`). Current measured baseline is
+  **153/153 across 13 classes** — see `docs/HARNESS.md`, re-measure rather than trust a fixed
+  number here.
 - All three 16 KB layers verified on the **shipping bytes**: Check A on the `.so` extracted from the
   release APK (PASS), Check B `zipalign -c -P 16 -v 4` (exit 0, all four `.so` `Stored` and on exact
-  16384-byte boundaries), and **Check C on a real 16 KB device** — AVD with
+  16384-byte boundaries), and **Check C on a 16 KB AVD emulator** (not a physical device — OQ-1
+  still open) — AVD with
   `getconf PAGE_SIZE = 16384` on API 36: install `Success`, launch `Status: ok`, `nativeloader` maps
   `libgdx.so` straight out of the APK, LibGDX reaches OpenGL ES 3.1, no crashes.
 - Manifest cleanup: removed the deprecated `package=` attribute (the AGP deprecation warning is now
@@ -184,7 +189,7 @@ page-size question with measured bytes, not version numbers.
 | 2026-08-27 | C3 `remove-free-debt-valve` status | **NEEDS RE-VERIFICATION.** `rg "RepayMode\|repayDebt\|REPAY_DISCARD_VALUE\|USURY_HP_RATIO" app/src/` returns zero matches and `9afd532` removed the valve, so C3's scope may already be satisfied by C2/C4 — or C3 may be mis-scoped. P0 records the evidence and deliberately does not decide. |
 | 2026-08-27 | Card art format | Reverted to PNG by `fe281e1`; 19 files, all genuine PNG, ~355–470 KB each. APK-size impact against the `< 20 MB` target is handed to P1. — *answered by P1 2026-08-27: release APK **13 MB**, AAB **12 MB**; the budget holds, no action needed.* |
 | 2026-08-27 | **16 KB page-size compliance** | **`ALIGNED-AFTER-FALLBACK`.** LibGDX 1.12.1 ships 64-bit `.so` with `p_align 0x1000`; Play requires `>= 0x4000` for `targetSdk >= 35`. Measured every release: **1.13.0 is the floor**, pinned **1.14.2** (trigger **T1**). Verified on shipping bytes at all three layers — ELF alignment, `zipalign -P 16`, and an **AVD emulator** with `PAGE_SIZE = 16384` (OQ-1: physical device still outstanding). **No shortcut was used**: 64-bit ABIs kept, `useLegacyPackaging` never set, no warning suppressed, `targetSdk` never lowered. Evidence in ADR 0002. |
-| 2026-08-27 | Toolchain baseline | Gradle **8.11.1**, AGP **8.10.1**, Kotlin **2.2.20**, LibGDX **1.14.2**, compileSdk/targetSdk **36**, minSdk **24** (unchanged). Each rung is forced by the one above it, not chosen for recency — AGP 8.10 is the lowest stable line supporting API 36, and it dictates the Gradle and Kotlin floors. Suite green at 124/124 after every rung. |
+| 2026-08-27 | Toolchain baseline | Gradle **8.11.1**, AGP **8.10.1**, Kotlin **2.2.20**, LibGDX **1.14.2**, compileSdk/targetSdk **36**, minSdk **24** (unchanged). Each rung is forced by the one above it, not chosen for recency — AGP 8.10 is the lowest stable line supporting API 36, and it dictates the Gradle and Kotlin floors. Suite green at 124/124 after every rung as measured at the time (tree predated C5/C7; current baseline is 153/153 across 13 classes, see `docs/HARNESS.md`). |
 | 2026-08-27 | Gradle wrapper status | **Not broken, and no repair pulled forward from P7.** The JAR is a valid 43 KB archive; it only ever pointed at a Gradle too old for AGP 8.10.1. Bumping `distributionUrl` to 8.11.1 is sufficient and `./gradlew` is the canonical invocation. A standalone 8.11.1 (SHA-256 verified) was installed while resolving this and is retained as a fallback only. |
 | 2026-08-27 | Device run (Check C) | Emulated AVD, image `android-36 google_apis_ps16k x86_64`, `getconf PAGE_SIZE = 16384`, `ro.build.version.sdk = 36`. Debug build (release APK is unsigned until P6): install `Success`, launch `Status: ok` in 3502 ms, `nativeloader` mapped `libgdx.so` from the APK, OpenGL ES 3.1 reached, no crashes. **Open (OQ-1): still no run on a *physical* 16 KB device.** |
 | 2026-08-27 | `allowBackup` | **Deferred to P4** (OQ-2). Left at `true` in P1; the decision belongs with the Play Data safety declaration, not with the platform baseline. |

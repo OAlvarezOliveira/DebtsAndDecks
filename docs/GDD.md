@@ -70,7 +70,7 @@ total. No map, no rest, no persistence between runs.
 | **HP** | Player HP, does not regenerate between combats. 0 = defeat. |
 | **Energy (Credit)** | 3/turn baseline, resets each turn. |
 | **Block** | Temporary HP, resets at end of turn. |
-| **Gold** | **Has no sink at all today.** The in-combat 1:1 Gold repay action was removed along with the rest of the free Debt valve (verified 2026-08-27: `RepayMode` no longer exists anywhere under `app/src/`). Gold now only accumulates and is only ever reduced by garnishment. *(Open balance question — giving Gold a job is the between-fight node, change C7 below. Recorded here, not fixed here.)* |
+| **Gold** | The in-combat 1:1 Gold repay action was removed along with the rest of the free Debt valve (`RepayMode` no longer exists anywhere under `app/src/`). Gold's sink is now the **between-fight node** (change C7, shipped `e7d5b50`/`d8a346a`): heal, repay-Debt (service fee on top of 1:1), buy a card, remove a card, or take a loan. Still reduced by garnishment as before. |
 | **Debt** | The economy axis. See below. |
 
 ### The Debt Economy (`DebtConfig.kt`)
@@ -211,9 +211,8 @@ under pressure, not a corner.
   `REPAY_DISCARD_VALUE` across `app/src/` returns zero matches (verified 2026-08-27). The only
   surviving repayment surface is the *card* effect `CardResolver.Effect.RepayDebt`, which costs
   a card play and Credit and is therefore not a free valve.
-  **Still open, carried forward:** Debt repayment was supposed to move to a between-fight node so
-  Gold would have a job. That node does not exist yet, so Gold currently has **no sink at all** —
-  see change **C7 `between-fight-node`**.
+  **Resolved:** Debt repayment's move to a between-fight node so Gold would have a job is now
+  **shipped** — change **C7 `between-fight-node`** (`e7d5b50`, `d8a346a`).
 - Fix the interest formula's low-end regressiveness. *(Still open.)*
 - Fix the break-encounter bug that currently summons the boss mid-run without advancing
   `encounterIndex`. *(Still open — not re-verified by the P0 docs pass.)*
@@ -279,7 +278,7 @@ that resolves on `develop`.
 | C4 | `leverage-payoff-cards` | 6-10 new cards, retire/rework the 3 dead cards | Card table: developer · Apply: Pi | **DONE** — `57b11c2` |
 | C5 | `run-length-and-encounter-slots` | 8-encounter run structure | Sequence: developer · Refactor: Pi | **DONE** — `5534524` |
 | C6 | `enemy-roster-and-economy-intents` | 5 new enemies + economy-touching intents | Table: developer · Apply: Pi | PENDING |
-| C7 | `between-fight-node` | Gold's job outside combat | Mixed — supervise the render/input half (no headless coverage there) | PENDING — **now urgent**: Gold has no sink at all on `develop` |
+| C7 | `between-fight-node` | Gold's job outside combat | Mixed — supervise the render/input half (no headless coverage there) | **DONE** — `e7d5b50` (logic: heal/repay/buy/remove/loan, `NodePolicy`), `d8a346a` (render/input/i18n) |
 | C8 | `balance-pass-1` | Tune constants until success criteria are met | Pi (measurable target via simulator) | PENDING |
 | C9 | `two-enemy-encounters` *(optional)* | Multi-enemy variety, code-cheap | Pi — skip if C8 already meets criteria | PENDING (optional) |
 
@@ -288,9 +287,12 @@ that resolves on `develop`.
 `9afd532 feat(combat): remove free in-combat Debt repay valve (GOLD/DISCARD)` is on `develop`.
 So the valve C3 was scoped to remove is already gone. What is *not* established is whether C3's
 scope was only the valve removal — in which case it is complete — or whether it also owned
-Debt repayment's move to a between-fight node, which has **not** happened. Marking this row
-`DONE` or `PENDING` would send a downstream session to skip or rewrite code on a false premise.
-Re-scoping C3 is the job of the change that picks it up (P2), not of this documentation pass.
+Debt repayment's move to a between-fight node. **That node has since shipped independently as
+C7** (`e7d5b50`, `d8a346a`), so the underlying gap C3 might have owned no longer exists — but
+whether that satisfies C3's original scope, or whether C3 should be marked DONE/redundant/re-scoped,
+is still not decided here. Marking this row `DONE` or `PENDING` would send a downstream session to
+skip or rewrite code on a false premise. Re-scoping (or closing) C3 is the job of whichever change
+picks it up next, not of this documentation pass.
 
 Open risk to watch: the leverage hypothesis itself could be wrong (an obvious optimal line would
 make the risk axis decorative). Re-run the simulator's greedy policy after C2 lands — if it wins
@@ -308,6 +310,6 @@ above ~70%, tighten Execution before investing further down the sequence.
 
 ---
 
-*Last updated: 2026-08-27 — Keep this file in sync with code. C2, C4 and C5 have landed; the next
-required update lands with whichever change resolves C3's scope, or with C6/C7/C8, whichever
+*Last updated: 2026-08-27 — Keep this file in sync with code. C2, C4, C5 and C7 have landed; the
+next required update lands with whichever change resolves C3's scope, or with C6/C8, whichever
 comes first.*
