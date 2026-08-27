@@ -50,6 +50,9 @@ class RunManager(
     /** Current run deck size (used by the sim's node policy / UI affordance). */
     val deckSize: Int get() = deck.size
 
+    /** Current run deck (ids, acquisition order) — read-only, for sim instrumentation. */
+    val deckList: List<String> get() = deck
+
     /** Resolves the node's removal-offer ids to their full card definitions (for rendering). */
     fun resolveNodeRemoveCards(): List<CardDefinition> =
         nodeRemoveChoices.mapNotNull { cardRegistry.get(it) }

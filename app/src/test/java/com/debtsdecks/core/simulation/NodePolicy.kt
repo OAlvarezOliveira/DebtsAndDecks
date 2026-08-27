@@ -16,8 +16,13 @@ import com.debtsdecks.core.combat.RunManager
  */
 object NodePolicy {
 
-    /** One node decision; always leaves the run in COMBAT (every action ends the node). */
-    fun act(run: RunManager) {
+    /**
+     * One node decision; always leaves the run in COMBAT (every action ends the node).
+     * [policy] resolves WHICH card gets bought/free-picked (its [RunPolicy.chooseReward]) so that
+     * distinct policies (e.g. greedy vs leverage) actually diverge on deck composition — the
+     * priority ladder below (shop-timing, loan, repay, thin) stays policy-agnostic.
+     */
+    fun act(run: RunManager, policy: RunPolicy) {
         val buyCost = NodeConfig.escalatedCost(NodeConfig.BUY_BASE, run.nodeIndex)
         val loanGold = NodeConfig.escalatedCost(NodeConfig.LOAN_GOLD_BASE, run.nodeIndex)
         val loanDebt = NodeConfig.escalatedCost(NodeConfig.LOAN_DEBT_BASE, run.nodeIndex)
@@ -29,7 +34,7 @@ object NodePolicy {
         // would leave the sim spinning in NODE forever (caught as "run exceeded max actions").
         val acted =
             // 1. Front-load value while the shop is cheap AND affordable.
-            (shopNow && run.nodeIndex <= 3 && run.buyCard(run.nodeShopChoices.first())) ||
+            (shopNow && run.nodeIndex <= 3 && run.buyCard(policy.chooseReward(run.nodeShopChoices))) ||
             // 2. Survival loan: gold-poor, safe band.
             (run.gold < LOAN_GOLD_NEED && run.debt + loanDebt <= SAFE_AFTER_LOAN && run.takeLoan()) ||
             // 3. Hot debt: repay when affordable (fee included).
@@ -38,11 +43,11 @@ object NodePolicy {
             (run.deckSize > THIN_DECK && run.nodeIndex >= THIN_NODE && run.gold >= removeAt(run) &&
                 run.removeCardFromDeck(deterministicRemoval(run))) ||
             // 5. Shop.
-            (shopNow && run.buyCard(run.nodeShopChoices.first()))
+            (shopNow && run.buyCard(policy.chooseReward(run.nodeShopChoices)))
 
         if (!acted) {
             // 6. Free pick (guaranteed termination).
-            run.takeNodeFreePick(run.rewardChoices.first())
+            run.takeNodeFreePick(policy.chooseReward(run.rewardChoices))
         }
     }
 

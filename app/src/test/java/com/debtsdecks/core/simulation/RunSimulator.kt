@@ -16,6 +16,10 @@ data class SimulationResult(
     val turnsPerCombat: List<Int>,
     val defeatEncounterId: String?,
         val pickedRewardIds: List<String> = emptyList(),
+    /** HP right after each combat ends (before the node heal), aligned index-wise with [turnsPerCombat]. */
+    val hpAfterCombat: List<Int> = emptyList(),
+    /** Enemy defId fought in each combat, aligned index-wise with [turnsPerCombat]. */
+    val encounterIds: List<String?> = emptyList(),
 )
 
 /**
@@ -39,6 +43,8 @@ class RunSimulator(
         var actions = 0
         var peakDebt = 0
         val turnsPerCombat = mutableListOf<Int>()
+        val hpAfterCombat = mutableListOf<Int>()
+        val encounterIds = mutableListOf<String?>()
         var currentCombatTurnStart: Int? = null
         var defeatEncounterId: String? = null
         val pickedRewardIds = mutableListOf<String>()
@@ -65,23 +71,41 @@ class RunSimulator(
             when (run.phase) {
                 RunManager.Phase.COMBAT -> driveCombat(engine, run, state)
                 RunManager.Phase.NODE -> {
-                        // C7: the sim's node policy makes the between-fight decision. Record the
-                        // free-pick offer id (buy cards also come from the same pool) so the
-                        // "table is played" evidence (R4.3-style) keeps working.
-                        val offerId = run.rewardChoices.firstOrNull()?.id ?: "node_no_free_pick"
-                        NodePolicy.act(run)
-                        pickedRewardIds.add(offerId)
+                        // The combat that just ended is complete at this point (engine hasn't
+                        // started the next one yet) — record its turn count here, since NODE may
+                        // recur up to 7 times per run and only the final combat hits VICTORY/DEFEAT.
+                        turnsPerCombat.add(turnsFor(currentCombatTurnStart, state.turnNumber))
+                        hpAfterCombat.add(state.player.hp)
+                        encounterIds.add(currentEncounterId(state))
+                        // C7: the sim's node policy makes the between-fight decision, using [policy]
+                        // to pick WHICH card among the offers (buy/free-pick) — see NodePolicy.act.
+                        // Record the card actually added to the deck, if any (loan/repay/thin add none).
+                        val deckBefore = run.deckList
+                        NodePolicy.act(run, policy)
+                        val deckAfter = run.deckList
+                        if (deckAfter.size > deckBefore.size) {
+                            pickedRewardIds.add(deckAfter.last())
+                        }
                         currentCombatTurnStart = null
-                    
                 }
                 RunManager.Phase.VICTORY -> {
                     turnsPerCombat.add(turnsFor(currentCombatTurnStart, state.turnNumber))
-                    return SimulationResult(seed, RunOutcome.VICTORY, peakDebt, run.hp, turnsPerCombat, null, pickedRewardIds)
+                    hpAfterCombat.add(run.hp)
+                    encounterIds.add(currentEncounterId(state))
+                    return SimulationResult(
+                        seed, RunOutcome.VICTORY, peakDebt, run.hp, turnsPerCombat, null, pickedRewardIds,
+                        hpAfterCombat, encounterIds,
+                    )
                 }
                 RunManager.Phase.DEFEAT -> {
                     turnsPerCombat.add(turnsFor(currentCombatTurnStart, state.turnNumber))
+                    hpAfterCombat.add(state.player.hp)
                     defeatEncounterId = run.debt?.let { currentEncounterId(state) }
-                    return SimulationResult(seed, RunOutcome.DEFEAT, peakDebt, 0, turnsPerCombat, defeatEncounterId, pickedRewardIds)
+                    encounterIds.add(defeatEncounterId)
+                    return SimulationResult(
+                        seed, RunOutcome.DEFEAT, peakDebt, 0, turnsPerCombat, defeatEncounterId, pickedRewardIds,
+                        hpAfterCombat, encounterIds,
+                    )
                 }
             }
         }
