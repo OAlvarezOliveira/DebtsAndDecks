@@ -25,8 +25,9 @@ val coreModule = module {
     single<CardRegistry> { DataLoader.createCardRegistry(androidContext()) }
     single<Random> { Random(System.currentTimeMillis()) }
     single<List<EnemyDefinition>> { DataLoader.loadEnemies(androidContext()) }
+    single<com.debtsdecks.core.model.RunSequence> { DataLoader.loadRunSequence(androidContext()) }
     single { CombatEngine(get(), get(), get()) }
-    single { RunManager(get(), get(), get(), get()) }
+    single { RunManager(get(), get(), get(), get(), get()) }
 }
 
 val gdxModule = module {

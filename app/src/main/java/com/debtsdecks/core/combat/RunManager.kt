@@ -10,12 +10,15 @@ import kotlin.random.Random
 /**
  * Owns run-level progression on top of [CombatEngine], which only knows about a single
  * encounter. Reuses the same engine instance across encounters via repeated [CombatEngine.startCombat]
- * calls instead of ever replacing it.
+ * calls instead of ever replacing it. The run follows [runSequence] (8 slots), NOT the roster
+ * order; each slot's enemyId resolves into [enemyDefinitions] (the catalog) and that slot's
+ * rewards are run-authoritative (enemy built-in rewards are inert for run logic).
  */
 class RunManager(
     private val combatEngine: CombatEngine,
     private val cardRegistry: CardRegistry,
     private val enemyDefinitions: List<EnemyDefinition>,
+    private val runSequence: com.debtsdecks.core.model.RunSequence,
     private val rng: Random
 ) {
     enum class Phase { COMBAT, REWARD, VICTORY, DEFEAT }
@@ -46,7 +49,7 @@ class RunManager(
         private set
 
     private var breakEncounterUsedThisRun = false
-    private var encounterIndex = 0
+    private var slotIndex = 0
     private var deck: List<String> = CombatEngine.STARTER_DECK
 
     init {
@@ -83,18 +86,19 @@ class RunManager(
 
         // Enemy defeated: garnish the Gold reward toward Debt repayment instead of granting it
         // in full (see DebtConfig.garnishAmount).
-        val rawGold = enemyDefinitions[encounterIndex].rewards.gold
+        val currentSlot = runSequence.slots[slotIndex]
+        val rawGold = currentSlot.rewards.gold
         val garnished = DebtConfig.garnishAmount(rawGold, debt)
         debt -= garnished
         gold += rawGold - garnished
 
-        phase = if (encounterIndex >= enemyDefinitions.lastIndex) {
+        phase = if (slotIndex >= runSequence.slots.lastIndex) {
             Phase.VICTORY
         } else {
             rewardChoices = cardRegistry.all()
                 .filter { REWARD_EXCLUDED_TAGS.none { tag -> tag in it.tags } }
                 .shuffled(rng)
-                .take(enemyDefinitions[encounterIndex].rewards.cardChoices)
+                .take(currentSlot.rewards.cardChoices)
             Phase.REWARD
         }
     }
@@ -105,19 +109,19 @@ class RunManager(
         phase = Phase.COMBAT
 
         if (pendingBreakEncounter) {
-            // Forced "collector" encounter: consumes the flag, does NOT advance encounterIndex,
-            // so the normal encounter sequence resumes exactly where it left off afterwards.
+            // Forced "collector" encounter: consumes the flag, does NOT advance slotIndex,
+            // so the normal run sequence resumes exactly where it left off afterwards.
             pendingBreakEncounter = false
             combatEngine.startCombat(
-                listOf(enemyDefinitions.first { it.id == "collector" }),
+                listOf(enemyById("collector")),
                 deck,
                 gold,
                 debt,
                 hp
             )
         } else {
-            encounterIndex++
-            combatEngine.startCombat(listOf(enemyDefinitions[encounterIndex]), deck, gold, debt, hp)
+            slotIndex++
+            combatEngine.startCombat(listOf(enemyById(runSequence.slots[slotIndex].enemyId)), deck, gold, debt, hp)
         }
     }
 
@@ -126,7 +130,7 @@ class RunManager(
     }
 
     private fun beginRun() {
-        encounterIndex = 0
+        slotIndex = 0
         deck = CombatEngine.STARTER_DECK
         rewardChoices = emptyList()
         phase = Phase.COMBAT
@@ -135,8 +139,11 @@ class RunManager(
         hp = PlayerState().maxHp
         pendingBreakEncounter = false
         breakEncounterUsedThisRun = false
-        combatEngine.startCombat(listOf(enemyDefinitions[encounterIndex]), deck)
+        combatEngine.startCombat(listOf(enemyById(runSequence.slots[slotIndex].enemyId)), deck)
     }
+
+    private fun enemyById(id: String): EnemyDefinition =
+        enemyDefinitions.first { it.id == id }
 
     companion object {
         // Starter cards are already guaranteed in the deck, so they're excluded from rewards.

@@ -1,0 +1,12 @@
+{
+  "slots": [
+    { "enemyId": "thug",        "rewards": { "gold": 10, "cardChoices": 1 } },
+    { "enemyId": "thug",        "rewards": { "gold": 10, "cardChoices": 1 } },
+    { "enemyId": "loan_shark",  "rewards": { "gold": 15, "cardChoices": 1 } },
+    { "enemyId": "thug",        "rewards": { "gold": 12, "cardChoices": 1 } },
+    { "enemyId": "loan_shark",  "rewards": { "gold": 18, "cardChoices": 2 } },
+    { "enemyId": "loan_shark",  "rewards": { "gold": 20, "cardChoices": 1 } },
+    { "enemyId": "collector",   "rewards": { "gold": 25, "cardChoices": 1 } },
+    { "enemyId": "collector",   "rewards": { "gold": 30, "cardChoices": 0 } }
+  ]
+}

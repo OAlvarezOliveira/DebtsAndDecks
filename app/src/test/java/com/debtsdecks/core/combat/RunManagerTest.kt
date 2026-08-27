@@ -45,7 +45,28 @@ class RunManagerTest {
         )
     )
 
-    /**
+    /** C5: 8-slot sequence over the fixture roster. Slot rewards are deliberately distinct from the
+     *  enemies' built-in cardChoices (3/4/5) to prove slot authority (R2.4/R4.2). */
+    private val sequence = runSequence()
+    private fun runSequence(): com.debtsdecks.core.model.RunSequence {
+        fun slot(id: String, gold: Int, picks: Int) = com.debtsdecks.core.model.EncounterSlot(
+            enemyId = id, rewards = com.debtsdecks.core.enemies.EnemyRewards(gold = gold, cardChoices = picks)
+        )
+        return com.debtsdecks.core.model.RunSequence(
+            slots = listOf(
+                slot("thug", 10, 1),
+                slot("thug", 10, 1),
+                slot("loan_shark", 15, 1),
+                slot("thug", 12, 1),
+                slot("loan_shark", 18, 2),
+                slot("loan_shark", 20, 1),
+                slot("collector", 25, 1),
+                slot("collector", 30, 0)
+            )
+        )
+    }
+
+/**
      * Starter cards, with "survive"'s cost parametrized. Debt-focused tests inflate it far past
      * `maxEnergy` so a single, deterministic play (no shuffle-order dependence) converts a known
      * shortfall into Debt via a SELF-targeting card that never touches enemy HP.
@@ -97,7 +118,7 @@ class RunManagerTest {
     fun setup() {
         cardRegistry = CardRegistry.create(makeStarterCards() + rewardCards)
         combatEngine = CombatEngine(cardRegistry, testLocalizer(), rng)
-        runManager = RunManager(combatEngine, cardRegistry, enemies, rng)
+        runManager = RunManager(combatEngine, cardRegistry, enemies, sequence, rng)
     }
 
     private fun killCurrentEnemy() {
@@ -124,12 +145,19 @@ class RunManagerTest {
     }
 
     @Test
-    fun `defeating the first enemy opens a reward screen with three choices`() {
+    fun `defeating the first enemy opens a reward screen with the slot's choice count`() {
         killCurrentEnemy()
 
         assertEquals(RunManager.Phase.REWARD, runManager.phase)
-        assertEquals(3, runManager.rewardChoices.size)
+        // Slot 0 rewards say 1 pick; the defeated thug's built-in cardChoices is 3. Slot wins.
+        assertEquals(1, runManager.rewardChoices.size)
         assertTrue(runManager.rewardChoices.none { "starter" in it.tags })
+    }
+
+    @Test
+    fun `defeating the first enemy proves slot rewards beat enemy built-in cardChoices`() {
+        killCurrentEnemy()
+        assertEquals(1, runManager.rewardChoices.size)
     }
 
     @Test
@@ -140,18 +168,19 @@ class RunManagerTest {
         runManager.chooseReward(chosen)
 
         assertEquals(RunManager.Phase.COMBAT, runManager.phase)
-        assertEquals("Loan Shark", combatEngine.getState().enemies[0].name)
+        assertEquals("Thug", combatEngine.getState().enemies[0].name) // slot 1 is thug
         assertTrue(combatEngine.getState().hand.isNotEmpty())
     }
 
     @Test
-    fun `defeating the last enemy triggers victory`() {
-        killCurrentEnemy() // Thug
-        runManager.chooseReward(runManager.rewardChoices.first())
-        killCurrentEnemy() // Loan Shark
-        runManager.chooseReward(runManager.rewardChoices.first())
-        killCurrentEnemy() // Collector
-
+    fun `victory fires only after the final slot of the sequence`() {
+        // Walk all 8 slots; victory must NOT fire before slot 8.
+        repeat(7) { slotNumber ->
+            killCurrentEnemy() // defeats the slot's enemy (fixture are all killable)
+            assertEquals(RunManager.Phase.REWARD, runManager.phase, "slot $slotNumber should reward, not win")
+            runManager.chooseReward(runManager.rewardChoices.first())
+        }
+        killCurrentEnemy() // slot 8: final collector
         assertEquals(RunManager.Phase.VICTORY, runManager.phase)
     }
 
@@ -234,7 +263,7 @@ class RunManagerTest {
     fun `debt and gold carry across encounters, with an interest tick applied at the next encounter start`() {
         val registry = CardRegistry.create(makeStarterCards(surviveCost = 6) + rewardCards)
         val engine = CombatEngine(registry, testLocalizer(), rng)
-        val rm = RunManager(engine, registry, enemies, rng)
+        val rm = RunManager(engine, registry, enemies, runSequence(), rng)
 
         playSelfCardWhenDrawn(engine, rm, "survive")
         finishSoleEnemy(engine, rm)
@@ -247,7 +276,7 @@ class RunManagerTest {
         rm.chooseReward(rm.rewardChoices.first())
 
         assertEquals(RunManager.Phase.COMBAT, rm.phase)
-        assertEquals("Loan Shark", engine.getState().enemies[0].name)
+        assertEquals("Thug", engine.getState().enemies[0].name) // slot 1 is thug
         val expectedDebtAfterTick = DebtConfig.applyInterest(debtCarried)
         assertEquals(expectedDebtAfterTick, engine.getState().debt)
         assertEquals(goldCarried, engine.getState().gold)
@@ -262,7 +291,7 @@ class RunManagerTest {
     fun `garnishment splits a gold reward at encounter end, reducing debt and crediting net gold`() {
         val registry = CardRegistry.create(makeStarterCards(surviveCost = 20) + rewardCards)
         val engine = CombatEngine(registry, testLocalizer(), rng)
-        val rm = RunManager(engine, registry, enemies, rng)
+        val rm = RunManager(engine, registry, enemies, runSequence(), rng)
 
         playSelfCardWhenDrawn(engine, rm, "survive")
         finishSoleEnemy(engine, rm)
@@ -282,7 +311,7 @@ class RunManagerTest {
     fun `crossing the break threshold forces the collector encounter next, without desyncing encounterIndex`() {
         val registry = CardRegistry.create(makeStarterCards(surviveCost = 33) + rewardCards)
         val engine = CombatEngine(registry, testLocalizer(), rng)
-        val rm = RunManager(engine, registry, enemies, rng)
+        val rm = RunManager(engine, registry, enemies, runSequence(), rng)
 
         playSelfCardWhenDrawn(engine, rm, "survive")
         assertTrue(rm.debt >= DebtConfig.BREAK_THRESHOLD)
@@ -304,14 +333,14 @@ class RunManagerTest {
         assertEquals(RunManager.Phase.REWARD, rm.phase)
 
         rm.chooseReward(rm.rewardChoices.first())
-        assertEquals("Loan Shark", engine.getState().enemies[0].name)
+        assertEquals("Thug", engine.getState().enemies[0].name) // slot 1 is thug
     }
 
     @Test
     fun `the break encounter does not re-trigger after it has already fired once this run`() {
         val registry = CardRegistry.create(makeStarterCards(surviveCost = 33) + rewardCards)
         val engine = CombatEngine(registry, testLocalizer(), rng)
-        val rm = RunManager(engine, registry, enemies, rng)
+        val rm = RunManager(engine, registry, enemies, runSequence(), rng)
 
         playSelfCardWhenDrawn(engine, rm, "survive")
         finishSoleEnemy(engine, rm)
@@ -331,7 +360,7 @@ class RunManagerTest {
         assertFalse(rm.pendingBreakEncounter)
 
         rm.chooseReward(rm.rewardChoices.first())
-        assertEquals("Loan Shark", engine.getState().enemies[0].name) // normal progression, not a 2nd forced Collector
+        assertEquals("Thug", engine.getState().enemies[0].name) // normal progression resumes at slot 1, not a 2nd forced Collector
     }
 
     // --- Player HP persistence across combats (combat-progression-and-i18n, Phase 1) ---
@@ -378,21 +407,24 @@ class RunManagerTest {
     // --- Enemy tiers: reward count wired to the defeated enemy's cardChoices (combat-progression-and-i18n, Phase 3) ---
 
     @Test
-    fun `reward choice count matches the defeated enemy's cardChoices, not a hardcoded three`() {
-        killCurrentEnemy() // Thug: cardChoices = 3
-        assertEquals(3, runManager.rewardChoices.size)
-
-        runManager.chooseReward(runManager.rewardChoices.first())
-        killCurrentEnemy() // Loan Shark: cardChoices = 4
-
-        assertEquals(4, runManager.rewardChoices.size)
+    fun `reward choice count matches the slot's cardChoices, walking the sequence`() {
+        // Slots 0-3 all give 1 pick (thug/thug/loan_shark/thug).
+        repeat(4) { i ->
+            killCurrentEnemy()
+            assertEquals(RunManager.Phase.REWARD, runManager.phase)
+            assertEquals(1, runManager.rewardChoices.size, "slot $i should give 1 pick")
+            runManager.chooseReward(runManager.rewardChoices.first())
+        }
+        // Slot 4 = loan_shark with 2 picks (the only double-pick slot).
+        killCurrentEnemy()
+        assertEquals(2, runManager.rewardChoices.size)
     }
 
     @Test
     fun `restarting the run resets debt, gold, and the pending break flag`() {
         val registry = CardRegistry.create(makeStarterCards(surviveCost = 33) + rewardCards)
         val engine = CombatEngine(registry, testLocalizer(), rng)
-        val rm = RunManager(engine, registry, enemies, rng)
+        val rm = RunManager(engine, registry, enemies, runSequence(), rng)
 
         playSelfCardWhenDrawn(engine, rm, "survive")
         assertTrue(rm.debt >= DebtConfig.BREAK_THRESHOLD)

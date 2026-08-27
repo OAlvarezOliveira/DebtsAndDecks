@@ -26,4 +26,7 @@ object TestAssetLoader {
 
     fun loadEnemies(): List<EnemyDefinition> =
         json.decodeFromString(File("src/main/assets/enemies/all.json").readText())
+
+    fun loadSequence(): com.debtsdecks.core.model.RunSequence =
+        json.decodeFromString(File("src/main/assets/run/sequence.json").readText())
 }

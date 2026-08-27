@@ -35,7 +35,7 @@ class RunSimulator(
     fun simulate(seed: Long): SimulationResult {
         val rng = kotlin.random.Random(seed)
         val engine = CombatEngine(cardRegistry, l10n, rng)
-        val run = RunManager(engine, cardRegistry, enemyDefinitions, rng)
+        val run = RunManager(engine, cardRegistry, enemyDefinitions, TestAssetLoader.loadSequence(), rng)
         var actions = 0
         var peakDebt = 0
         val turnsPerCombat = mutableListOf<Int>()

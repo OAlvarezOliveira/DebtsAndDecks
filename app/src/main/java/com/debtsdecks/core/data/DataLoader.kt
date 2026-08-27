@@ -27,6 +27,15 @@ object DataLoader {
         }
     }
 
+    fun loadRunSequence(context: Context): com.debtsdecks.core.model.RunSequence {
+        val input = context.assets.open("run/sequence.json").reader()
+        return try {
+            json.decodeFromString<com.debtsdecks.core.model.RunSequence>(input.readText())
+        } finally {
+            input.close()
+        }
+    }
+
     fun createCardRegistry(context: Context): CardRegistry {
         return CardRegistry.create(loadCards(context))
     }
