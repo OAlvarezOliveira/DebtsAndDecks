@@ -7,7 +7,7 @@ package com.debtsdecks.core.combat
 object NodeConfig {
 
     /** Flat HP restored on entering a node (part of the "rest"; no button, it just happens). */
-    const val HEAL_AMOUNT: Int = 8
+    const val HEAL_AMOUNT: Int = 5
 
     /** Per-node multiplier applied to node-action base costs (node n → base × ESCALATION^(n-1)). */
     const val ESCALATION: Double = 1.5

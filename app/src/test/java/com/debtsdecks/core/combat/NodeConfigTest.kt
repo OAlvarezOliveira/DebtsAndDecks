@@ -52,7 +52,7 @@ class NodeConfigTest {
 
     @Test
     fun `heal and offer sizes are positive`() {
-        assertEquals(8, NodeConfig.HEAL_AMOUNT)
+        assertEquals(5, NodeConfig.HEAL_AMOUNT)
         assertEquals(3, NodeConfig.SHOP_OFFER_SIZE)
         assertEquals(3, NodeConfig.REMOVE_OFFER_SIZE)
     }
