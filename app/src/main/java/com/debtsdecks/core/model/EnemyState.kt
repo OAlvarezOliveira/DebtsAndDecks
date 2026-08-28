@@ -2,6 +2,7 @@ package com.debtsdecks.core.model
 
 import com.debtsdecks.core.enemies.EnemyInstance
 import com.debtsdecks.core.enemies.EnemyTier
+import com.debtsdecks.core.enemies.IntentType
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -16,7 +17,7 @@ data class EnemyState(
     val weak: Int,
     val vulnerable: Int,
     val poison: Int,
-    val intentType: String,
+    val intentType: IntentType,
     val intentDamage: Int,
     val intentParam: Int,
     val intentDisplayName: String,
@@ -37,7 +38,7 @@ data class EnemyState(
                 weak = enemy.weak,
                 vulnerable = enemy.vulnerable,
                 poison = enemy.poison,
-                intentType = intent.type.name,
+                intentType = intent.type,
                 intentDamage = intent.damage,
                 intentParam = intent.param,
                 intentDisplayName = enemy.intentDisplayName(),

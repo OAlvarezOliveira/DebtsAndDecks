@@ -1,5 +1,6 @@
 package com.debtsdecks.core.simulation
 
+import com.debtsdecks.core.enemies.IntentType
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.model.CardType
@@ -96,10 +97,10 @@ object ScriptedPolicy : RunPolicy {
     fun predictedIncomingDamage(state: CombatState): Int {
         var total = 0
         for (enemy in state.enemies) {
-            val attack = enemy.intentType == "ATTACK" || enemy.intentType == "MULTI_ATTACK"
+            val attack = enemy.intentType == IntentType.ATTACK || enemy.intentType == IntentType.MULTI_ATTACK
             if (!attack) continue
             val perHit = ((enemy.intentDamage + enemy.strength) * if (enemy.weak > 0) 0.75 else 1.0).toInt()
-            val hits = if (enemy.intentType == "MULTI_ATTACK") enemy.intentParam.coerceAtLeast(1) else 1
+            val hits = if (enemy.intentType == IntentType.MULTI_ATTACK) enemy.intentParam.coerceAtLeast(1) else 1
             total += perHit * hits
         }
         return total

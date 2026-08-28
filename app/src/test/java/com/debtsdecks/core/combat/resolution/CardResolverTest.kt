@@ -1,5 +1,6 @@
 package com.debtsdecks.core.combat.resolution
 
+import com.debtsdecks.core.enemies.IntentType
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.combat.DebtConfig
 import com.debtsdecks.core.i18n.testLocalizer
@@ -37,7 +38,7 @@ class CardResolverTest {
         weak = 0,
         vulnerable = vulnerable,
         poison = 0,
-        intentType = "ATTACK",
+        intentType = IntentType.ATTACK,
         intentDamage = 5,
         intentParam = 0,
         intentDisplayName = "Attack",

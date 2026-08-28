@@ -18,6 +18,7 @@ import com.debtsdecks.core.combat.RunManager
 import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.model.CardType
 import com.debtsdecks.core.model.CombatState
+import com.debtsdecks.core.enemies.IntentType
 import com.debtsdecks.core.model.EnemyState
 import com.debtsdecks.core.model.TurnPhase
 
@@ -57,14 +58,13 @@ class CombatRenderer(private val bundle: I18NBundle) {
         CardType.POWER to loadTexture("art/card_frame_power.png")
     )
 
-    // Keyed by EnemyInstance.Intent.iconName
-    private val intentTextures: Map<String, Texture> = mapOf(
-        "intent_attack" to loadTexture("art/intent_attack.png"),
-        "intent_buff" to loadTexture("art/intent_buff.png"),
-        "intent_debuff" to loadTexture("art/intent_debuff.png"),
-        "intent_multi" to loadTexture("art/intent_multi.png"),
-        "intent_levy" to loadTexture("art/intent_levy.png")
-    )
+    /**
+     * Derived from [INTENT_ICON_PATHS], so it covers every [IntentType] by construction. It used to
+     * be five hand-typed string literals, which a sixth intent would not have extended: the lookup
+     * below treats a missing key as "draw nothing", so the bar rendered blank and no build noticed.
+     */
+    private val intentTextures: Map<IntentType, Texture> =
+        INTENT_ICON_PATHS.mapValues { (_, path) -> loadTexture(path) }
 
     // Screen backdrops, keyed by screen. A missing file falls back to the original
     // gradient instead of crashing, same contract as the card art below.
@@ -185,11 +185,14 @@ class CombatRenderer(private val bundle: I18NBundle) {
         shapeRenderer.end()
     }
 
-    private fun intentColor(intentType: String): Color = when (intentType) {
-        "ATTACK", "MULTI_ATTACK" -> Color(0.85f, 0.25f, 0.2f, 1f)
-        "BUFF" -> Color(0.3f, 0.75f, 0.35f, 1f)
-        "DEBUFF" -> Color(0.6f, 0.3f, 0.85f, 1f)
-        else -> Color(1f, 0.8f, 0.2f, 1f)
+    // Takes the enum, not its name, and has no `else`. As a `when` over String with a fallback
+    // this compiled happily for any intent it had never heard of and painted the bar the LEVY
+    // yellow -- which is how LEVY itself got its colour, by accident rather than by decision.
+    private fun intentColor(intentType: IntentType): Color = when (intentType) {
+        IntentType.ATTACK, IntentType.MULTI_ATTACK -> Color(0.85f, 0.25f, 0.2f, 1f)
+        IntentType.BUFF -> Color(0.3f, 0.75f, 0.35f, 1f)
+        IntentType.DEBUFF -> Color(0.6f, 0.3f, 0.85f, 1f)
+        IntentType.LEVY -> Color(1f, 0.8f, 0.2f, 1f)
     }
 
     private fun cardTypeColor(type: CardType): Color = when (type) {
@@ -297,15 +300,14 @@ class CombatRenderer(private val bundle: I18NBundle) {
         shapeRenderer.rect(x, y, w, barH)
         shapeRenderer.end()
 
-        val icon = intentTextures[enemy.intentIconName]
-        val textX = if (icon != null) x + 36f else x + 10f
+        // Total by construction: intentTextures is keyed by the enum and built from its entries,
+        // so there is no missing-icon branch left to take.
+        val icon = intentTextures.getValue(enemy.intentType)
 
         batch.begin()
-        if (icon != null) {
-            val iconSize = 26f
-            batch.draw(icon, x + 4f, y + (barH - iconSize) / 2f, iconSize, iconSize)
-        }
-        font.draw(batch, enemy.intentDisplayName, textX, y + 20f)
+        val iconSize = 26f
+        batch.draw(icon, x + 4f, y + (barH - iconSize) / 2f, iconSize, iconSize)
+        font.draw(batch, enemy.intentDisplayName, x + 36f, y + 20f)
         batch.end()
     }
 
@@ -928,6 +930,21 @@ class CombatRenderer(private val bundle: I18NBundle) {
     }
 
     companion object {
+        /**
+         * Where each intent's icon lives, derived from the enum rather than listed by hand. Adding
+         * an [IntentType] extends this map for free.
+         *
+         * Keep it derived. `IntentTypeCoverageTest` asserts that the map covers every [IntentType]
+         * and that every path it yields is a file on disk, so a value declared without its PNG
+         * fails the build instead of shipping a blank intent bar. What no test can assert is the
+         * derivation itself: replace `associateWith` with literals for today's values and the
+         * suite stays green, because the two maps are equal until the next enum value lands. The
+         * `associateWith` is therefore load-bearing on its own -- it is what makes a stale map
+         * unrepresentable rather than merely detected one commit later.
+         */
+        internal val INTENT_ICON_PATHS: Map<IntentType, String> =
+            IntentType.entries.associateWith { "art/${it.iconName}.png" }
+
         /**
          * How much of the card the frame PNG's opaque border covers on each side, measured off
          * art/card_frame_attack.png (336x480): 46px of 336 horizontally, 62px of 480 vertically.
