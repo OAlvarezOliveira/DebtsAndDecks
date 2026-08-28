@@ -15,4 +15,12 @@ data class District(
     val id: String,
     val name: String,
     val description: String
-)
+) {
+    /**
+     * Texture key for this district's backdrop, derived from its [id] (the PNG itself is task 5 /
+     * PR2's 5.x). Renderers draw it via [com.debtsdecks.gdx.render.CombatRenderer]; a missing PNG
+     * falls back to the gradient, the same contract as every other backdrop. Yields design.md's
+     * `bg_district_*` ids without adding a catalog field.
+     */
+    fun backgroundKey(): String = "bg_district_$id"
+}

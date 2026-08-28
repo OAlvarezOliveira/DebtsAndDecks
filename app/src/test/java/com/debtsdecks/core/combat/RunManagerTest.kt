@@ -9,6 +9,7 @@ import com.debtsdecks.core.enemies.IntentStep
 import com.debtsdecks.core.enemies.IntentType
 import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.model.CardType
+import com.debtsdecks.core.model.District
 import com.debtsdecks.core.model.Rarity
 import com.debtsdecks.core.model.TargetType
 import com.debtsdecks.core.model.TurnPhase
@@ -679,5 +680,63 @@ class RunManagerTest {
         val second = runManager.resolveNodeUpgradeCards().map { it.id }
         assertEquals(first, second, "the offered upgrade order must be stable (tapped card == offered card)")
         assertEquals(3, first.size)
+    }
+
+    // --- F2 task 7.1: RunManager.currentDistrict derived from the current slot ---
+
+    /**
+     * A RunManager over a 3-district re-cut of the fixture roster, so [RunManager.currentDistrict]
+     * can be observed changing as the run advances. Each district's slots use that district's id
+     * (matching the real catalog's id->texture-key mapping the renderer relies on for 7.2).
+     */
+    private fun threeDistrictRun(): Pair<CombatEngine, RunManager> {
+        val districts = listOf(
+            District("slaughterhouse", "district.slaughterhouse.name", "district.slaughterhouse.description"),
+            District("casino", "district.casino.name", "district.casino.description"),
+            District("boardroom", "district.boardroom.name", "district.boardroom.description")
+        )
+        fun slot(id: String, districtId: String, gold: Int, picks: Int) = com.debtsdecks.core.model.EncounterSlot(
+            enemyId = id,
+            districtId = districtId,
+            rewards = com.debtsdecks.core.enemies.EnemyRewards(gold = gold, cardChoices = picks)
+        )
+        // 3 + 3 + 2 contiguous partition (district by slot index, not enemy), matching the real
+        // catalog's id->texture-key mapping the renderer relies on for 7.2.
+        val seq = com.debtsdecks.core.model.RunSequence(
+            slots = listOf(
+                slot("thug", "slaughterhouse", 10, 1), slot("thug", "slaughterhouse", 10, 1), slot("loan_shark", "slaughterhouse", 15, 1),
+                slot("thug", "casino", 12, 1), slot("loan_shark", "casino", 18, 2), slot("loan_shark", "casino", 20, 1),
+                slot("collector", "boardroom", 25, 1), slot("collector", "boardroom", 30, 0)
+            )
+        )
+        val registry = CardRegistry.create(makeStarterCards() + rewardCards)
+        val engine = CombatEngine(registry, testLocalizer(), rng)
+        return engine to RunManager(engine, registry, enemies, seq, rng, districts)
+    }
+
+    @Test
+    fun `currentDistrict is derived from the slot the run is on`() {
+        val (engine, rm) = threeDistrictRun()
+        assertEquals("slaughterhouse", rm.currentDistrict.id)
+
+        // Advance three slots to the first casino fight.
+        repeat(3) { finishSoleEnemy(engine, rm); rm.chooseReward(rm.rewardChoices.first()) }
+        assertEquals("casino", rm.currentDistrict.id)
+
+        // Advance three more to the first boardroom fight.
+        repeat(3) { finishSoleEnemy(engine, rm); rm.chooseReward(rm.rewardChoices.first()) }
+        assertEquals("boardroom", rm.currentDistrict.id)
+    }
+
+    @Test
+    fun `isDistrictEntrance is true only on the first slot of each district`() {
+        val (engine, rm) = threeDistrictRun()
+        assertTrue(rm.isDistrictEntrance) // slot 0
+        finishSoleEnemy(engine, rm); rm.chooseReward(rm.rewardChoices.first()) // slot 1
+        assertFalse(rm.isDistrictEntrance)
+        finishSoleEnemy(engine, rm); rm.chooseReward(rm.rewardChoices.first()) // slot 2
+        assertFalse(rm.isDistrictEntrance)
+        finishSoleEnemy(engine, rm); rm.chooseReward(rm.rewardChoices.first()) // slot 3 = casino entrance
+        assertTrue(rm.isDistrictEntrance)
     }
 }
