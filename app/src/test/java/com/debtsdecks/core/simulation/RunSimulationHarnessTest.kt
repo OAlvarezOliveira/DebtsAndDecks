@@ -2,6 +2,7 @@ package com.debtsdecks.core.simulation
 
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.combat.CombatEngine
+import com.debtsdecks.core.combat.DebtConfig
 import com.debtsdecks.core.enemies.EnemyTier
 import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.model.CardType
@@ -237,13 +238,17 @@ class RunSimulationHarnessTest {
         // the win-gap grace above (leverage within 5pp of greedy, both in the 35-55% pivot band)
         // and the debt-band checks below (both policies must actually PLAY the band, without
         // sitting below the >25 debt target or suiciding into Execution).
+        // F1 R1.1: band thresholds derive from HarnessBands (ratios of EXECUTION_THRESHOLD).
+        // R1.4: failure messages carry absolute, ratio, and the violated ratio bounds.
+        val bandLow = HarnessBands.leverageBandLow
+        val bandHigh = HarnessBands.leverageBandHigh
         assertTrue(
-            greedy.avgPeakDebt >= 25.0 && greedy.avgPeakDebt < 45.0,
-            "greedy peak debt (${greedy.avgPeakDebt}) must play the leverage band [25, 45)"
+            greedy.avgPeakDebt >= bandLow && greedy.avgPeakDebt < bandHigh,
+            "greedy peak debt (${greedy.avgPeakDebt}, ${HarnessBands.ratioOfExecution(greedy.avgPeakDebt).let { "%.3f".format(it) }} of execution line) must play the leverage band [${HarnessBands.LEVERAGE_BAND_LOW_RATIO}, ${HarnessBands.LEVERAGE_BAND_HIGH_RATIO}) of ${DebtConfig.EXECUTION_THRESHOLD}"
         )
         assertTrue(
-            leverage.avgPeakDebt >= 25.0 && leverage.avgPeakDebt < 45.0,
-            "leverage peak debt (${leverage.avgPeakDebt}) must play the leverage band [25, 45)"
+            leverage.avgPeakDebt >= bandLow && leverage.avgPeakDebt < bandHigh,
+            "leverage peak debt (${leverage.avgPeakDebt}, ${HarnessBands.ratioOfExecution(leverage.avgPeakDebt).let { "%.3f".format(it) }} of execution line) must play the leverage band [${HarnessBands.LEVERAGE_BAND_LOW_RATIO}, ${HarnessBands.LEVERAGE_BAND_HIGH_RATIO}) of ${DebtConfig.EXECUTION_THRESHOLD}"
         )
         // R4.2: no dominant line — neither policy may win 70%+.
         assertTrue(greedy.winRate < 0.70, "greedy win rate ${greedy.winRate} must stay under 70%")
@@ -274,7 +279,11 @@ class RunSimulationHarnessTest {
         // H1.2 won-run peak Debt > 25 HARD (leveraging is the intended win path).
         val wonRuns = (greedyResults + leverageResults).filter { it.outcome == RunOutcome.VICTORY }
         val wonPeak = wonRuns.map { it.peakDebt }.average()
-        assertTrue(wonPeak > 25, "won-run peak debt $wonPeak must exceed 25")
+        // F1 R1.1: the won-peak floor derives from HarnessBands too (0.50 of execution line).
+        assertTrue(
+            wonPeak > HarnessBands.wonPeakMin,
+            "won-run peak debt $wonPeak (${HarnessBands.ratioOfExecution(wonPeak).let { "%.3f".format(it) }} of execution line) must exceed ${HarnessBands.WON_PEAK_MIN_RATIO} of ${DebtConfig.EXECUTION_THRESHOLD}"
+        )
         // H1.3 archetype diversity: ≥2 distinct archetypes across winning decks (leniency below 10
         // wins is sample-noise protection; diversity is reported rather than asserted then).
         val wonArchetypes = wonRuns.map { archetypeOfDeck(it) }.toSet()

@@ -31,10 +31,14 @@ data class SimulationReport(
         }
     }
 
+    /** F1 R1.4: avgPeakDebt as a fraction of the execution line — readable at any scale. */
+    val peakDebtRatio: Double get() = HarnessBands.ratioOfExecution(avgPeakDebt)
+
     fun summary(): String = buildString {
         appendLine("=== Run Simulation Sweep Report ===")
         appendLine("Win rate:          ${(winRate * 100).let { "%.1f".format(it) }}%")
         appendLine("Avg peak Debt:     %.1f".format(avgPeakDebt))
+        appendLine("  as fraction:     %.3f of execution line".format(peakDebtRatio))
         appendLine("Avg HP at victory: %.1f".format(avgHpAtVictory))
         appendLine("Avg turns/combat:  %.1f".format(avgTurnsPerCombat))
         appendLine("Defeats by encounter:")
