@@ -50,10 +50,18 @@ Cheaper, less structurally honest. Decide it deliberately.
 ## Outputs
 
 - `app/src/main/assets/events/all.json` — structure and **keys only**.
-- Prose in `strings.properties` with a Spanish translation. **The vision's §2.3 says
-  `events.json` will hold noir text. That is wrong and F6 must not implement it as written:**
-  it breaks the repo's convention and would leave the most translation-heavy layer in the game
-  untranslatable. `all.json` already stores `card.strike.description`; events do the same.
+- Prose in `strings.properties` with a Spanish translation. `all.json` already stores
+  `card.strike.description`; events do the same. Baking noir text into `events.json` would
+  break the repo's convention and leave the most translation-heavy layer in the game
+  untranslatable.
+
+  > **Corrected 2026-08-28.** This bullet used to read "The vision's §2.3 says `events.json`
+  > will hold noir text. That is wrong and F6 must not implement it as written." The vision says
+  > no such thing, and never did. It has no §2.3, and the string `events.json` does not appear
+  > in it at all — `rg -n '§2\.3|events\.json' docs/VISION.md` returns nothing. What
+  > `docs/VISION.md:33-34` actually says about events is "Data-driven, keyed, translatable",
+  > which is this bullet's own requirement. The charter was refuting its own source. The
+  > constraint above is real and unchanged; only the invented disagreement is gone.
 - A simulator policy for the new decision point. Non-optional — see above.
 
 ## Open decisions
