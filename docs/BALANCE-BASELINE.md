@@ -163,34 +163,42 @@ nothing else:
 | cost only | 1.15 | 60,5% | 35,0 | `{collector=76, loan_shark=3}` |
 
 Making the shop affordable makes the game **harder**, and not smoothly: 54 → 35 → 20,5 → 60,5
-is not a knob, it is a cliff with a rebound. Two mechanisms are visible in the numbers. Cards
-bought are cards added, and a wider deck draws its good cards less often. And peak Debt climbs
-as prices fall — 30,8 → 41,5 → 44,5 — which points at the second mechanism.
+is not a knob, it is a cliff with a rebound. One mechanism is legible in the numbers: cards
+bought are cards added, and a wider deck draws its good cards less often. Peak Debt also climbs
+as prices fall — 30,8 → 41,5 → 44,5 — and that one is **still unexplained**; the explanation this
+section originally gave for it is retracted below.
 
-**The second mechanism is the decision ladder, and it is the dominant one.** `NodePolicy`
-evaluates *"front-load value while the shop is cheap"* (rule 1b) **before** *"repay when the
-debt band is hot"* (rule 3). An affordable shop therefore consumes the node that would
-otherwise have paid down Debt. Swap those two rules and change nothing else:
+**A second mechanism was proposed here, and it was wrong.** `NodePolicy` evaluated *"front-load
+value while the shop is cheap"* (rule 1b) **before** *"repay when the debt band is hot"* (rule 3),
+and this section originally predicted that swapping the two would lift the win rate to 77,5% and
+push peak Debt to 63,1 — above the execution line — with `loan_shark` recording its first kill.
 
-| Variant | `ESCALATION` | Greedy win | Peak Debt | Defeats |
-| --- | --- | --- | --- | --- |
-| repay before shop | **1.50, unchanged** | **77,5%** | **63,1** | `{collector=44, loan_shark=1}` |
-| repay before shop | 1.25 | 61,0% | 41,7 | `{collector=78}` |
+**Retracted 2026-08-28. The swap was implemented and measured; it changes nothing.** PR #17
+(merged as `c84974d`) moves repay to rung 2, right after UPGRADE. Both predicted rows were then
+re-run with `--rerun-tasks`, same build and locale as §1:
 
-On the economy exactly as it ships, a player who pays down before buying wins **77,5%** instead
-of 54,0%, peaks at **63,1** Debt — above the execution line of 50, so the Debt axis is finally
-live — and `loan_shark` records its first kill.
+| Variant | `ESCALATION` | Predicted here | Actually measured |
+| --- | --- | --- | --- |
+| repay before shop | 1.50 | 77,5% / 63,1 / `{collector=44, loan_shark=1}` | **54,0% / 30,8 / `{collector=92}`** — identical to the `shipped` row above |
+| repay before shop | 1.25 | 61,0% / 41,7 / `{collector=78}` | **20,5% / 44,5 / `{collector=159}`** — identical to the `cost only` 1.25 row above |
 
-**What this does and does not license.** `NodePolicy` lives in `app/src/test/` and its own
-docstring calls it *"the MEASUREMENT floor for balance tuning, not a design directive."*
-Reordering it does not change the game; it changes the ruler. So F5 does not say the economy is
-fine. It says something narrower and more awkward: **F2 and F4 above are partly properties of
-the measuring policy, not only of the game.** A yardstick that shops before it repays reports a
-Debt axis that never engages, because it never engages the Debt axis.
+**Why it is a no-op.** The repay branch needs `run.debt >= REPAY_BAND` (25) *at the moment of a
+node decision*. §2.2 of this same file already recorded node-time debt averaging 7 → 20, never
+reaching the band: the ~30 peak is mid-combat, and the reward garnishment lowers it again before
+the next node. **REPAY fires in zero of the sweep's node decisions.** The rule is dormant, and
+reordering a dormant rule cannot move a number. The evidence refuting this section was already
+printed inside it.
 
-That has to be settled before FV, for the same reason F3 did: E1 asks whether ignoring a verb
-costs you win rate. If the reference policy is leaving 23pp on the table for an unrelated
-reason, a 10pp verb signal is being measured against noise of larger amplitude than itself.
+**What survives.** The cost cliff above (54 → 35 → 20,5 → 60,5) is untouched, and its 1.25 point
+was reproduced during this check. What does not survive is the claim that the decision ladder is
+the dominant mechanism, and with it the claim that the reference policy leaves 23pp on the table.
+F2 and F4 stand as properties of the game, not of the ruler. **F5 no longer blocks FV.**
+
+**What the reorder is still worth.** `NodePolicy` lives in `app/src/test/` and its own docstring
+calls it *"the MEASUREMENT floor for balance tuning, not a design directive."* The merged ladder
+is the correct floor for whenever nodes *do* see hot debt — which is exactly what F3's treasury
+(monthly payments) would introduce. It is a correct change with a measured delta of zero, not a
+fix for a problem that existed.
 
 ### F6 — The credit line dies exactly where escalation makes it necessary.
 
@@ -242,14 +250,13 @@ again with a different N.
 that the player has a second line to fall back on, and F3 says the player stops being able to
 buy cards at node 4 — so AUDIT on this economy is a stun, not a redirect. But the sweep in F5
 rules out the obvious fix: lowering `ESCALATION` moves the win rate to 35% and then 20,5%
-before recovering, so the price wall is currently *load-bearing*. It is what stops the
-measuring policy from spending the node it should have spent repaying.
+before recovering, so the price wall is currently *load-bearing*.
 
 The order of work that follows from the evidence, rather than from the shape of the complaint:
-settle the reference policy first (F5), then the loan-versus-execution-line ratio (F6), and
-only then ask what the shop should cost. Doing it in the other order tunes a constant against a
-yardstick that is itself 23pp off, and no measurement taken that way can be trusted afterwards.
-This is a finding, not a proposal.
+the reference policy is now settled — F5's proposed reorder was merged and measured at zero
+delta — so take the loan-versus-execution-line ratio (F6) next, and only then ask what the shop
+should cost. Tuning the price first would move a constant that the sweep shows is holding the
+economy up. This is a finding, not a proposal.
 
 ---
 
@@ -291,7 +298,7 @@ Intent: fix the measurement floor. The `NodePolicy` priority ladder was reordere
 hot debt (previously rung 4, after the early-shop and the loan) comes **before any shop** (now rung
 2, right after UPGRADE), matching the documented ladder. Branch `fix/policy-repay-before-shop`; no
 gameplay files touched. This document's §5.2 claimed the defeat-cause/slot instrumentation "does not
-exist yet" — it was delivered meanwhile as PR #16 (`fix/observation-defeat-slot`, pending merge).
+exist yet" — it was delivered meanwhile as PR #16 (`fix/observation-defeat-slot`, merged as `72ffa1c`).
 
 Result: **byte-identical sweep.** Re-ran with `--rerun-tasks`, same build and locale (see §1):
 
