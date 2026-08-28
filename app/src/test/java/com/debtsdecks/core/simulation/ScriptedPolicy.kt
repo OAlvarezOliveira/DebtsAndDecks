@@ -52,11 +52,20 @@ object ScriptedPolicy : RunPolicy {
         val best = pool.maxWith(
             compareBy<CardInstance> { damagePerCost(it) }   // highest damage/cost
                 .thenBy { it.baseDamage }                   // then highest raw damage
-                .thenBy { it.cardId }                       // then lowest card id (alphabetical)
+                .thenBy { it.cardId }                       // then highest card id (this is maxWith)
             // NOT instanceId: that is a fresh UUID.randomUUID() per card instance, so this
             // tie-break used to pick at random and the gate answered differently on identical
             // input. cardId is the definition id and is stable across runs.
-            // See HarnessDeterminismTest.
+            //
+            // Which end of the alphabet wins does not matter — only that it is the same end
+            // every run. It is stated here because the previous comment claimed "lowest" while
+            // maxWith takes the highest, and a wrong comment on the one line a reader is sent
+            // to inspect is worse than none.
+            //
+            // This is NOT a total order: two instances of the SAME card tie all the way down
+            // and maxWith then keeps the first in list order. That is fine only because the
+            // hand and draw pool are themselves built deterministically. Anyone changing how
+            // the hand is assembled must re-check HarnessDeterminismTest.
         )
                 // Debt-as-Leverage safety: never play a shortfall attack whose borrow would cross the
         // Execution line (debt > EXECUTION_THRESHOLD is an instant loss). End the turn instead.
