@@ -24,7 +24,7 @@ SUBJECT: An auction room after hours. A gavel mid-fall over a lot of seized dome
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 2. `asset_bubble.png` — Asset Bubble
@@ -38,7 +38,7 @@ SUBJECT: A soap-thin glass dome the size of a room, containing a miniature finan
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 3. `bash.png` — Bash
@@ -52,7 +52,7 @@ SUBJECT: A man swinging a heavy leather briefcase like a club, caught at the top
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 4. `bounced_check.png` — Bounced Check
@@ -66,7 +66,7 @@ SUBJECT: A cheque torn clean in half mid-air over a bank counter, the two halves
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 5. `collateral_hold.png` — Collateral Hold
@@ -80,7 +80,7 @@ SUBJECT: A pawnshop counter seen from the customer's side: a wristwatch and a we
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 6. `compound_interest.png` — Compound Interest
@@ -94,7 +94,7 @@ SUBJECT: A spiral staircase of stacked ledger books descending into darkness, ea
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 7. `debt_forgiveness.png` — Debt Forgiveness
@@ -108,7 +108,7 @@ SUBJECT: A single ledger page held over a brass ashtray, one corner already alig
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 8. `defend.png` — Defend
@@ -122,7 +122,7 @@ SUBJECT: A forearm raised across the face behind an overturned office desk, the 
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 9. `ejecucion.png` — Foreclosure
@@ -136,7 +136,7 @@ SUBJECT: A gavel already struck, splitting a courtroom desk, documents blown out
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 10. `emergency_fund.png` — Emergency Fund
@@ -150,7 +150,7 @@ SUBJECT: A tin cash box lifted out from under a prised-up floorboard, lid open, 
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 11. `eternal_debt.png` — Eternal Debt
@@ -164,7 +164,7 @@ SUBJECT: A ribbon of ledger paper knotted into an ouroboros, feeding back into a
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 12. `foreclosure_express.png` — Foreclosure Express
@@ -178,7 +178,7 @@ SUBJECT: A repossession crew forcing an apartment door at dawn, moving fast and 
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 13. `ghost_collector.png` — Ghost Collector
@@ -192,7 +192,7 @@ SUBJECT: A debt collector in a long coat standing in a tenement hallway, faintly
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 14. `golden_credit.png` — Golden Credit
@@ -206,7 +206,7 @@ SUBJECT: A letter of credit on heavy stock, embossed and gold-leafed at the edge
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 15. `leverage_strike.png` — Leverage Strike
@@ -220,7 +220,7 @@ SUBJECT: A crowbar driven under a steel shutter, a boot on its end, the fulcrum 
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 16. `mortgage_collateral.png` — Mortgage Collateral
@@ -234,7 +234,7 @@ SUBJECT: A rolled property deed held up like a shield, unfurling into the outlin
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 17. `overdraft.png` — Overdraft
@@ -248,7 +248,7 @@ SUBJECT: A brass pneumatic tube station in a bank's back office, every canister 
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 18. `partial_forgiveness.png` — Partial Forgiveness
@@ -262,7 +262,7 @@ SUBJECT: An open ledger, one column struck through with a single heavy pen strok
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 19. `refinanciar.png` — Refinance
@@ -276,7 +276,7 @@ SUBJECT: Two contracts sliding past each other across a lawyer's desk in opposit
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 20. `repo_expert.png` — Repossession Expert
@@ -290,7 +290,7 @@ SUBJECT: A repo man crouched at the door of a parked car in the rain, slim jim a
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 21. `reverse_mortgage.png` — Reverse Mortgage
@@ -304,7 +304,7 @@ SUBJECT: A narrow row house tilted and pouring coins out of its own front door i
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 22. `risky_investment.png` — Risky Investment
@@ -318,7 +318,7 @@ SUBJECT: A bare hand gripping a rising line of a stock chart rendered as a blade
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 23. `strike.png` — Strike
@@ -332,7 +332,7 @@ SUBJECT: A bare fist landing, seen close and side-on in the rain, knuckles split
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 24. `subprime_loan.png` — Subprime Loan
@@ -346,7 +346,7 @@ SUBJECT: A loan contract on a desk, the lower half of the page dissolving into a
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 25. `survive.png` — Survive
@@ -360,7 +360,7 @@ SUBJECT: A man braced hard in a doorframe with both arms as the room behind him 
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 26. `tactical_bankruptcy.png` — Tactical Bankruptcy
@@ -374,7 +374,7 @@ SUBJECT: A man in shirtsleeves pulling a fire alarm in his own office as the roo
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
 
 ## 27. `zombie_debt.png` — Zombie Debt
@@ -388,5 +388,5 @@ SUBJECT: A hand of grey paper — fingers made of layered invoices — pushing u
 
 COMPOSITION: 4:3 landscape, 1024x768 pixels. The subject fills the frame and is composed for a centred horizontal crop, so keep the important detail away from the top and bottom edges. Fully opaque artwork, edge to edge, with a painted background. No transparency, no alpha channel, no cut-out, no background removal.
 
-DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners.
+DO NOT INCLUDE: any text of any kind - no lettering, words, letters, numbers, digits, currency symbols, signage, labels, captions, watermarks or signatures. No crop marks, dashed guides, corner brackets, dimension arrows, rulers, blueprint annotations or mockup framing. No transparency checkerboard pattern anywhere, including inside enclosed shapes. No border, no card frame, no rounded corners. The painting must reach all four edges of the image, full bleed: no mount, no mat, no passe-partout, no white or pale margin, no paper border, no framed print, no gallery or museum presentation, no canvas edge, no drop shadow around the artwork.
 ```
