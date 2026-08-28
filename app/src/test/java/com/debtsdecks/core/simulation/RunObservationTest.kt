@@ -5,7 +5,6 @@ import com.debtsdecks.core.combat.CombatEngine
 import com.debtsdecks.core.combat.DebtConfig
 import com.debtsdecks.core.combat.RunManager
 import com.debtsdecks.core.combat.playerArchetype
-import com.debtsdecks.core.model.RunSequence
 import com.debtsdecks.core.model.TurnPhase
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -22,17 +21,6 @@ enum class DefeatCause { EXECUTION, HP_ZERO }
 /** [endDebt] >= the execution line is [DefeatCause.EXECUTION]; otherwise HP reached zero first. */
 fun classifyDefeat(endDebt: Int): DefeatCause =
     if (endDebt >= DebtConfig.EXECUTION_THRESHOLD) DefeatCause.EXECUTION else DefeatCause.HP_ZERO
-
-/**
- * 1-based run slots of a defeat: every position in [RunSequence] whose [EncounterSlot.enemyId]
- * matches the enemy that ended the run. The forced BREAK "collector" rematch plays OUTSIDE the
- * sequence ([RunManager] does not advance its slot index) and replaces the final battle, so it
- * resolves to the collector's slots. A defId does not distinguish STREET from BOSS, so a repeated
- * enemy (two `thug`s, `collector` at boardroom 7 and 8) resolves to ALL its slots — the report
- * renders them `7|8`. That is enough granularity for a defeat gate.
- */
-fun defeatSlotsOf(defeatEnemyId: String?, runSequence: RunSequence): List<Int> =
-    runSequence.slots.mapIndexedNotNull { index, slot -> if (slot.enemyId == defeatEnemyId) index + 1 else null }
 
 /**
  * Playtest-via-sim observation harness (test-source, deterministic, no asserts beyond health).
@@ -59,7 +47,7 @@ class RunObservationTest {
         val endHp: Int,
         val defeatEnemy: String?,
         val defeatCause: DefeatCause?,
-        val defeatSlots: List<Int>?,
+        val defeatSlot: Int?,
         val endDeckSize: Int,
         val nodes: List<NodeStep>,
     )
@@ -80,6 +68,10 @@ class RunObservationTest {
         val nodes = mutableListOf<NodeStep>()
         var peakDebt = 0
         var actions = 0
+        // 0-based sequence slot of the combat in progress. The forced BREAK "collector" rematch does
+        // NOT advance it (RunManager keeps its slot index), so the slot is tracked here rather than
+        // derived from node count — a won rematch adds a node without adding a run slot.
+        var currentSlot = 0
 
         while (actions < maxActions) {
             actions++
@@ -95,10 +87,15 @@ class RunObservationTest {
             }
 
             if (run.phase == RunManager.Phase.NODE) {
+                // The BREAK rematch flag is consumed INSIDE NodePolicy.act (via advanceToNextCombat), so
+                // sample it before acting: a pending rematch keeps the next combat on the same run slot,
+                // anything else advances the sequence.
+                val hadBreak = run.pendingBreakEncounter
                 val g0 = run.gold; val d0 = run.debt; val k0 = run.deckSize
                 NodePolicy.act(run, policy)
                 run.refresh() // sync run fields (deckSize is live; gold/debt checked directly)
                 nodes.add(NodeStep(run.nodeIndex, inferAction(run, g0, d0, k0), g0, d0, k0, run.gold, run.debt, run.deckSize))
+                if (run.phase == RunManager.Phase.COMBAT && !hadBreak) currentSlot++
             }
 
             if (run.phase == RunManager.Phase.VICTORY || run.phase == RunManager.Phase.DEFEAT) {
@@ -109,7 +106,7 @@ class RunObservationTest {
                     peakDebt, run.debt, run.gold, run.hp,
                     if (isDefeat) st.enemies.firstOrNull { it.hp > 0 }?.defId else null,
                     if (isDefeat) classifyDefeat(run.debt) else null,
-                    if (isDefeat) defeatSlotsOf(st.enemies.firstOrNull { it.hp > 0 }?.defId, sequence) else null,
+                    if (isDefeat) currentSlot + 1 else null,
                     run.deckSize, nodes
                 )
             }
@@ -136,12 +133,12 @@ class RunObservationTest {
         println("---- defeat causes & slots (${deaths.size} defeats) ----")
         val causeCounts = DefeatCause.entries.map { c -> c to deaths.count { it.defeatCause == c } }.filter { it.second > 0 }
         println("  cause: " + causeCounts.joinToString(" ") { "${it.first}=${it.second}" })
-        deaths.groupingBy { it.defeatSlots?.joinToString("|") ?: "?" }.eachCount().toSortedMap().forEach { (slots, count) ->
-                val byCause = DefeatCause.entries
-                    .map { c -> c to deaths.filter { it.defeatSlots?.joinToString("|") ?: "?" == slots }.count { it.defeatCause == c } }
-                    .filter { it.second > 0 }
-                println("  slot=$slots: defeats=$count causes=${byCause.joinToString(" ") { "${it.first}=${it.second}" }}")
-            }
+        deaths.groupingBy { it.defeatSlot }.eachCount().toSortedMap(compareBy { it ?: -1 }).forEach { (slot, count) ->
+            val byCause = DefeatCause.entries
+                .map { c -> c to deaths.count { it.defeatSlot == slot && it.defeatCause == c } }
+                .filter { it.second > 0 }
+            println("  slot=$slot: defeats=$count causes=${byCause.joinToString(" ") { "${it.first}=${it.second}" }}")
+        }
 
         // ---------- B. node decision distribution ----------
         println()
@@ -180,6 +177,8 @@ class RunObservationTest {
         // health gate (observation runs must all terminate)
         assertTrue(traces.all { it.outcome == "VICTORY" || it.outcome == "DEFEAT" })
         assertTrue(traces.all { it.encountersWon in 0..8 })
+        // no defeat may report a slot outside the run sequence (a won BREAK rematch must not inflate it)
+        assertTrue(deaths.all { it.defeatSlot in 1..8 })
     }
 
     @Test
@@ -189,11 +188,4 @@ class RunObservationTest {
         assertEquals(DefeatCause.EXECUTION, classifyDefeat(DebtConfig.EXECUTION_THRESHOLD + 1))
     }
 
-    @Test
-    fun `defeat slots are the run-sequence positions of the defeating enemy`() {
-        assertEquals(listOf(1, 2, 4), defeatSlotsOf("thug", sequence))
-        assertEquals(listOf(3, 5, 6), defeatSlotsOf("loan_shark", sequence))
-        assertEquals(listOf(7, 8), defeatSlotsOf("collector", sequence))
-        assertEquals(emptyList<Int>(), defeatSlotsOf("no_such_enemy", sequence))
-    }
 }
