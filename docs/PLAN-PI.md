@@ -1,7 +1,9 @@
 # Work plan — handoff to Pi
 
-**Written 2026-08-28** against `feat/card-art-1024` @ `0d8ba32`. Suite at the time: **217 tests,
-0 failures, 0 errors, 0 skipped**.
+**Written 2026-08-28** against `feat/card-art-1024` @ `0d8ba32`, **updated the same day after
+#23 and #24 landed**. Baseline is now `develop` @ `ea0b4a6`: **220 tests, 0 failures, 0 errors,
+2 skipped**. The 2 skipped are deliberate `@Disabled` gates in `DebtPressureTest.kt` (F2 open
+design debt, expected to fail on trunk) — not a regression, do not "fix" them.
 
 Every block below is self-contained: the defect, the line that causes it, the test to write
 first, and what "done" means. Pick one, do it, stop. Do not assemble context from other blocks.
@@ -177,11 +179,12 @@ Comment-only change. Check `CardResolver.kt` for the same drift while you are in
 
 ## Not blocks — things that need a human decision
 
-**The intent art collides at merge.** `feat/card-art-1024` carries real illustrations for
-`intent_foreclose.png` (2990 B) and `intent_hedge.png` (1491 B).
-`feat/fv-verbs-foreclose-hedge` carries 395-byte placeholders at the same two paths. Whichever
-merges second will conflict, and **the real art must win**. Do not resolve this by taking
-"theirs" out of habit.
+**The intent art collides when #22 merges.** `develop` now carries the real illustrations for
+`intent_foreclose.png` (2990 B, blob `77fae1de`) and `intent_hedge.png` (1491 B, blob
+`ae05f8fd`), merged with #23. `feat/fv-verbs-foreclose-hedge` still carries 395-byte
+placeholders at the same two paths (blobs `5fcecf23` / `147048fe`). When #22 merges it will
+conflict on both, and **the version already on `develop` must win** — keep "ours", discard the
+395-byte placeholder. Do not resolve this by taking "theirs" out of habit.
 
 **PR #18 is CONFLICTING.** `docs/refute-f5-ladder`. It carries the correct hunk for the
 `docs/BALANCE-BASELINE.md` §2.2 mislabel: the doc reads "reached final boss (won >=7 fights):
@@ -199,12 +202,18 @@ shared checkout — it has already destroyed uncommitted work in this project on
 
 ## State of play
 
-| Branch | Ahead of origin | PR | Note |
-| --- | --- | --- | --- |
-| `feat/card-art-1024` | 2 | #23 | 27 card illustrations, world art, six enemy portraits, the four opening stills, the intro screen |
-| `feat/fv-verbs-foreclose-hedge` | 2 + uncommitted | #22 | live session, hands off |
-| `test/debt-pressure-door` | 0 | #24 | mergeable |
-| `docs/refute-f5-ladder` | 0 | #18 | conflicting, see above |
+`develop` @ `ea0b4a6` is the trunk and is green. Start every block from it.
+
+| Branch | PR | State |
+| --- | --- | --- |
+| — | #24 | **MERGED** `8df4ee2` — the F2 debt-pressure door |
+| — | #23 | **MERGED** `ea0b4a6` — 27 card illustrations, world art, six enemy portraits, the four opening stills, the intro screen |
+| `feat/fv-verbs-foreclose-hedge` | #22 | open, live session, **hands off** |
+| `docs/refute-f5-ladder` | #18 | open, conflicting — held on purpose, see above |
+
+#18 is held rather than rebased because the live session on #22 has uncommitted edits to the
+same file (`docs/BALANCE-BASELINE.md`). Rebasing it now races that session. Rebase it once #22
+has landed.
 
 The debug APK builds from a clean tree: `./gradlew assembleDebug` produced a 45.5 MB
 `app/build/outputs/apk/debug/app-debug.apk` on 2026-08-28. Release is **unsigned** —

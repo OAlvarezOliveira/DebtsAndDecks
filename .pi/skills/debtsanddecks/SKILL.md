@@ -23,7 +23,7 @@ Follow `docs/CONVENTIONS.md` for full style. These are the hard rules and non-ob
 - Use the cached gradle binary directly — `~/.gradle/wrapper/dists/gradle-8.9-bin/<hash>/gradle-8.9/bin/gradle --no-daemon :app:testDebugUnitTest --tests "<FQCN>"`. Do NOT rely on `./gradlew`. Harmless daemon-socket stderr noise ("Unexpected type tag 71") can be ignored.
 - Strict TDD: RED → GREEN → TRIANGULATE → REFACTOR for every task; deterministic `Random(seed)`; assert concrete expected values (no tautologies).
 - No headless GL harness: `CombatRenderer`/`GameScreen` rendering and per-card art are verified by build + manual playtest (disclosed gap), not unit tests.
-- Baseline suite: **217 tests green (22 classes)** as of 2026-08-28 (`feat/card-art-1024` @ `0d8ba32`). Tier-ordering regression test guards the 3-roster stat invariant. Count it, do not trust this line: `./gradlew testDebugUnitTest` then sum `tests`/`failures` over `app/build/test-results/testDebugUnitTest/TEST-*.xml` (quiet mode prints nothing on success).
+- Baseline suite: **220 tests, 0 failures, 2 skipped (23 classes)** as of 2026-08-28 (`develop` @ `ea0b4a6`). The 2 skipped are deliberate `@Disabled` F2 gates in `DebtPressureTest.kt`, expected to fail on trunk — leave them alone. Tier-ordering regression test guards the 3-roster stat invariant. Count it, do not trust this line: `./gradlew testDebugUnitTest` then sum `tests`/`failures` over `app/build/test-results/testDebugUnitTest/TEST-*.xml` (quiet mode prints nothing on success).
 
 ## Economy & cards
 - Reward pool = the 15 economy cards; `starter`-tagged cards never offered as rewards.
