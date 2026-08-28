@@ -270,6 +270,29 @@ class CombatEngine(
                     if (addDebt(intent.param, DebtSource.LEVY)) { levyExecution = true }
                     enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_levy", intent.param), turnNumber))
                 }
+                IntentType.FORECLOSE -> {
+                    // FV deliverable 1: engine-owned intent (reads the player's Debt, which only
+                    // the engine holds). The creditor ALWAYS calls in the debt — the seizure is
+                    // run-ending at/above the announced threshold (FV §2 "run-ending, per balance"),
+                    // and a standing fee below it, so the verb's turn is never free (a purely
+                    // conditional seizure let the shark give away its turn 1 and E1 collapsed).
+                    if (debt >= intent.param) {
+                        player.takeDamage(player.hp) // outright seizure: the insolvent debtor is foreclosed
+                        enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_foreclose", intent.param), turnNumber))
+                    } else {
+                        val fee = player.takeDamage(intent.damage)
+                        enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_foreclose_fee", intent.damage, fee, intent.param), turnNumber))
+                    }
+                }
+                IntentType.HEDGE -> {
+                    // FV deliverable 1: engine-owned mirror of the player's own leverage bonus —
+                    // the enemy gains block equal to floor(debt / hedgeParam). The divisor is
+                    // data-driven (intent.param), so balance tunes how much engine it co-opts.
+                    // "Your own engine arms the enemy."
+                    val hedged = debt / (intent.param.takeIf { it > 0 } ?: DebtConfig.LEVERAGE_DIVISOR)
+                    enemy.gainBlock(hedged)
+                    enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_hedge", hedged), turnNumber))
+                }
                 IntentType.ATTACK,
                 IntentType.BUFF,
                 IntentType.DEBUFF,
