@@ -6,11 +6,11 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.Locale
 
@@ -663,15 +663,34 @@ class I18nBundleTest {
     }
 
     @Test
-    fun `a district key present only in English is caught, not silently answered in English`() {
-        // Guards the guard. If this ever fails, the test above has stopped being able to fail:
-        // it would mean a Spanish lookup for a Spanish-only-missing key no longer differs from
-        // the raw table, i.e. someone reintroduced bundle fallback into the parity check.
-        val es = rawProperties("strings_es.properties")
-        val bundle = I18NBundle.createBundle(bundleBase, Locale("es"))
-        val absent = "district.__not_translated__.name"
-        assertNull(es[absent], "fixture key must not exist in the Spanish file")
-        assertThrows(java.util.MissingResourceException::class.java) { bundle.get(absent) }
+    fun `a key present only in English resolves to English through the bundle, which is why parity reads raw files`(
+        @TempDir dir: File
+    ) {
+        // Guards the guard. The parity test above deliberately does NOT go through I18NBundle,
+        // and this is the reason: on a purpose-built bundle pair where a key exists in English
+        // and is missing from Spanish, the Spanish bundle answers with the English text instead
+        // of failing. A parity check written as `assertNotEquals(en, bundle.get(k))` or
+        // `assertTrue(bundle.get(k).isNotBlank())` therefore passes on an untranslated key.
+        //
+        // The fixture is built here rather than taken from the shipped files because the shipped
+        // files are (and must stay) in parity, so they cannot express this case. If libGDX ever
+        // drops parent-bundle fallback this test fails, and the parity test above may then be
+        // simplified — but not before.
+        File(dir, "probe.properties").writeText("probe.key=ENGLISH ONLY\n", Charsets.UTF_8)
+        File(dir, "probe_es.properties").writeText("probe.other=ALGO EN ESPAÑOL\n", Charsets.UTF_8)
+        val probeBase = FileHandle(File(dir, "probe"))
+
+        val spanish = I18NBundle.createBundle(probeBase, Locale("es"))
+
+        assertEquals("ALGO EN ESPAÑOL", spanish.get("probe.other"), "the Spanish file must be the one loaded")
+        assertEquals(
+            "ENGLISH ONLY",
+            spanish.get("probe.key"),
+            "expected the parent-bundle fallback to answer in English; if this changed, revisit the parity test"
+        )
+
+        // And a key in neither file still throws, so the fallback is a fallback, not a blanket catch.
+        assertThrows(java.util.MissingResourceException::class.java) { spanish.get("probe.absent") }
     }
 
 }
