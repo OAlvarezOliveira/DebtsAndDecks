@@ -86,6 +86,15 @@ candidate, not a target change.
 
 ## Daily Log
 
+### 2026-08-28 (Session — F1 harness-ratio-normalization delivered)
+**Goal:** Make the balance gate survive an economy re-scale: every harness debt threshold becomes a FRACTION of `DebtConfig.EXECUTION_THRESHOLD` instead of an absolute (SDD change `f1-harness-ratio-normalization`, R1.1–R1.5; artifacts on `docs/vision-program`, PR #8).
+**Done:**
+- **`HarnessBands`** (test source set): single scale-free threshold source — 0.50/0.90/0.50/0.70/0.90/0.50 of the execution line — with LIVE getter derivation (a spike mutating `EXECUTION_THRESHOLD` is picked up on next access); `HarnessBandsTest` proves band identity at 50 and correct ratios at 100.
+- **Policies re-anchored**: `LeveragePolicy.LEVERAGE_TARGET` (was 35), `NodePolicy.SAFE_AFTER_LOAN` (45) and `REPAY_BAND` (25) now derive from `HarnessBands`; `LOAN_GOLD_NEED` stays absolute on purpose (coupled to gold, no anchor against the death line — deferred to F3).
+- **Gate assertions + messages**: harness asserts against band-derived thresholds; failures report the absolute value, the ratio of the execution line, and the violated ratio bounds; `SimulationReport` gains `peakDebtRatio`.
+- **Acceptance = sweep parity (zero-delta)**: identical sweep on a clean tree (`54,0/30,8/12,6 · 49,5/30,3/10,6 · 92/101 · 30,5`), suite **201/201**, 6 files +122/−9, core untouched. Delivered as **PR #9** (refactor/f1-harness-ratio-normalization → develop).
+**Harness note:** the "pre-PR gate" failure was **not** a cwd issue — `gentle-ai review validate --gate pre-pr` fail-closes by design while RDD is disabled clone-scope (`disabled/unmanaged` → ordinary repo policy), with the identical result under an explicit `--cwd`; the actual blocker was Pi's fail-closed compound/wrapped lifecycle command detection (`cd && gh pr create` → ambiguous). Run the lifecycle command as ONE direct invocation (session cwd is already the repo root) and it passes.
+
 ### 2026-08-27 (Session 5 — design D: the debt is no longer optional)
 **Goal:** Kill the "block everything, debt 0" free walk the playtest exposed (debt sources were player-sided until the boss; a patient defensive run wins).
 **Done:**
