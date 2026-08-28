@@ -121,8 +121,13 @@ blast-radius check in 5.2 is the equivalent gate.
       check. None asserts that a claim has been verified. A raw hit count is the wrong gate
       here — writing down that the check passed raises the count, so the words have to be
       read, not counted.*
-- [ ] 5.5 **Open.** Mirror every artifact to Engram (`sdd/<change>/<artifact>`, project
-      `debtsanddecks`, `capture_prompt: false`), plus `sdd/vision-programa/done`.
+- [x] 5.5 **Done 2026-08-28.** Mirror every artifact to Engram
+      (`sdd/<change>/<artifact>`, project `debtsanddecks`, `capture_prompt: false`), plus
+      `sdd/vision-programa/done`.
+      *Topics written and read back from Engram: `sdd/f0-vision-program/{proposal,design,tasks,spec}`
+      (one observation per artifact, full content) and the completion marker
+      `sdd/vision-programa/done`, updated to the final merged state (PR #8 → `3a18e4c`). The
+      mirror is a copy; the git tree stays authoritative per `openspec/config.yaml`.*
 
 ## 6. Deliver
 
