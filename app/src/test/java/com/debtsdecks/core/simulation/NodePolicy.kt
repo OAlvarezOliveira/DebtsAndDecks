@@ -9,11 +9,12 @@ import com.debtsdecks.core.model.CardType
  * C8 balance-pass-1: competent-player NodePolicy — the MEASUREMENT floor for balance tuning, not a
  * design directive. Deterministic + stateless proxy for a greedy-but-competent player at the node.
  *
- * Priority ladder (design obs 1516; card-upgrades 2026-08-27):
+ * Priority ladder (design obs 1516; card-upgrades 2026-08-27; F5 repay-before-shop 2026-08-28):
  * 1. UPGRADE when affordable and the run cap has room — flat 15 gold, durable power (scarce cap first).
- * 2. Shop EARLY (nodes ≤ 3) when the offer is affordable — the escalation curve cheapens early buys.
- * 3. Loan when gold-starved and safe (never above Execution; the loan is the conscious survival move).
- * 4. Repay when the debt band is hot and affordable.
+ * 2. Repay when the debt band is hot and affordable — BEFORE any shop: a competent player settles
+ *    debt before spending gold (this ladder is the measurement floor, not a design directive).
+ * 3. Shop EARLY (nodes ≤ 3) when the offer is affordable — the escalation curve cheapens early buys.
+ * 4. Loan when gold-starved and safe (never above Execution; the loan is the conscious survival move).
  * 5. Thin the deck late (starters) when it's wide.
  * 6. Shop otherwise. 7. Free-pick fallback (always terminates the node).*/
 object NodePolicy {
@@ -39,16 +40,17 @@ object NodePolicy {
                 (run.gold >= NodeConfig.UPGRADE_BASE && run.upgradesRemaining > 0 &&
                     run.resolveNodeUpgradeCards().isNotEmpty() &&
                     run.upgradeCard(upgradePick(run))) ||
-                // 1b. Front-load value while the shop is cheap AND affordable.
-                (shopNow && run.nodeIndex <= 3 && run.buyCard(policy.chooseReward(run.nodeShopChoices))) ||
-                // 2. Survival loan: gold-poor, safe band.
-                (run.gold < LOAN_GOLD_NEED && run.debt + loanDebt <= SAFE_AFTER_LOAN && run.takeLoan()) ||
-                // 3. Hot debt: repay when affordable (fee included).
+                // 2. Hot debt BEFORE any shop: repay when affordable (fee included). A competent
+                // player settles debt before spending gold (measurement floor, not a design rule).
                 (run.debt >= REPAY_BAND && run.gold >= run.debt + feeAt(run) && run.repayViaNode()) ||
-                // 4. Thin late wide decks (remove a starter if offered).
+                // 3. Front-load value while the shop is cheap AND affordable.
+                (shopNow && run.nodeIndex <= 3 && run.buyCard(policy.chooseReward(run.nodeShopChoices))) ||
+                // 4. Survival loan: gold-poor, safe band.
+                (run.gold < LOAN_GOLD_NEED && run.debt + loanDebt <= SAFE_AFTER_LOAN && run.takeLoan()) ||
+                // 5. Thin late wide decks (remove a starter if offered).
                 (run.deckSize > THIN_DECK && run.nodeIndex >= THIN_NODE && run.gold >= removeAt(run) &&
                     run.removeCardFromDeck(deterministicRemoval(run))) ||
-                // 5. Shop.
+                // 6. Shop.
                 (shopNow && run.buyCard(policy.chooseReward(run.nodeShopChoices)))
 
             if (!acted) {
