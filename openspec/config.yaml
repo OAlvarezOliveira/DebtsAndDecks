@@ -1,0 +1,59 @@
+# OpenSpec configuration — Debts & Decks
+#
+# Artifact store for this project is BOTH: this tree (git-versioned, human-readable)
+# and Engram (topics `sdd/<change>/<artifact>`, project `debtsanddecks`).
+# Neither is authoritative over the other; they are mirrors. If they disagree,
+# the git tree wins, because it is the one a reviewer can diff.
+#
+# NOTE ON TOOLING: this repo has no package.json and no OpenSpec CLI installed
+# (claim: `fd -d 1 package.json` prints nothing — run it, do not take this comment's
+# word for it). The layout below follows the
+# OpenSpec convention by hand; there is no `openspec validate` gate in CI yet.
+# Adding one is a candidate task for F0, not an assumption of this file.
+
+project:
+  name: Debts & Decks
+  id: debtsanddecks
+  # GitHub slug, not a filesystem path: the previous absolute path was one machine's checkout
+  # and resolved to nothing anywhere else, including every worktree of this same clone.
+  repo: OAlvarezOliveira/DebtsAndDecks
+  branch: develop
+  stack: Kotlin + LibGDX (Android), JUnit 5, Gradle KTS
+  language:
+    artifacts: en          # docs, specs, code, commits, i18n base bundle
+    ui_locales: [en, es]   # app/src/main/assets/i18n/strings{,_es}.properties
+
+conventions:
+  source_of_truth: docs/CONVENTIONS.md
+  commits: conventional        # feat|fix|balance|docs|chore
+  process: strict TDD          # red -> green -> refactor, tests first
+  i18n_rule: >
+    Data files store KEYS, never prose. all.json holds "card.strike.description";
+    the prose lives only in the i18n bundles. This applies to every new data file
+    (events.json, districts.json, bosses.json) with no exception.
+  art_rule: >
+    No text, no lettering, no numbers baked into any art asset. PNG with real alpha.
+    See docs/ART-PIPELINE.md §2.3 (contract) and §3.1 (the open debt: 15/27 cards
+    currently violate it).
+
+balance_gate:
+  harness: app/src/test/java/com/debtsdecks/core/simulation/RunSimulationHarnessTest.kt
+  seeds: 200
+  policies: [ScriptedPolicy (greedy), LeveragePolicy]
+  status: >-
+    ratio-normalized. F1 shipped as `3a7c201` (PR #9, 2026-08-28): every debt band is a
+    fraction of DebtConfig.EXECUTION_THRESHOLD, declared once in
+    app/src/test/java/com/debtsdecks/core/simulation/HarnessBands.kt. Check it with
+    `git show develop:app/src/test/java/com/debtsdecks/core/simulation/LeveragePolicy.kt | rg LEVERAGE_TARGET`
+    -- it reads `get() = HarnessBands.leverageTarget`, not `= 35`. LOAN_GOLD_NEED stays
+    absolute on purpose; it is coupled to the gold economy and F3 picks its anchor.
+
+artifact_store:
+  git: openspec/
+  engram:
+    project: debtsanddecks
+    topic_pattern: sdd/<change>/<artifact>
+
+# `openspec/` MUST stay tracked in git from its first commit. There is a documented
+# precedent in this project of an apply agent deleting untracked files under
+# openspec/changes/. Do not add it to .gitignore.
