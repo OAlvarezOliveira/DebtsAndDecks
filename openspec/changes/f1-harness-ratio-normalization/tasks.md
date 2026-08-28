@@ -9,8 +9,12 @@ Strict TDD. Every code task is RED before GREEN.
 > `CardInstance.instanceId`, a fresh `UUID.randomUUID()` per instance. The fix is
 > `f02b421`, which ships in [PR #7](https://github.com/OAlvarezOliveira/DebtsAndDecks/pull/7).
 >
-> **Do not start F1 until PR #7 is merged.** Branching off today's `develop` means chasing
-> a diff that reappears on every run and is not caused by your change.
+> ~~**Do not start F1 until PR #7 is merged.**~~ **Unblocked 2026-08-28:** PR #7 was
+> squash-merged into `develop` as `6b50164`. The determinism fix is on `develop` and the
+> harness now reproduces byte-identically across runs (verified: two consecutive sweeps of
+> `6b50164` produced the same output, greedy 54.0% / peak debt 30.8). Confirm before
+> starting: `rg -n 'thenBy \{ it.cardId \}' app/src/test/java/com/debtsdecks/core/simulation/`
+> returns two hits, and `HarnessDeterminismTest` exists and passes. F1 may begin.
 
 ## 0. Baseline capture (do this first, it is the acceptance evidence)
 
@@ -67,7 +71,7 @@ Strict TDD. Every code task is RED before GREEN.
 ## 6. Deliver
 
 - [ ] 6.1 Branch `refactor/f1-harness-ratio-normalization` off `develop` **with PR #7
-      merged**.
+      merged** — satisfied as of `6b50164`.
       *Corrected 2026-08-28: this said "the post-FV `develop`". FV cannot complete —
       its exit criteria E3/E4 need an external playtest, but `release` has no
       `signingConfig` and no keystore exists, so nothing is distributable. Gating F1

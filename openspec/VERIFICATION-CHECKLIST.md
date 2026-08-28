@@ -52,9 +52,9 @@ All commands run from `/home/oscardev/DebtsAndDecks` on `develop` unless stated.
 > victory and defeat inside a single JVM. Cause: the card-choice comparators tie-broke on
 > `CardInstance.instanceId`, a fresh `UUID.randomUUID()` per instance.
 >
-> Fixed by `f02b421` in [PR #7](https://github.com/OAlvarezOliveira/DebtsAndDecks/pull/7).
-> **Until that merges, C3 and C6 cannot be run from `develop` and any "identical" result
-> is luck rather than evidence.** Before trusting either row, confirm the fix is present:
+> Fixed by `f02b421` in [PR #7](https://github.com/OAlvarezOliveira/DebtsAndDecks/pull/7),
+> **merged into `develop` as `6b50164` on 2026-08-28**. C3 and C6 are runnable from
+> `develop` as of that commit. Before trusting either row, confirm the fix is present:
 > `git log --oneline -S 'thenBy { it.cardId }' -- app/src/test/java/com/debtsdecks/core/simulation/`
 > and check that `HarnessDeterminismTest` exists and passes.
 >
@@ -113,9 +113,10 @@ log of defects in the *program*, not in the code.
 | E2 | **The zero-delta gates were unrunnable.** C3 and C6 demand an identical report across two runs; the harness was non-deterministic, so identical runs disagreed. Nothing in the program mentioned it — the defect was found after these documents were written. | C3, C6, `f1/tasks.md`, `f2/tasks.md`, both proposals | Precondition added above section C, and a blocking-dependency note in each phase. The valid F2 comparison is `develop` + `f02b421` versus the branch, **not** `develop` versus the branch. |
 | E3 | **Balance facts were measured on the broken gate.** Any number this program cites was read off a noisy instrument. | program-wide | Stated in the section C precondition. Pre-2026-08-28 balance figures are approximate. |
 | E4 | **Two absolute test counts were already stale** when written, because implementing a phase changes them. | C2, `f1/tasks.md` 5.3 | Both replaced with checks that cannot rot: a diff being empty, and a count relative to the fork point. |
-| E5 | **F2's tasks described work that had already shipped**, under names that differ from the shipped ones. Following the file literally would have meant reimplementing PR #7 and colliding with it. | `f2/tasks.md` | Reconciled against `38e0b9b`. Shipped names win over planned names and are recorded inline. Task 2.4 is the one PR1 item genuinely unmet and stays open. |
+| E5 | **F2's tasks described work that had already shipped**, under names that differ from the shipped ones. Following the file literally would have meant reimplementing PR #7 and colliding with it. | `f2/tasks.md` | Reconciled against `38e0b9b`. Shipped names win over planned names and are recorded inline. Task 2.4, the one PR1 item genuinely unmet at reconciliation time, was then implemented in `c018648` and is now ticked. |
 | E6 | **F1 was gated on "the post-FV `develop`"**, but FV cannot complete — B4 shows `release` has no `signingConfig` and no keystore exists, so its external playtest is undistributable. | `f1/tasks.md` 6.1 | Re-gated on PR #7, which is the real prerequisite. FV is independent of F1. |
 | E7 | **Prescribed commands used `grep`, `sed` and `ls`**, against the project's stated tooling convention. | this file | Rewritten as `rg`, `bat` and `fd`. |
+| E8 | **A translation-parity test that goes through the localization API cannot fail.** PR #7 shipped an i18n check calling `bundle.get(key)`; libGDX's `I18NBundle` falls back to the parent bundle, so a key missing only from `strings_es.properties` resolved to the English string and the assertion passed. The PR claimed an untranslated district failed the build. It did not. | PR #7, and any future phase adding user-facing text | Fixed in `4597e61`/`503d75c`: parity is checked against the raw `.properties` key sets. **C10 below was already written in the raw-file form and is correct** — the defect was in the Kotlin test, not in this checklist. Rule for later phases: a parity guard never consults the API that implements the fallback, and is proven by deleting a key and watching it go red. |
 
 **This section is itself unverified.** It is written by the same pass that made the changes,
 so it carries the same blind spots as everything else here. Check it the way you would check

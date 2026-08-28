@@ -8,10 +8,16 @@ Strict TDD. Two chained PRs: **PR1 = model + data + zero-delta proof** (no UI, n
 > `feat/districts`, commit `38e0b9b`. The boxes below are ticked against what that commit
 > actually contains, not against what this file originally asked for. Where the shipped
 > names differ from the names planned here, **the shipped name wins** and is recorded
-> inline — renaming working code to match a plan is churn, not progress. One task, 2.4,
-> is **not** implemented and stays open.
+> inline — renaming working code to match a plan is churn, not progress.
 >
 > PR1's acceptance gate (§3) depends on `f02b421`, in the same PR. See the note in §3.
+>
+> **Updated 2026-08-28, after the merge.** PR #7 was squash-merged into `develop` as
+> `6b50164`. Task 2.4, left open at reconciliation time, was implemented in `c018648`
+> before the merge and is now ticked. Two independent verification passes ran over the
+> PR; between them they corrected three claims and forced one test to be rewritten —
+> recorded in §8.4 and in the PR description. **PR1 is complete.** What remains in F2
+> is PR2 in its entirety.
 
 ## 0. Baseline capture
 
@@ -55,14 +61,15 @@ Strict TDD. Two chained PRs: **PR1 = model + data + zero-delta proof** (no UI, n
       *Three tests: "each district closes on exactly one boss seat", "the boss seats are
       slots three, six and eight", "a boss seat is always the last slot of its district".
       Plus "street slots stay street so the reskin adds no hidden encounter".*
-- [ ] 2.4 **RED** an unknown `districtId` fails at load, naming the id.
-      **OPEN — not implemented.** `DistrictTest` asserts that the ids in the shipped
-      `sequence.json` all resolve against the shipped catalog, which is a different and
-      weaker guarantee: it pins today's data, but the **loader** still accepts a bad id
-      without complaint. `DataLoader` decodes with
-      `Json { ignoreUnknownKeys = true }` and performs no cross-catalog validation. A
-      typo introduced later fails one assertion in one test rather than failing at load
-      with a message naming the offender. Keep this task; it is correct and unmet.
+- [x] 2.4 **RED** an unknown `districtId` fails at load, naming the id.
+      *Done in `c018648`, after this file was first reconciled. `DataLoader.loadRunSequence`
+      now loads the district catalog from the same `AssetSource` and `require`s every
+      slot's `districtId` to be in it, failing with the slot index, the enemy id, the
+      offending id and the known set. The test was verified red before the production
+      change and green after. The check is on the production path: `di/Module.kt` binds
+      `single<RunSequence> { DataLoader.loadRunSequence(get()) }`.*
+      *Known limit, deliberately not addressed: the guard is one-directional. A district
+      in the catalog that no slot references is not detected.*
 - [x] 2.5 **GREEN** add `SlotRole`, extend `EncounterSlot`, amend `sequence.json`.
       *`core/model/RunSequence.kt`: `EncounterSlot` gains `districtId` and
       `role: SlotRole = SlotRole.STREET`; `enum class SlotRole { STREET, BOSS }`. KDoc
@@ -150,14 +157,20 @@ and proof, with no UI and no art, exactly as this file scoped it.
       `docs(design):` belong to PR2 and are still pending.*
 - [x] 8.3 PR1 body carries the sweep diff.
       *PR2's screenshot requirement is still open.*
-- [ ] 8.4 Do not self-close. Independent pass re-runs 3.1 and eyeballs 5.3.
-      **Open by design.** 3.1 is covered by the independent pass on PR #7; 5.3 cannot be
-      done until PR2 generates the art.
+- [x] 8.4 Do not self-close. Independent pass re-runs 3.1 and eyeballs 5.3.
+      *Two independent passes ran on PR #7, each without knowledge of the implementation.
+      The first confirmed the zero-delta and determinism claims but found the i18n parity
+      test vacuous — `I18NBundle` falls back to the parent bundle, so a Spanish-missing
+      key resolved to English and passed — and found a wrong comment on the one line a
+      reader is sent to inspect. The second found the first attempt at fixing that i18n
+      test still proved nothing, and only passed once the fixture was rebuilt as a
+      genuine English-only/Spanish-missing pair. Three claims in the PR description were
+      corrected rather than deleted.*
+      *5.3 remains out of reach until PR2 generates the art.*
 
 ---
 
 ## What is left in F2
 
-1. **2.4** — make the loader reject an unknown `districtId` and name it. Small, and the
-   only unmet task in PR1.
-2. **All of PR2** — §§4, 5, 7, and the remainder of 8. Design system, art, render.
+**PR1 is complete and merged** (`6b50164`). What is left is **all of PR2** — §§4, 5, 7
+and the remainder of 8: design system, art, render.
