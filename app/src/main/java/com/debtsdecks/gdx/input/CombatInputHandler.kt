@@ -90,7 +90,9 @@ class CombatInputHandler(
             CombatRenderer.NodeMode.SHOP -> {
                 runManager.nodeShopChoices.forEachIndexed { index, card ->
                     if (renderer.nodeSubCardBounds(index, runManager.nodeShopChoices.size).contains(x, y)) {
-                        return runManager.buyCard(card)
+                        val bought = runManager.buyCard(card)
+                        if (bought) renderer.setNodeMode(CombatRenderer.NodeMode.CHOICES)
+                        return bought
                     }
                 }
                 false
@@ -99,7 +101,9 @@ class CombatInputHandler(
                 val removeCards = runManager.resolveNodeRemoveCards()
                 removeCards.forEachIndexed { index, card ->
                     if (renderer.nodeSubCardBounds(index, removeCards.size).contains(x, y)) {
-                        return runManager.removeCardFromDeck(card.id)
+                        val removed = runManager.removeCardFromDeck(card.id)
+                        if (removed) renderer.setNodeMode(CombatRenderer.NodeMode.CHOICES)
+                        return removed
                     }
                 }
                 false
@@ -108,7 +112,9 @@ class CombatInputHandler(
                 val upgradeCards = runManager.resolveNodeUpgradeCards()
                 upgradeCards.forEachIndexed { index, card ->
                     if (renderer.nodeSubCardBounds(index, upgradeCards.size).contains(x, y)) {
-                        return runManager.upgradeCard(card.id)
+                        val upgraded = runManager.upgradeCard(card.id)
+                        if (upgraded) renderer.setNodeMode(CombatRenderer.NodeMode.CHOICES)
+                        return upgraded
                     }
                 }
                 false
