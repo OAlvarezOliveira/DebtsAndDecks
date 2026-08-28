@@ -91,6 +91,20 @@ class IntentVerbTest {
     }
 
     @Test
+    fun `FORECLOSE seizure increments the instrumentation counter`() {
+        start(IntentType.FORECLOSE, damage = 9, param = 30, startingDebt = 30)
+        resolveIntent()
+        assertEquals(1, engine.forecloseSeizureCount, "at/above the threshold the seizure counts")
+    }
+
+    @Test
+    fun `FORECLOSE fee branch does not increment the seizure counter`() {
+        start(IntentType.FORECLOSE, damage = 9, param = 30, startingDebt = 10)
+        resolveIntent()
+        assertEquals(0, engine.forecloseSeizureCount, "below the threshold only the fee fires")
+    }
+
+    @Test
     fun `HEDGE block persists through the player turn`() {
         start(IntentType.HEDGE, startingDebt = 30)
         resolveIntent()

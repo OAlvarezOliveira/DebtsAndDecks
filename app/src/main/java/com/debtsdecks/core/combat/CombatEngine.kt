@@ -41,6 +41,14 @@ class CombatEngine(
 
     /** Per-combat flag (see [activateEscrowShield]) that halves Debt added from a shortfall while active. */
     private var escrowShieldActive: Boolean = false
+
+    /**
+     * FV calibration instrumentation: how many times FORECLOSE took the seizure branch
+     * (player Debt at/above the announced threshold) since this engine was created. The
+     * simulator creates one engine per run, so the count accumulates across the whole run.
+     */
+    var forecloseSeizureCount: Int = 0
+        private set
             private enum class DebtSource { LEVY, OTHER }
 
         /**
@@ -277,6 +285,7 @@ class CombatEngine(
                     // and a standing fee below it, so the verb's turn is never free (a purely
                     // conditional seizure let the shark give away its turn 1 and E1 collapsed).
                     if (debt >= intent.param) {
+                        forecloseSeizureCount++
                         player.takeDamage(player.hp) // outright seizure: the insolvent debtor is foreclosed
                         enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_foreclose", intent.param), turnNumber))
                     } else {

@@ -20,6 +20,8 @@ data class SimulationResult(
     val hpAfterCombat: List<Int> = emptyList(),
     /** Enemy defId fought in each combat, aligned index-wise with [turnsPerCombat]. */
     val encounterIds: List<String?> = emptyList(),
+        /** FV instrumentation: how many times FORECLOSE seized during the run. */
+        val forecloseSeizures: Int = 0,
 )
 
 /**
@@ -94,7 +96,7 @@ class RunSimulator(
                     encounterIds.add(currentEncounterId(state))
                     return SimulationResult(
                         seed, RunOutcome.VICTORY, peakDebt, run.hp, turnsPerCombat, null, pickedRewardIds,
-                        hpAfterCombat, encounterIds,
+                        hpAfterCombat, encounterIds, engine.forecloseSeizureCount,
                     )
                 }
                 RunManager.Phase.DEFEAT -> {
@@ -104,7 +106,7 @@ class RunSimulator(
                     encounterIds.add(defeatEncounterId)
                     return SimulationResult(
                         seed, RunOutcome.DEFEAT, peakDebt, 0, turnsPerCombat, defeatEncounterId, pickedRewardIds,
-                        hpAfterCombat, encounterIds,
+                        hpAfterCombat, encounterIds, engine.forecloseSeizureCount,
                     )
                 }
             }
