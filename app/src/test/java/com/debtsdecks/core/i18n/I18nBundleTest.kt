@@ -5,6 +5,9 @@ import com.badlogic.gdx.utils.I18NBundle
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -596,6 +599,13 @@ class I18nBundleTest {
     // The district catalog stores bundle keys, so an untranslated district is an invisible defect
     // until it renders. The data-driven test below walks the real catalog rather than a literal
     // list, so adding a fourth district without translating it fails here instead of on screen.
+    //
+    // It reads the .properties files directly, NOT through I18NBundle, and that is the whole
+    // point. I18NBundle chains to the parent bundle: ask the Spanish bundle for a key that only
+    // exists in strings.properties and it hands back the English string without complaint. A
+    // guard written on top of bundle.get() therefore passes on exactly the failure it was
+    // written to catch — someone adds a district in English and forgets the Spanish. Only the
+    // raw key sets can see that.
 
     @Test
     fun `English district keys resolve`() {
@@ -625,19 +635,43 @@ class I18nBundleTest {
         assertEquals("Nadie levanta la voz. El papeleo se firmó hace años.", b.get("district.boardroom.description"))
     }
 
+    /** Loads a `.properties` file as raw key/value pairs, with no bundle fallback of any kind. */
+    private fun rawProperties(fileName: String): Map<String, String> {
+        val file = File("src/main/assets/i18n/$fileName")
+        assertTrue(file.isFile, "expected ${file.path} to exist")
+        val props = java.util.Properties()
+        file.inputStream().reader(Charsets.UTF_8).use { props.load(it) }
+        return props.stringPropertyNames().associateWith { props.getProperty(it) }
+    }
+
     @Test
     fun `every district in the catalog is translated in both bundles`() {
-        val en = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
-        val es = I18NBundle.createBundle(bundleBase, Locale("es"))
+        val en = rawProperties("strings.properties")
+        val es = rawProperties("strings_es.properties")
         for (district in com.debtsdecks.core.simulation.TestAssetLoader.loadDistricts()) {
             for (key in listOf(district.name, district.description)) {
-                for ((tag, bundle) in listOf("en" to en, "es" to es)) {
-                    val text = bundle.get(key)
-                    assertNotEquals(key, text, "district key $key is missing from the $tag bundle")
-                    assertTrue(text.isNotBlank(), "district key $key is blank in the $tag bundle")
+                for ((tag, table) in listOf("en" to en, "es" to es)) {
+                    val text = table[key]
+                    assertNotNull(text, "district key $key is missing from the $tag properties file")
+                    assertTrue(
+                        text!!.isNotBlank(),
+                        "district key $key is present but blank in the $tag properties file"
+                    )
                 }
             }
         }
+    }
+
+    @Test
+    fun `a district key present only in English is caught, not silently answered in English`() {
+        // Guards the guard. If this ever fails, the test above has stopped being able to fail:
+        // it would mean a Spanish lookup for a Spanish-only-missing key no longer differs from
+        // the raw table, i.e. someone reintroduced bundle fallback into the parity check.
+        val es = rawProperties("strings_es.properties")
+        val bundle = I18NBundle.createBundle(bundleBase, Locale("es"))
+        val absent = "district.__not_translated__.name"
+        assertNull(es[absent], "fixture key must not exist in the Spanish file")
+        assertThrows(java.util.MissingResourceException::class.java) { bundle.get(absent) }
     }
 
 }
