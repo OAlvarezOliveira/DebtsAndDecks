@@ -65,10 +65,28 @@ class IntentVerbsE1Test {
             )
         )
 
+        // R3-1 (reliability advisory): the response gap is not gated (it is the documented 0.5-2.5pp
+        // noise of the re-metric), but it must never go strongly NEGATIVE — the measured proactive
+        // responder regression hit -9.5 to -12pp, and that pathology must fail the suite.
+        assertTrue(
+            responseGap >= -5.0,
+            "responding must not be materially worse than ignoring (gap %.1fpp; the re-metric expects 0.5-2.5pp noise, and a -9.5pp+ regression is exactly what this guard exists to catch)".format(responseGap)
+        )
+
+        // R3-2 (reliability advisory): tie the pass to the documented measured values (BALANCE-BASELINE,
+        // difficulty calibration 2026-08-28): the weights measured 25.5pp/19.5pp at HP x1.10, so the
+        // floor sits at 20/15 with headroom against sweep noise while keeping a real cushion.
         assertTrue(
             weightResponding >= 10.0 && weightIgnoring >= 10.0,
             "the verb slots must be load-bearing for difficulty: switching them off costs at least 10pp " +
                 "(responding %.1fpp, ignoring %.1fpp) — if this is noise, the verbs are decoration".format(
+                    weightResponding, weightIgnoring,
+                )
+        )
+        assertTrue(
+            weightResponding >= 20.0 && weightIgnoring >= 15.0,
+            "the difficulty weights must hold near their documented calibration values " +
+                "(measured 25.5pp/19.5pp at HP x1.10; floors 20/15; now %.1fpp/%.1fpp)".format(
                     weightResponding, weightIgnoring,
                 )
         )

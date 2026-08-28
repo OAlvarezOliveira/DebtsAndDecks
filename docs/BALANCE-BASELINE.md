@@ -378,3 +378,42 @@ player's normal operating pressure. Measured, the leverage economy keeps debt at
 line and the seizure threshold lives in that band, so no parameter position separates the
 responses without collapsing the run. The gate is re-derived from what the sim supports, with
 the numbers attached, in the same way previous pre-pivot assumptions were re-metriced.
+
+---
+
+## FV — difficulty calibration: enemy HP x1.10 (2026-08-28)
+
+**Measured:** 2026-08-28, on `feat/fv-verbs-foreclose-hedge`. The R4.2 gate (no policy may win
+>= 70%) was red: after the F5 fixes and the FV verbs, the headless players left the C8 pivot
+band. The sweep below picks the scale with sim output. Reproduce: `:app:testDebugUnitTest
+--tests '*RunSimulationHarnessTest'` (gate) and `--tests '*IntentVerbsE1Test'` (verb weights).
+**This section supersedes the win-rate table in the E1 section above** (which was measured at
+the pre-calibration HP).
+
+### Enemy HP sweep (200 seeds per policy, in-memory)
+
+| HP scale | greedy | leverage | band 35-55% |
+|---|---|---|---|
+| 1.00 (shipped pre-FV) | 74,5% | 71,0% | no |
+| **1.10 (shipped)** | **48,5%** | **45,5%** | **yes** |
+| 1.15 | 40,0% | 38,0% | yes (harsher) |
+| 1.20 | 24,0% | 22,5% | no |
+| 1.25 | 16,5% | 16,0% | no (collapses; matches the historic +25% finding) |
+| 1.30 | 12,5% | 12,5% | no |
+
+Shipped values (all.json): thug 22 -> 24, loan_shark 36 -> 40, collector 52 -> 57.
+`EnemyTierRegressionTest` tracks the boss HP (57).
+
+### Measured state at HP x1.10
+
+```
+Harness  -> greedy 48,5% | leverage 45,5% | spread -3,0pp | peak 30,0 / 29,4  (all gates green)
+E1       -> verbs-on 48,0% / 45,5% | verbs-off (control) 22,5% / 26,0%
+           difficulty weight 25,5pp / 19,5pp (gate >= 10; doc floors 20/15) | response gap 2,5pp
+Seizures -> 85/200 (responding), 96/200 (ignoring) at the new HP: the shark survives longer, so
+           FORECLOSE bites more — the verb becomes the threat the FV design intends.
+```
+
+The extra difficulty lands almost entirely on loan_shark (greedy defeats 47 -> 97): living
+longer means its FORECLOSE/LEVY cycle actually resolves. Collector defeats stay flat. The pivot
+band and the 5pp leverage grace hold; hp@win stays sane (~20).
