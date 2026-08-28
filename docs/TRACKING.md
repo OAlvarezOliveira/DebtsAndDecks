@@ -20,6 +20,17 @@ sequence, **C3–C5, C7 and C8 are now also merged in `develop`** (2026-08-27, t
 - **C8 `balance-pass-1`** (`fba0b13`) — sim-tuned balance: **greedy win 55% / leverage 51%**
   (GDD band 35–55%), won-run peak Debt 29.6 (> 25 target), all 3 archetypes in winning decks.
 
+**Merged 2026-08-28 — the vision programme is now the roadmap, in-tree:**
+- **F2 districts** (`6b50164`, PR #7) — run re-cut into 3 districts (slaughterhouse / casino /
+  boardroom, boss seat at slots 3/6/8), plus the harness determinism fix the balance gate depended on.
+- **F1 ratio-normalized balance gate** (`3a7c201`, PR #9) — every harness debt threshold is now a
+  fraction of `EXECUTION_THRESHOLD` (`HarnessBands`), so the gate survives a future re-scale;
+  acceptance = zero-delta sweep, suite 201/201.
+- **Vision SDD programme** (`3a18e4c`, PR #8) — `openspec/` + `docs/VISION.md` + GDD amendments on
+  trunk. The roadmap is governed in-tree (`openspec/project.md`, order reconciled: F2 shipped before
+  F1, F0 last). Next content phase: **F3 treasury** (unblocked by F1); **FV core-validation** needs a
+  signed distributable build → sprint signing phase.
+
 The active programme remains `play-store-launch`: P0 documented the real state, P1 modernized the
 platform baseline, **P2 (next)** is playtest-focused, later phases cover signing, store listing and
 closed testing. See **BD-1** below — v1 ships free.
@@ -35,10 +46,11 @@ candidate, not a target change.
 ## Task Board
 
 ### To Do
-- [ ] **Polish** Manual playtest on device/emulator: full loop + economy feel + **C7 node screen sign-off** (deferred from C7, R8.3)
+- [ ] **Polish** Manual playtest on device/emulator: full loop + economy feel + **C7 node screen sign-off** (deferred from C7, R8.3) — includes re-verifying the new 3-district run structure on device
 - [ ] **Polish** Balance pass from playtest (debt pressure, boss LEVY, reward pool) — C8 tuned in-sim; human feel is the remaining unknown
 - [ ] **Measure** Metrics dashboard below: sim-measured values filled (2026-08-27); combat duration / FPS / launch-time on signed build still need device timing
 - [x] **Decide** Dashboard win-rate target: **35–55% (pivot band)** — decided 2026-08-27, dashboard updated
+- [ ] **SDD** Next roadmap phase per `openspec/project.md`: **F3 treasury** (high risk — after the P2 playtest, so the economy is not re-scaled before the core is measured in human hands) or **FV core-validation** (external playtest; needs signed APK)
 
 ### Doing
 - [ ] `play-store-launch` P2 (next phase)
@@ -86,8 +98,19 @@ candidate, not a target change.
 
 ## Daily Log
 
+### 2026-08-28 (Session — F1, tracking and the vision programme merged into develop)
+**Done:**
+- Merged **PR #9** (F1 ratio bands) and **PR #10** (tracking) — `develop` → `c8ebcd3`.
+- Merged **PR #8** (vision SDD programme) — `3a18e4c`: `openspec/` + `docs/VISION.md` + GDD amendments on trunk; roadmap now governed in-tree (`openspec/project.md`).
+**Next:** P2 human playtest on device (full loop with districts, C7 node sign-off, economy feel, gold-sink decision) → then F3 treasury or FV, per `openspec/project.md`.
+
 ### 2026-08-28 (Session — F1 harness-ratio-normalization delivered)
-**Goal:** Make the balance gate survive an economy re-scale: every harness debt threshold becomes a FRACTION of `DebtConfig.EXECUTION_THRESHOLD` instead of an absolute (SDD change `f1-harness-ratio-normalization`, R1.1–R1.5; artifacts on `docs/vision-program`, PR #8).
+**Goal:** Make the balance gate survive an economy re-scale: every harness debt threshold becomes a FRACTION of `DebtConfig.EXECUTION_THRESHOLD` instead of an absolute (SDD change `f1-harness-ratio-normalization`, R1.1–R1.5).
+**Its artifact folder is not on `develop`.** F1 shipped as `3a7c201` while the
+snapshot on the vision branch still described F1 as unstarted, so PR #8 deliberately left the
+folder out rather than land a false one — `openspec/project.md` says so, and
+`git ls-tree -r develop --name-only | grep -i f1` returns no match. Locate the work by content:
+`git log --oneline -S 'HarnessBands' develop -- app/src/test/`.
 **Done:**
 - **`HarnessBands`** (test source set): single scale-free threshold source — 0.50/0.90/0.50/0.70/0.90/0.50 of the execution line — with LIVE getter derivation (a spike mutating `EXECUTION_THRESHOLD` is picked up on next access); `HarnessBandsTest` proves band identity at 50 and correct ratios at 100.
 - **Policies re-anchored**: `LeveragePolicy.LEVERAGE_TARGET` (was 35), `NodePolicy.SAFE_AFTER_LOAN` (45) and `REPAY_BAND` (25) now derive from `HarnessBands`; `LOAN_GOLD_NEED` stays absolute on purpose (coupled to gold, no anchor against the death line — deferred to F3).
