@@ -11,7 +11,7 @@
 | 7.3 | `drawDistrictTitle` wiring + `isDistrictEntrance` trigger | reviewed; not pixel-testable headlessly |
 
 ## Full verification
-- `./gradlew testDebugUnitTest` → **BUILD SUCCESSFUL**, **235 tests, 0 failures, 0 errors**.
+- `./gradlew testDebugUnitTest --rerun-tasks` → **BUILD SUCCESSFUL**, **225 tests, 0 failures, 0 errors, 2 skipped** (JUnit XML count, independently re-verified).
 - `RunSimulationHarnessTest` (13 tests, 200 seeds) GREEN → zero balance delta (R2.5) holds.
 - Compile: `compileDebugKotlin` + `compileDebugUnitTestKotlin` clean (no new warnings introduced by this change).
 

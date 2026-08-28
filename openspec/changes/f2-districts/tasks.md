@@ -139,7 +139,8 @@ and proof, with no UI and no art, exactly as this file scoped it.
 
 *Updated 2026-08-29.* Section 7 (Render) is implemented on branch `feat/f2-districts-runmanager`:
 `RunManager.currentDistrict` and the combat/node district backdrop + title wiring (7.1–7.4) are
-done and green — 235 tests, 0 failures, balance harness (`RunSimulationHarnessTest`) unchanged, so
+done and green — 225 tests, 0 failures, 0 errors, 2 skipped (JUnit XML, independently re-verified),
+balance harness (`RunSimulationHarnessTest`) unchanged, so
 the zero-delta gate (R2.5) still holds. Tasks 4.x (design system) and 5.x (art) remain out of
 scope here and unstarted; the district backdrop PNGs are deferred to 5.x, after which the renderer's
 missing-file fallback stops painting the gradient.

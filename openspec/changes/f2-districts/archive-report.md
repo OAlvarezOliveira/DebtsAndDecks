@@ -6,7 +6,7 @@
 > Archive `{task}` only when verification succeeds and file-backed sync is complete or not applicable.
 > If verification or sync fails, leave artifacts active.
 
-- **Verification:** succeeded — 235 tests, 0 failures; balance harness GREEN.
+- **Verification:** succeeded — 225 tests, 0 failures, 0 errors, 2 skipped (JUnit XML, independently re-verified); balance harness GREEN.
 - **File-backed sync:** not applicable / deferred — see `sync-report.md`. The R2.7 delta is complete, but
   PR2 as a whole is not (4.x, 5.x open).
 
