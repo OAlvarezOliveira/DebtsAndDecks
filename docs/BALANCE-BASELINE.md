@@ -284,3 +284,35 @@ Not a proposal, not a balance change, not a re-baselining. When FV moves the ban
 the new band to arrive with its own sim output attached; that output should be diffed against
 §2 of this file, and this file should be left as it stands — a record of what the game measured
 on `3a18e4c`, before the verbs.
+
+## 7. F5 addendum (2026-08-28) — repay-before-shop is zero-delta; the repay rule is dormant
+
+Intent: fix the measurement floor. The `NodePolicy` priority ladder was reordered so that repaying
+hot debt (previously rung 4, after the early-shop and the loan) comes **before any shop** (now rung
+2, right after UPGRADE), matching the documented ladder. Branch `fix/policy-repay-before-shop`; no
+gameplay files touched. This document's §5.2 claimed the defeat-cause/slot instrumentation "does not
+exist yet" — it was delivered meanwhile as PR #16 (`fix/observation-defeat-slot`, pending merge).
+
+Result: **byte-identical sweep.** Re-ran with `--rerun-tasks`, same build and locale (see §1):
+
+```
+Win rate:          54,0%
+Avg peak Debt:     30,8
+  as fraction:     0,615 of execution line
+Avg HP at victory: 12,6
+Avg turns/combat:  1,7
+Defeats by encounter:  collector: 92
+Greedy   -> win 54,0% | peak debt 30,8 | HP@win 12,6
+Leverage -> win 49,5% | peak debt 30,3 | HP@win 10,6
+Defeats greedy:   {collector=92}
+Defeats leverage: {collector=101}
+```
+
+The 80-seed observation is unchanged too (wins 42/80, defeats 38, identical node decision counts).
+
+Why the ladder move changed nothing: the repay branch fires only when `run.debt >= 25` *at the
+moment of a node decision*. Observed node-time debt averages 7 → 20 and never reaches the band
+(the ~30 peak debt is mid-combat; the reward garnishment lowers it before the node). **REPAY
+appears in zero node decisions** — the rule is dormant under current conditions. E2 therefore
+requires no new band: the gate did not move. The reorder stands as the intended measurement floor
+for whenever nodes do see hot debt (e.g. F3 treasury's monthly payments).
