@@ -4,9 +4,9 @@
 > Companion to [`ART-PIPELINE.md`](ART-PIPELINE.md), which records *why* each asset below is
 > being regenerated. Update both when the roster changes.
 
-**Scope.** Card illustration coverage is already 27/27 — nothing here is a gap. Sections 4–6
-replace assets with recorded defects. Section 7 is the only genuinely new art, and it is gated
-on a design decision that has not been taken yet.
+**Scope.** Card illustration coverage is already 27/27 — nothing here is a gap. §4 re-cuts the
+whole deck to one standard; §5–6 replace assets with recorded defects. §7 is the only genuinely
+new art, and it is gated on a design decision that has not been taken yet.
 
 ---
 
@@ -98,120 +98,232 @@ have smuggled a number into a ledger column at full size.
 
 ---
 
-## 4. Card illustrations to regenerate (17)
+## 4. Card illustrations — all 27
+
+Regenerate the whole set, not only the defective ones. Mixing 1024×768 opaque plates with
+512×512 alpha plates that average 75% transparent padding gives a deck that reads as two
+different games.
 
 Each entry states what the card **actually does**, taken from `app/src/main/assets/cards/all.json`
-and `strings.properties`. The mechanic is context for the illustrator, **not** text to render.
+and `strings.properties`. That is context for the illustrator — **never text to render.** The
+engine draws name, cost, description and type tag live from the bundle at every frame, in the
+player's language, with the upgraded values substituted. Painting any of it into the pixels
+freezes what has to move.
 
-### 4.1 `asset_auction.png` — Asset Auction
-*SKILL, cost 1. Exhaust a card from hand. Gain 9 Gold.* Defects: baked text, guide marks.
+### 4.0 Working checklist
+
+Priority **1** = a recorded defect, the art is wrong today. **2** = correct but off-standard,
+re-cut for consistency. Work 1s first; the deck is playable at any point in the list.
+
+| # | File | Pri | Why |
+| --- | --- | --- | --- |
+| 1 | `asset_auction.png` | 1 | baked text §3.1, guide marks §3.3 |
+| 2 | `asset_bubble.png` | 1 | opaque checkerboard inside the dome §3.2 |
+| 3 | `bash.png` | 2 | consistency |
+| 4 | `bounced_check.png` | 1 | baked text §3.1 |
+| 5 | `collateral_hold.png` | 2 | consistency |
+| 6 | `compound_interest.png` | 1 | baked text §3.1 |
+| 7 | `debt_forgiveness.png` | 1 | baked text §3.1 |
+| 8 | `defend.png` | 2 | consistency |
+| 9 | `ejecucion.png` | 1 | alpha cut into the artwork §3.4 |
+| 10 | `emergency_fund.png` | 2 | 84% transparent padding — the worst in the set §3.5 |
+| 11 | `eternal_debt.png` | 1 | baked text §3.1 |
+| 12 | `foreclosure_express.png` | 1 | baked text §3.1, guide marks §3.3 |
+| 13 | `ghost_collector.png` | 1 | baked text §3.1 |
+| 14 | `golden_credit.png` | 1 | baked text §3.1, guide marks §3.3 |
+| 15 | `leverage_strike.png` | 2 | consistency |
+| 16 | `mortgage_collateral.png` | 1 | baked text §3.1 |
+| 17 | `overdraft.png` | 2 | consistency |
+| 18 | `partial_forgiveness.png` | 1 | baked text §3.1 |
+| 19 | `refinanciar.png` | 2 | consistency |
+| 20 | `repo_expert.png` | 2 | consistency |
+| 21 | `reverse_mortgage.png` | 1 | baked text §3.1 |
+| 22 | `risky_investment.png` | 1 | baked text §3.1 |
+| 23 | `strike.png` | 2 | consistency |
+| 24 | `subprime_loan.png` | 1 | baked text §3.1 |
+| 25 | `survive.png` | 2 | consistency |
+| 26 | `tactical_bankruptcy.png` | 1 | baked text §3.1 |
+| 27 | `zombie_debt.png` | 1 | baked text §3.1 |
+
+Path for every row: `app/src/main/assets/art/cards/<file>`. The filename **is** the card `id` —
+`CombatRenderer` resolves art by id, so a rename silently drops the illustration.
+
+---
+
+### 1. `asset_auction.png` — Asset Auction
+*SKILL, cost 1. Exhaust a card from hand. Gain 9 Gold.*
 
 > An auction room after hours. A gavel mid-fall over a lot of seized domestic possessions — a
 > mantel clock, a rolled rug, a child's bicycle — arranged under one hanging bulb. Bidders are
 > silhouettes at the edge of the light, faceless. Brass accent on the gavel head.
 
-### 4.2 `asset_bubble.png` — Asset Bubble
-*ATTACK, cost 1. Damage equal to half your Debt. Debt is kept.* Defect: opaque checkerboard
-filling the inside of the glass dome, which a flood fill could not reach.
+### 2. `asset_bubble.png` — Asset Bubble
+*ATTACK, cost 1. Damage equal to half your Debt. Debt is kept.*
 
 > A soap-thin glass dome the size of a room, containing a miniature financial district in
 > perfect detail, lit from within. A hairline fracture crosses the dome and catches the light.
 > **The interior of the dome is fully painted city — never empty, never patterned, never grey.**
 
-### 4.3 `bounced_check.png` — Bounced Check
-*ATTACK, cost 1. Deal 5 damage. Add 4 Debt.* Defect: baked text.
+### 3. `bash.png` — Bash
+*ATTACK, cost 2, starter. Deal 8 damage. Apply 1 Vulnerable.*
+
+> A man swinging a heavy leather briefcase like a club, caught at the top of the arc, the case
+> already split and papers bursting out of the seam. Rain-lit alley behind him. Blunt and
+> unglamorous — this is a starting card, not a finisher.
+
+### 4. `bounced_check.png` — Bounced Check
+*ATTACK, cost 1. Deal 5 damage. Add 4 Debt.*
 
 > A cheque torn clean in half mid-air over a bank counter, the two halves tumbling apart, ink
 > smearing in the rain coming through an open door. Blank paper — no writing, no figures.
 
-### 4.4 `compound_interest.png` — Compound Interest
-*SKILL, cost 1, exhaust. Gain 1 Strength per 10 Debt.* Defect: baked text.
+### 5. `collateral_hold.png` — Collateral Hold
+*SKILL, cost 1. Gain Block equal to half your Debt. Debt is kept.*
+
+> A pawnshop counter seen from the customer's side: a wristwatch and a wedding ring locked
+> behind thick grilled glass, a heavy chain and padlock across the cabinet. A hand rests flat
+> on the counter, not reaching. Brass on the padlock.
+
+### 6. `compound_interest.png` — Compound Interest
+*SKILL, cost 1, exhaust. Gain 1 Strength per 10 Debt.*
 
 > A spiral staircase of stacked ledger books descending into darkness, each tier wider than the
 > one above, receding past the reach of the light. Blank spines and blank pages.
 
-### 4.5 `debt_forgiveness.png` — Debt Forgiveness
-*SKILL, cost 2. Wipe all Debt to 0.* Defect: baked text.
+### 7. `debt_forgiveness.png` — Debt Forgiveness
+*SKILL, cost 2. Wipe all Debt to 0.*
 
 > A single ledger page held over a brass ashtray, one corner already alight, the flame the only
 > warm colour in the frame. A gloved hand lets it fall. Ash suspended in the air.
 
-### 4.6 `eternal_debt.png` — Eternal Debt
-*SKILL, cost 1. Add 3 Debt. Add a copy to your discard pile. Gain 1 Strength per 10 Debt.*
-Defect: baked text.
+### 8. `defend.png` — Defend
+*SKILL, cost 1, starter. Gain 5 Block.*
 
-> A ribbon of ledger paper knotted into an ouroboros, feeding back into a typewriter carriage
-> that is printing the same ribbon it is being fed. Blank paper throughout.
+> A forearm raised across the face behind an overturned office desk, the desk taking the impact,
+> splinters and dust in the beam of a streetlight through a broken window. Plain, reflexive,
+> nothing heroic.
 
-### 4.7 `ejecucion.png` — Foreclosure
-*ATTACK, cost 2, exhaust. Damage equal to half your Debt, then wipe all Debt.* Defect: the
-background-removal pass punched holes through the gavel and the papers.
+### 9. `ejecucion.png` — Foreclosure
+*ATTACK, cost 2, exhaust. Damage equal to half your Debt, then wipe all Debt.*
 
 > A gavel already struck, splitting a courtroom desk, documents blown outward in the shock. Low
 > angle, hard light from behind, dust and paper in the air. **The gavel and every document are
 > solid and unbroken.**
 
-### 4.8 `foreclosure_express.png` — Foreclosure Express
-*ATTACK, cost 1. Deal 6 damage. Gain 4 Gold.* Defects: baked text, guide marks.
+### 10. `emergency_fund.png` — Emergency Fund
+*SKILL, cost 1. Gain 6 Block. Draw 1 card.*
+
+> A tin cash box lifted out from under a prised-up floorboard, lid open, held in both hands in
+> a dark room. The only light comes from inside the box. Subject fills the frame — this asset
+> is currently 84% empty canvas and reads as a speck on the card.
+
+### 11. `eternal_debt.png` — Eternal Debt
+*SKILL, cost 1. Add 3 Debt. Add a copy to your discard pile. Gain 1 Strength per 10 Debt.*
+
+> A ribbon of ledger paper knotted into an ouroboros, feeding back into a typewriter carriage
+> that is printing the same ribbon it is being fed. Blank paper throughout.
+
+### 12. `foreclosure_express.png` — Foreclosure Express
+*ATTACK, cost 1. Deal 6 damage. Gain 4 Gold.*
 
 > A repossession crew forcing an apartment door at dawn, moving fast and rehearsed, furniture
 > already halfway to the van idling in the street. Headlights raking wet asphalt. Brass on the
 > crowbar.
 
-### 4.9 `ghost_collector.png` — Ghost Collector
-*ATTACK, cost 1. Deal 5 damage. Apply 2 Weak.* Defect: baked text.
+### 13. `ghost_collector.png` — Ghost Collector
+*ATTACK, cost 1. Deal 5 damage. Apply 2 Weak.*
 
 > A debt collector in a long coat standing in a tenement hallway, faintly translucent — the
 > wallpaper pattern reads through his chest. His shadow on the wall is solid and cast wrong.
 > Hat brim hiding the eyes.
 
-### 4.10 `golden_credit.png` — Golden Credit
-*SKILL, cost 2. Gain 4 Credit this turn.* Defects: baked text, guide marks.
+### 14. `golden_credit.png` — Golden Credit
+*SKILL, cost 2. Gain 4 Credit this turn.*
 
 > A letter of credit on heavy stock, embossed and gold-leafed at the edge, lying on black
 > lacquer under a single beam. The gold is the brightest thing in the frame. Blank stock — the
 > embossing is a pattern, never characters.
 
-### 4.11 `mortgage_collateral.png` — Mortgage Collateral
-*SKILL, cost 1. Gain 12 Block.* Defect: baked text.
+### 15. `leverage_strike.png` — Leverage Strike
+*ATTACK, cost 1. Deal 5 damage. Deal 1 extra damage per 10 Debt.*
+
+> A crowbar driven under a steel shutter, a boot on its end, the fulcrum resting on a stacked
+> column of ledgers — the taller the stack, the more the bar bites. The shutter is buckling.
+> Brass along the bar.
+
+### 16. `mortgage_collateral.png` — Mortgage Collateral
+*SKILL, cost 1. Gain 12 Block.*
 
 > A rolled property deed held up like a shield, unfurling into the outline of a house that
 > hardens into a barricade of stone and shutters. Rain breaking against it. Blank parchment.
 
-### 4.12 `partial_forgiveness.png` — Partial Forgiveness
-*SKILL, cost 0. Repay 8 Debt.* Defect: baked text.
+### 17. `overdraft.png` — Overdraft
+*SKILL, cost 1. Draw 1 card, plus 1 per 10 Debt.*
+
+> A brass pneumatic tube station in a bank's back office, every canister fired at once,
+> documents erupting from the open ports faster than the clerk's hands can take them. Blank
+> paper. Motion, not violence.
+
+### 18. `partial_forgiveness.png` — Partial Forgiveness
+*SKILL, cost 0. Repay 8 Debt.*
 
 > An open ledger, one column struck through with a single heavy pen stroke, the rest untouched.
 > The pen still resting where it stopped. Ruled columns are visible as lines only — no figures.
 
-### 4.13 `reverse_mortgage.png` — Reverse Mortgage
-*SKILL, cost 1. Gain 4 Gold per 10 Debt.* Defect: baked text.
+### 19. `refinanciar.png` — Refinance
+*SKILL, cost 1. Halve your Debt. Gain Block equal to the amount cancelled.*
+
+> Two contracts sliding past each other across a lawyer's desk in opposite directions, one
+> being folded in half as it goes, the fold line catching the lamp. Two pairs of hands, no
+> faces. Blank paper.
+
+### 20. `repo_expert.png` — Repossession Expert
+*ATTACK, cost 1. Deal 7 damage. Apply 1 Weak.*
+
+> A repo man crouched at the door of a parked car in the rain, slim jim already in the window
+> seal, tool roll open on the wet kerb beside him. Unhurried, professional, done this a
+> thousand times. Brass on the tools.
+
+### 21. `reverse_mortgage.png` — Reverse Mortgage
+*SKILL, cost 1. Gain 4 Gold per 10 Debt.*
 
 > A narrow row house tilted and pouring coins out of its own front door into a storm drain,
 > the structure visibly thinning as it empties. Streetlight above, everything else in shadow.
 
-### 4.14 `risky_investment.png` — Risky Investment
-*SKILL, cost 0. Gain 12 Gold. Lose 6 HP.* Defect: baked text.
+### 22. `risky_investment.png` — Risky Investment
+*SKILL, cost 0. Gain 12 Gold. Lose 6 HP.*
 
 > A bare hand gripping a rising line of a stock chart rendered as a blade edge, the line
 > climbing steeply, blood running down the wrist and beading on the glass. The chart is pure
 > geometry — a line and a grid, no axis marks.
 
-### 4.15 `subprime_loan.png` — Subprime Loan
-*SKILL, cost 0. Gain 3 Credit this turn. Add 3 Debt.* Defect: baked text.
+### 23. `strike.png` — Strike
+*ATTACK, cost 1, starter. Deal 6 damage.*
+
+> A bare fist landing, seen close and side-on in the rain, knuckles split, water thrown off the
+> impact. No weapon, no flourish. The most ordinary violence in the game.
+
+### 24. `subprime_loan.png` — Subprime Loan
+*SKILL, cost 0. Gain 3 Credit this turn. Add 3 Debt.*
 
 > A loan contract on a desk, the lower half of the page dissolving into a dense grey texture
 > like insects. A fountain pen bleeding a slow pool across it. The texture reads as pattern,
 > never as legible writing.
 
-### 4.16 `tactical_bankruptcy.png` — Tactical Bankruptcy
-*SKILL, cost 1. Lose 8 HP. Wipe all Debt to 0.* Defect: baked text.
+### 25. `survive.png` — Survive
+*SKILL, cost 1, starter. Gain 8 Block.*
+
+> A man braced hard in a doorframe with both arms as the room behind him comes apart — plaster
+> dust, a light fixture swinging, the floor at a wrong angle. Holding, not winning.
+
+### 26. `tactical_bankruptcy.png` — Tactical Bankruptcy
+*SKILL, cost 1. Lose 8 HP. Wipe all Debt to 0.*
 
 > A man in shirtsleeves pulling a fire alarm in his own office as the room behind him folds
 > inward, filing cabinets toppling toward him. He is not running. Deliberate, calm, ruined.
 
-### 4.17 `zombie_debt.png` — Zombie Debt
-*SKILL, cost 0. Add 2 Debt. Gain 1 Credit. Add a copy to your discard pile.* Defect: baked text.
+### 27. `zombie_debt.png` — Zombie Debt
+*SKILL, cost 0. Add 2 Debt. Gain 1 Credit. Add a copy to your discard pile.*
 
 > A hand of grey paper — fingers made of layered invoices — pushing up through a cemetery of
 > filing drawers, soil and shredded documents falling away. Blank paper throughout.
