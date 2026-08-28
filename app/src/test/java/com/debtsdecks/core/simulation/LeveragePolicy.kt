@@ -73,7 +73,10 @@ object LeveragePolicy : RunPolicy {
             val bestAffordable = affordable.maxWith(
                 compareBy<CardInstance> { projectedDamage(it, state.debt) }
                     .thenBy { projectedDamage(it, state.debt) / it.cost }
-                    .thenBy { it.cardId }   // stable definition id; instanceId is a random UUID
+                    .thenBy { it.cardId }   // highest definition id; instanceId is a random UUID
+            // Same caveat as ScriptedPolicy: not a total order. Two instances of the same card
+            // tie all the way down and maxWith keeps the first in list order, so determinism
+            // rests on the hand being built deterministically. See HarnessDeterminismTest.
             )
             return ScriptedPolicy.CombatAction.Play(bestAffordable.instanceId, ScriptedPolicy.enemyTargetId(state))
         }

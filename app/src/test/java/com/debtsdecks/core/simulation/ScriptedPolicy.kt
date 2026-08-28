@@ -67,7 +67,7 @@ object ScriptedPolicy : RunPolicy {
             // hand and draw pool are themselves built deterministically. Anyone changing how
             // the hand is assembled must re-check HarnessDeterminismTest.
         )
-                // Debt-as-Leverage safety: never play a shortfall attack whose borrow would cross the
+        // Debt-as-Leverage safety: never play a shortfall attack whose borrow would cross the
         // Execution line (debt > EXECUTION_THRESHOLD is an instant loss). End the turn instead.
         val wouldBorrow = best.cost > state.energy
         val debtAfter = state.debt + (best.cost - state.energy)
