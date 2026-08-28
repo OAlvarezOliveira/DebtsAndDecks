@@ -1,7 +1,13 @@
 # F0 — Vision & Program (documentation only)
 
 **Status:** proposed, unverified. **Date:** 2026-08-28. **Branch base:** `develop`.
-**Depends on:** nothing. **Blocks:** F1 (which needs the program's numbering to exist).
+**Depends on:** nothing. **Blocks:** nothing, as it turned out.
+
+> *This line said "Blocks: F1 (which needs the program's numbering to exist)" and events
+> falsified it: F1 shipped as `3a7c201` (PR #9) while this PR was still open, so F0 blocked
+> nothing. The numbering was useful to F1's authors, not a prerequisite for its code. Recorded
+> rather than deleted — a dependency the program asserted and reality refused is worth more to
+> the next phase than a tidy header.*
 
 ## Why
 
@@ -51,11 +57,14 @@ edit is either additive or a marked forward-reference.
 `docs/VISION.md` ~215 lines · GDD delta ~60 lines · openspec tree ~900 lines across 20 files.
 **Total ~1200 lines, all prose.**
 
-*The forecast missed by roughly 2x, recorded 2026-08-28.* At `0faa08d`,
-`git diff --stat develop...HEAD | tail -1` reports **24 files changed, 2236 insertions(+),
-8 deletions(-)**. Almost the whole gap is the reconciliation evidence every artifact now
+*The forecast missed by roughly 2x, recorded 2026-08-28.* Run
+`git diff --stat $(git merge-base develop HEAD) | tail -1` from a checkout of this branch.
+The figure is deliberately not pinned to a commit here: this note previously cited `0faa08d`,
+a branch SHA that `git merge-base --is-ancestor 0faa08d develop` rejects and a fresh clone
+cannot resolve at all, because this repo squash-merges. Almost the whole gap is the reconciliation evidence every artifact now
 carries — the command each tick cites. The figure grows with every further commit on this
 branch, so re-run the command; do not trust this number. Over the 400-line threshold by volume, but it is
 documentation with no execution semantics, so a single PR is defensible. If the reviewer
 wants it split, the natural cut is **PR1: `docs/` (VISION + GDD delta)**, **PR2:
-`openspec/` (tree + FV/F0/F1/F2 artifacts)**, **PR3: charters F3-F8**.
+`openspec/` (tree + FV/F0/F2 artifacts)**, **PR3: charters F3-F8**. F1's artifacts are not in
+this PR at all — see `tasks.md` 4.3.

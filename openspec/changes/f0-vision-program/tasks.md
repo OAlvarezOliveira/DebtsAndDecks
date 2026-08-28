@@ -57,19 +57,32 @@ blast-radius check in 5.2 is the equivalent gate.
       *No hunk of `git diff develop -- docs/GDD.md` touches it.*
 - [x] 3.5 Verify the delta shape: `git diff develop -- docs/GDD.md` shows no removed line
       that was true about `develop`.
-      *`git diff develop -- docs/GDD.md | rg -c '^-[^-]'` → **8** removed lines, all of them
-      false about `develop`: the enemy stat table — 4 lines, its header row included (HP
-      24/40/56, contradicted by `app/src/main/assets/enemies/all.json`) — the "`LEVY` fires once
-      per fight" claim, and a 3-line stale "last updated" footer. Nothing true was dropped. This
-      note said 7 until 2026-08-28: it counted the table's data rows and forgot its header,
-      which is exactly the kind of by-eye count `rg -c` exists to replace.*
+      *`git diff develop -- docs/GDD.md | rg -c '^-[^-]'` → **9** removed lines, all of them
+      false about `develop`. The nine, enumerated against the command's own output: the enemy
+      stat table (**4** lines, its header row included — HP 24/40/56, contradicted by
+      `app/src/main/assets/enemies/all.json`), the "`LEVY` fires once per fight" claim (**1**),
+      the `### MVP Scope (…)` heading whose section the delta replaces (**1**), and a stale
+      "last updated" footer (**3**). Nothing true was dropped.*
+
+      *This number has now been wrong twice. It said **7** until 2026-08-28 (it counted the
+      table's data rows and forgot its header), then **8** (it added the header but dropped the
+      `### MVP Scope` heading from the enumeration). Both corrections were written by the same
+      pass that wrote the note arguing by-eye counts fail — which is the actual lesson here:
+      the fix is not a more careful count, it is pasting the command's output instead of
+      summarizing it. The count is also stable against the merge-base: `git diff 6b50164 --
+      docs/GDD.md | rg -c '^-[^-]'` → 9, so `develop` moving is not what changed it.*
 
 ## 4. Write the change artifacts
 
 - [x] 4.1 `fv-core-validation/proposal.md` — short proposal with exit criteria E1-E4 and the
       signing-config hard dependency. **No tasks file.**
 - [x] 4.2 F0 proposal / spec / design / tasks (this set).
-- [x] 4.3 F1 proposal / spec / design / tasks.
+- [x] 4.3 F1 proposal / spec / design / tasks. **Written, and not carried by this PR.**
+      *F1 was implemented from them and shipped as `3a7c201` (PR #9) before this PR merged, so
+      the snapshot on this branch describes an unstarted phase — 20 unticked tasks for code
+      already on `develop`. Verify the code landed:
+      `git log --oneline -S 'HarnessBands' develop -- app/src/test/`. The folder returns in its
+      own PR, reconciled to what shipped. See `design.md` §Structure for the same note.*
 - [x] 4.4 F2 proposal / spec / design / tasks.
 - [x] 4.5 One-page charter for each of F3, F4, F5, F6, F7, F8. **No tasks files.** A charter
       that looks apply-ready is worse than no charter.
@@ -84,14 +97,23 @@ blast-radius check in 5.2 is the equivalent gate.
       output, `rc=1`. Use `--name-only`, not `--stat`: `--stat` elides long paths to `.../`,
       which the filter cannot match — see checklist row C1.*
 - [x] 5.3 The test count is unchanged from the merge-base, none added, none modified.
-      *F0 adds no test, so the check is equality with `develop`, not a literal. This line
-      said "180 tests" and was stale by PR #7. Counted on both sides without a build, so it
-      cannot be contaminated by an unrelated working tree:
-      `git ls-tree -r develop --name-only | rg '^app/src/test/.*\.kt$' | while read f; do
-      git show develop:"$f"; done | rg -o "@Test" | wc -l` → **199**, and the same command
-      with `HEAD` gives 199. Note that counting the checked-out files instead returns 201
-      here, because a concurrent session has uncommitted F1 tests in the main worktree —
-      count from the git tree, never from disk.*
+      *F0 adds no test, so the check is equality with the **merge-base**, not with `develop`
+      and not a literal. This line said "180 tests" and was stale by PR #7. Counted on both
+      sides without a build, so it cannot be contaminated by an unrelated working tree:
+      `git ls-tree -r <ref> --name-only | rg '^app/src/test/.*\.kt$' | while read f; do
+      git show <ref>:"$f"; done | rg -o "@Test" | wc -l`. Run 2026-08-28: merge-base
+      `6b50164` → **199**, `HEAD` → **199**. Equal, so F0 added none.*
+
+      *The anchor moved from `develop` to the merge-base on 2026-08-28, and the reason is the
+      point of the task: `develop` is now **201**, because `3a7c201` (F1) merged and brought
+      `HarnessBandsTest` with it. Against `develop` this check would now read as a failure —
+      "the branch is missing two tests" — on a branch that touches no test at all. A check that
+      compares a branch against a moving trunk measures the trunk. Against the merge-base it
+      answers the only question 5.3 asks: did F0 add or change a test?* Note that counting the checked-out files instead returns 201
+      here, because at the time a concurrent session had uncommitted F1 tests in the main
+      worktree — count from the git tree, never from disk. Those tests have since merged as
+      `3a7c201`, so the same disk/tree gap no longer reproduces from that cause; the rule it
+      illustrates does.*
 - [x] 5.4 Search the F0 output for self-certification language. Zero *assertions*.
       *`rg -in "verified|confirmed|validated" openspec/changes/f0-vision-program/ | wc -l`
       → 10, every one of them the rule stating itself ("proposed, unverified", "Not marking

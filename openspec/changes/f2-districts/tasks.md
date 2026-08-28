@@ -196,15 +196,12 @@ and proof, with no UI and no art, exactly as this file scoped it.
       precisely so that no phase dispatch had to change for presentation data.
       *Held, but the count in this task was wrong and is corrected here.
       `git grep -n "when *( *\(run\|runManager\)\.phase" develop -- 'app/src/**/*.kt'`
-      returns **five** sites, not four, and only **three** of them are exhaustive:*
-
-      | Site | Exhaustive? |
-      | --- | --- |
-      | `CombatInputHandler.kt:34` | yes |
-      | `GameScreen.kt:43` | yes |
-      | `RunSimulator.kt:71` | yes |
-      | `CombatInputHandler.kt:213` | **no** — `else -> Unit` |
-      | `NodePolicyTest.kt:32` | **no** — `else -> error(...)` |
+      returns **five** sites, not four, and only **three** of them are exhaustive. The
+      breakdown is in **§7.5 detail** below, lifted out of this list item on 2026-08-28: a
+      table indented to line up under a list item's prose sits 4+ columns past the item's
+      content column, which GFM renders as an indented code block. It looked correct in every
+      local preview and shipped as literal pipe characters on GitHub — the same defect class as
+      checklist rows E13 and C6.*
 
       *This matters for F6/F7, not for F2. F2 adds no phase, so nothing here changes either
       way. But a phase added later gets a compile error from three sites and **silence** from
@@ -212,6 +209,16 @@ and proof, with no UI and no art, exactly as this file scoped it.
       play no sound and nobody would be told. `NodePolicyTest.kt:32` fails at runtime with a
       readable message, which is second best. Whichever phase adds `EVENT` or `MARKET` has to
       open `CombatInputHandler.kt:213` deliberately, because the compiler will not.*
+
+### 7.5 detail — the five `when (phase)` sites
+
+| Site | Exhaustive? |
+| --- | --- |
+| `CombatInputHandler.kt:34` | yes |
+| `GameScreen.kt:43` | yes |
+| `RunSimulator.kt:71` | yes |
+| `CombatInputHandler.kt:213` | **no** — `else -> Unit` |
+| `NodePolicyTest.kt:32` | **no** — `else -> error(...)` |
 
 ## 8. Deliver
 

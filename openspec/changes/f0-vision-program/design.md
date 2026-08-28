@@ -32,7 +32,6 @@ openspec/
   changes/
     fv-core-validation/proposal.md
     f0-vision-program/{proposal,design,tasks}.md + specs/vision-program/spec.md
-    f1-harness-ratio-normalization/{proposal,design,tasks}.md + specs/balance-gate/spec.md
     f2-districts/{proposal,design,tasks}.md + specs/run-structure/spec.md
     f3-treasury/charter.md
     f4-ballast-cards/charter.md
@@ -41,6 +40,12 @@ openspec/
     f7-market/charter.md
     f8-leads/charter.md
 ```
+
+**F1's folder is deliberately absent from this PR.** Its four artifacts were written on this
+branch and F1 was implemented from them, shipping as `3a7c201` (PR #9) before this PR merged.
+Carrying them here would land a snapshot that describes F1 as unstarted -- 20 unticked tasks
+for work already on `develop`. They are reintroduced in their own PR as a record of what
+shipped. `git log --oneline -S 'HarnessBands' develop -- app/src/test/` finds the code.
 
 Delta specs use the OpenSpec convention (`## ADDED Requirements`, `### Requirement:` in SHALL
 language, `#### Scenario:` in GIVEN/WHEN/THEN). There is no OpenSpec CLI in this repo — no

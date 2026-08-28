@@ -14,8 +14,12 @@ what block absorbs — and the treasury is the run's life. Two axes, three ways 
 
 ## Inputs required
 
-- **F1 complete.** The gate must be on ratios before the economy moves. Non-negotiable; the
-  whole reason F1 exists is to stand in front of this phase.
+- **F1 complete. ✅ Met — shipped as `3a7c201` (PR #9, 2026-08-28).** The gate must be on
+  ratios before the economy moves; it now is. Non-negotiable, and the whole reason F1 existed
+  was to stand in front of this phase. Confirm before starting F3, do not take this line's
+  word for it:
+  `git show develop:app/src/test/java/com/debtsdecks/core/simulation/LeveragePolicy.kt | rg LEVERAGE_TARGET`
+  must read `get() = HarnessBands.leverageTarget`.
 - **F2 complete.** The node/district rhythm defines when a "month" falls due (D2: one node,
   one month — seven due dates per run).
 - **Card descriptions parametrized.** Every number on a card exists in four places today:
@@ -23,8 +27,11 @@ what block absorbs — and the treasury is the run's life. Two axes, three ways 
   live cards, 23 have their number hand-written into the description in each language. The
   pattern to copy already exists in the same bundle for intents (`intent.levy=Levy {0} Debt`).
   This is prep work **inside F3**, done first, not a refactor to schedule later.
-- **A decision on `NodePolicy.LOAN_GOLD_NEED`** (deferred from F1 with reason): it is a gold
-  threshold with no honest anchor today. F3 touches the gold economy, so F3 picks the anchor.
+- **A decision on `NodePolicy.LOAN_GOLD_NEED`** (deferred from F1 with reason, and F1 did in
+  fact defer it): it is a gold threshold with no honest anchor today. F3 touches the gold
+  economy, so F3 picks the anchor. Still absolute on `develop` — `NodePolicy.kt:63` reads
+  `private const val LOAN_GOLD_NEED = 20`, with the reason in the comment two lines below,
+  while `SAFE_AFTER_LOAN` and `REPAY_BAND` beside it are now `get() = HarnessBands.…`.
 
 ## Outputs
 

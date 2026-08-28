@@ -16,7 +16,7 @@ price of using it.
 | What a card does | `app/src/main/assets/cards/all.json` | the card art, the description string |
 | What the run looks like | `app/src/main/assets/run/sequence.json` | the GDD's prose |
 | Whether balance holds | `RunSimulationHarnessTest` (200 seeds, 2 policies) | anyone's judgement |
-| Whether the game is fun | **nothing yet** — never measured (see `fv-core-validation`) | the harness |
+| Whether the game is fun | **nothing yet** — no measurement of it is recorded in this repo (checklist row B5; see `fv-core-validation`) | the harness |
 
 The last row is the reason the program starts with a validation phase instead of a feature.
 
@@ -33,10 +33,28 @@ The last row is the reason the program starts with a validation phase instead of
 
 ## Program shape
 
-`FV -> F0 -> F1 -> F2 -> F3 -> F4 -> F5 -> F6 -> F7 -> F8` is the **planned** order, and it is
-already out of date: **F2 PR1 merged into `develop` as `6b50164` on 2026-08-28, before F1
-started**, because F2 PR1 carried the harness determinism fix that F1's own acceptance argument
-depends on. The sequence is a default, not a constraint. The constraints are the **Depends on**
-and **Blocks** lines in each proposal; read those, not this arrow. See `docs/VISION.md` for the
-reasoning and `openspec/changes/<phase>/` for the artifacts. This batch specs FV (short
-proposal), F0, F1 and F2 in full; F3-F8 are one-page charters on purpose.
+`FV -> F0 -> F1 -> F2 -> F3 -> F4 -> F5 -> F6 -> F7 -> F8` is the **planned** order, and the
+trunk has already executed a different one. What actually merged, in order:
+
+| Commit | PR | What |
+| --- | --- | --- |
+| `6b50164` | #7 | F2 PR1 — districts, plus the harness determinism fix |
+| `3a7c201` | #9 | F1 — balance bands normalized to ratios |
+| `c8ebcd3` | #10 | tracking docs |
+
+So **F2 shipped before F1, and both shipped before F0** — this document's own phase. F2 PR1
+went first because it carried the determinism fix that F1's acceptance argument ("the report
+is identical before and after") needs in order to mean anything. F1 went next because nothing
+blocked it. F0 is last because documentation blocks nobody, which is the opposite of what
+this program's `Blocks:` lines predicted.
+
+The sequence is a default, not a constraint. The constraints are the **Depends on** and
+**Blocks** lines in each proposal; read those, not this arrow — and treat them as claims that
+can be falsified, because two of them already were. Verify the table with
+`git log --oneline develop -3`. See `docs/VISION.md` for the reasoning and
+`openspec/changes/<phase>/` for the artifacts.
+
+This batch specs FV (short proposal), F0 and F2 in full; F3-F8 are one-page charters on
+purpose. **F1's folder is not here**: it was written, F1 shipped from it as `3a7c201`, and the
+snapshot on this branch still describes F1 as unstarted, so carrying it would write a false
+project state into the tree on day one. It returns in its own PR, reconciled to what shipped.

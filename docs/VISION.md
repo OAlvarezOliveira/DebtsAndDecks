@@ -72,10 +72,21 @@ healing restores. The treasury is the **life of the run**: what the city takes, 
 forecloses, what ends you. Two axes, two failure modes.
 
 *Rejected:* pure treasury (damage hits cash directly). It reads beautifully in one sentence
-and collapses on contact with the deck — 23 of the 27 live cards are built on damage and
+and collapses on contact with the deck — **11 of the 27** live cards are built on damage or
 block, `EnemyIntent` speaks in damage, and the entire harness measures HP at victory.
 Collapsing the axes is not a design change, it is a rewrite of the combat layer to buy a
 metaphor the hybrid already delivers.
+
+> *Corrected 2026-08-28: this read "23 of the 27" and the number was borrowed from a different
+> claim — `docs/GDD.md`'s reward pool, and checklist row B3's count of live cards carrying a
+> hand-written number in their description, which is genuinely 23. The count for **this**
+> sentence is 11:
+> `python3 -c "import json;d=json.load(open('app/src/main/assets/cards/all.json'));print(sum(1 for c in d if c.get('damage',0)>0 or c.get('block',0)>0),'of',len(d))"`.
+> The argument survives on weaker footing and it is worth naming how much weaker: 11 of 27 is a
+> large minority, not a supermajority, so "the deck is built on damage and block" overstates it.
+> What actually carries the rejection is the other two clauses — `EnemyIntent` has no vocabulary
+> but damage, and the harness's victory condition is HP — neither of which the card count
+> affects.*
 
 *Cost accepted:* two simultaneous defeat conditions plus HP-0 makes three. **The UI contract
 that distinguishes them is a mandatory deliverable of F3**, not a follow-up. Without it the
@@ -188,7 +199,7 @@ Debt`); the cards simply never adopted it.
 | --- | --- | --- |
 | **FV** | Core validation: new intent verbs + the external playtest the GDD already specifies | Tests the most expensive assumption with the cheapest work |
 | **F0** | This document, the GDD delta, the program | Documentation only |
-| **F1** | Normalize the harness invariants to ratios | The instrument before the work |
+| **F1** | Normalize the harness invariants to ratios | The instrument before the work — **shipped `3a7c201`** |
 | **F2** | Districts: 8 slots -> 3 zones, identity, backgrounds | Provably zero balance delta |
 | **F3** | Treasury | The economic re-thesis, before anyone spends the currency |
 | **F4** | Ballast cards | Direct consequence of F3's loan economy |
@@ -201,11 +212,19 @@ The ordering principle: **instrument, then structure, then currency, then the th
 spend it.** The alternative — treasury last — forces F4 through F7 to be calibrated against
 an economy that is then replaced, and recalibrated wholesale afterwards.
 
-> **The first two already swapped, 2026-08-28.** F2 PR1 merged as `6b50164` before F1 started,
-> because the instrument F1 exists to normalize was itself non-deterministic and the fix shipped
-> inside F2 PR1. "Instrument first" survives as a principle — the gate was repaired before
-> anything was measured against it — but the phase *numbers* are not the order of execution.
-> The real edges are the **Depends on** / **Blocks** lines in each proposal.
+> **The table above is a plan, not a history. 2026-08-28.** What the trunk actually executed,
+> newest last: `6b50164` (PR #7, F2 PR1 — districts plus the harness determinism fix),
+> `3a7c201` (PR #9, **F1 complete**), `c8ebcd3` (PR #10, tracking). So F2 went before F1, and
+> both went before F0 — the phase you are reading. F2 PR1 went first because it carried the
+> determinism fix that F1's whole acceptance argument depends on; F1 followed once nothing
+> blocked it; F0 is last because documentation blocks nobody, which is precisely the opposite
+> of what this program's `Blocks:` lines predicted.
+>
+> "Instrument first" survives as a principle — the gate was repaired, then normalized, before
+> anything was measured against it — but the phase *numbers* are not the order of execution and
+> should not be read as one. The real edges are the **Depends on** / **Blocks** lines in each
+> proposal, and those are claims that can be falsified: two of them already were. Verify with
+> `git log --oneline develop -3`.
 
 ## 6. What this vision does not do
 

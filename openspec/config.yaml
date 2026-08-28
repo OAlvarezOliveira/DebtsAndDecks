@@ -40,7 +40,13 @@ balance_gate:
   harness: app/src/test/java/com/debtsdecks/core/simulation/RunSimulationHarnessTest.kt
   seeds: 200
   policies: [ScriptedPolicy (greedy), LeveragePolicy]
-  status: absolute-scale (see change f1-harness-ratio-normalization)
+  status: >-
+    ratio-normalized. F1 shipped as `3a7c201` (PR #9, 2026-08-28): every debt band is a
+    fraction of DebtConfig.EXECUTION_THRESHOLD, declared once in
+    app/src/test/java/com/debtsdecks/core/simulation/HarnessBands.kt. Check it with
+    `git show develop:app/src/test/java/com/debtsdecks/core/simulation/LeveragePolicy.kt | rg LEVERAGE_TARGET`
+    -- it reads `get() = HarnessBands.leverageTarget`, not `= 35`. LOAN_GOLD_NEED stays
+    absolute on purpose; it is coupled to the gold economy and F3 picks its anchor.
 
 artifact_store:
   git: openspec/

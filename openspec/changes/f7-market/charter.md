@@ -31,7 +31,10 @@ And the hook is `private`. Exposing it is a change to the most balance-sensitive
 the codebase — the one that applies compounding interest, the mechanism the entire
 debt-as-leverage thesis rests on.
 
-This is why F7 is last. It is the only phase whose core hook is inside the combat loop.
+This is why F7 comes as late as it does. It is the only phase whose core hook is inside the
+combat loop. *It is not the last phase — `docs/VISION.md` §5 puts F8 (leads and preparation)
+after it, since F8 needs bosses (F5) and events (F6). This line said "F7 is last" and
+contradicted that table.*
 
 ## Outputs
 

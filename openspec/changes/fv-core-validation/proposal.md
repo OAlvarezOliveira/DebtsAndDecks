@@ -19,8 +19,11 @@ ever tested that assumption.
 - The harness proves the win rate lands in `[0.35, 0.55]` across 200 seeds. It cannot prove
   a fight is interesting, and no simulation can.
 - GDD success criterion #4 — *"≥ 60% of external playtesters start a third run unprompted"*
-  (`docs/GDD.md`, §Success criteria) — **has never been measured**. The only playtest on
-  record is 4 runs by the owner.
+  (`docs/GDD.md`, §Success criteria) — **has no measurement recorded anywhere in this repo**.
+  The only playtest on record is 4 runs by the owner. *Worded narrowly on purpose: "never
+  measured" is a claim about the world that no command can establish — absence from the repo is
+  not absence in reality. Checklist row B5 carries the check that can actually be run
+  (`git log --oneline -S"playtest" -- docs/`).*
 - The three enemies are not a roster, they are a staircase. Read from
   `app/src/main/assets/enemies/all.json`: `thug` = {ATTACK 8, ATTACK 8, BUFF 3};
   `loan_shark` = thug + {DEBUFF, LEVY} with bigger numbers; `collector` = loan_shark +
@@ -77,8 +80,19 @@ the responding policy over 200 seeds. If the gap is noise, the verb is decoratio
 After the verbs land, `RunSimulationHarnessTest` must still pass: greedy win rate in
 `[0.35, 0.55]`, won-run peak Debt > 25, both policies in the debt band `[25, 45)`, neither
 above 70%. If the verbs move the band, the new band is proposed **with sim output attached**,
-never on paper. Note the ordering consequence: F1 normalizes these invariants to ratios, and
-it must be computed from the **post-FV** baseline, not today's.
+never on paper.
+
+> **The ordering consequence this paragraph predicted did not happen, 2026-08-28.** It read
+> "F1 normalizes these invariants to ratios, and it must be computed from the **post-FV**
+> baseline, not today's". F1 shipped first, as `3a7c201`, computed from today's baseline —
+> FV has not started, and F1's own proposal had already overturned the dependency in its header
+> (FV cannot complete: no `signingConfig`, no keystore, so its external playtest is
+> undistributable; see checklist row E6 and B4). The absolute numbers above are also stale:
+> on `develop` the bands are ratios in `HarnessBands`, so `> 25` and `[25, 45)` are now
+> `WON_PEAK_MIN_RATIO` and `[LEVERAGE_BAND_LOW_RATIO, LEVERAGE_BAND_HIGH_RATIO)` of
+> `EXECUTION_THRESHOLD`. What survives is the real risk, unchanged: **if FV's verbs move the
+> win band, F1's ratios must be re-derived from the post-FV baseline.** F1 mitigated that by
+> naming the anchor in one file, not by waiting.
 
 **E3 — criterion #4 is measured.**
 ≥ 60% of external testers start a third run unprompted. Measured, not estimated. A number
