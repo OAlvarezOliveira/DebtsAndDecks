@@ -46,17 +46,25 @@ class IntentTypeCoverageTest {
     }
 
     @Test
-    fun `the renderer derives its icon paths from the enum, not from a hand-written list`() {
+    fun `the renderer's icon map covers every IntentType`() {
         // The gap this closes: intentTextures used to be five string literals typed by hand, and
         // the lookup that reads it treats a miss as "draw nothing". A sixth IntentType with its PNG
         // committed passed every other test in this file and still rendered a blank bar, because
-        // nothing connected the enum to the map. Derivation from `entries` makes that unrepresentable;
-        // this test is what stops the literals coming back.
+        // nothing connected the enum to the map.
+        //
+        // What this test can and cannot prove. It compares key sets, so it catches a map that has
+        // gone STALE -- which is the property that actually protects a sixth intent, and the reason
+        // `drawIntent` may now use `getValue`. It does NOT prove the map is *derived*: swap the
+        // production `associateWith` for five hand-typed literals covering today's five values and
+        // this test still passes, because at that instant the two maps are equal. Derivation is a
+        // property of the source text, not of any value the JVM can be asked about, so no assertion
+        // here can pin it. Keeping the map derived is what makes staleness unrepresentable in the
+        // first place; this test is the net for the day someone stops.
         assertEquals(
             IntentType.entries.toSet(),
             CombatRenderer.INTENT_ICON_PATHS.keys,
-            "CombatRenderer.INTENT_ICON_PATHS must cover every IntentType and be derived from " +
-                "IntentType.entries -- a hand-maintained map goes stale silently"
+            "CombatRenderer.INTENT_ICON_PATHS must cover every IntentType -- a map that does not " +
+                "is one the renderer will miss a key in, and a missed key is a blank intent bar"
         )
     }
 

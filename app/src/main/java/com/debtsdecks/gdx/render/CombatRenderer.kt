@@ -932,9 +932,15 @@ class CombatRenderer(private val bundle: I18NBundle) {
     companion object {
         /**
          * Where each intent's icon lives, derived from the enum rather than listed by hand. Adding
-         * an [IntentType] extends this map for free; `IntentTypeCoverageTest` asserts both that it
-         * stays derived and that every path it yields is a file on disk, so a value declared without
-         * its PNG fails the build instead of shipping a blank intent bar.
+         * an [IntentType] extends this map for free.
+         *
+         * Keep it derived. `IntentTypeCoverageTest` asserts that the map covers every [IntentType]
+         * and that every path it yields is a file on disk, so a value declared without its PNG
+         * fails the build instead of shipping a blank intent bar. What no test can assert is the
+         * derivation itself: replace `associateWith` with literals for today's values and the
+         * suite stays green, because the two maps are equal until the next enum value lands. The
+         * `associateWith` is therefore load-bearing on its own -- it is what makes a stale map
+         * unrepresentable rather than merely detected one commit later.
          */
         internal val INTENT_ICON_PATHS: Map<IntentType, String> =
             IntentType.entries.associateWith { "art/${it.iconName}.png" }
