@@ -12,6 +12,7 @@ import com.debtsdecks.core.combat.RunManager
 import com.debtsdecks.core.data.AssetSource
 import com.debtsdecks.core.data.DataLoader
 import com.debtsdecks.core.enemies.EnemyDefinition
+import com.debtsdecks.core.model.District
 import com.debtsdecks.core.i18n.Localizer
 import com.debtsdecks.core.intro.IntroSequence
 import com.debtsdecks.gdx.GameScreen
@@ -34,8 +35,9 @@ val coreModule = module {
     single<Random> { Random(System.currentTimeMillis()) }
     single<List<EnemyDefinition>> { DataLoader.loadEnemies(get()) }
     single<com.debtsdecks.core.model.RunSequence> { DataLoader.loadRunSequence(get()) }
+    single<List<District>> { DataLoader.loadDistricts(get()) }
     single { CombatEngine(get(), get(), get()) }
-    single { RunManager(get(), get(), get(), get(), get()) }
+    single { RunManager(get(), get(), get(), get(), get(), get()) }
 }
 
 val gdxModule = module {

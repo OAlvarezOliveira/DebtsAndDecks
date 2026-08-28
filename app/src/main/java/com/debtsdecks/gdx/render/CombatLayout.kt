@@ -40,4 +40,14 @@ object CombatLayout {
         val button = endTurnButton(worldWidth)
         return Rectangle(worldWidth - MARGIN - w, button.y + button.height + 16f, w, 292f)
     }
+
+    // District title card (F2 R2.7): centred on the live world width so it tracks the viewport,
+    // never a fixed 1280-space coordinate. CombatRenderer draws the name + descriptor into it.
+    const val DISTRICT_TITLE_WIDTH = 520f
+    const val DISTRICT_TITLE_HEIGHT = 120f
+    private const val DISTRICT_TITLE_Y = 600f
+
+    /** Top-centre bounds of the district title card, centred on [worldWidth]. */
+    fun districtTitle(worldWidth: Float): Rectangle =
+        Rectangle((worldWidth - DISTRICT_TITLE_WIDTH) / 2f, DISTRICT_TITLE_Y, DISTRICT_TITLE_WIDTH, DISTRICT_TITLE_HEIGHT)
 }

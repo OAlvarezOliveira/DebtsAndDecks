@@ -73,4 +73,14 @@ class DistrictTest {
     fun `street slots stay street so the reskin adds no hidden encounter`() {
         assertEquals(5, slots.count { it.role == SlotRole.STREET })
     }
+
+    @Test
+    fun `district exposes a backdrop texture key derived from its id`() {
+        // F2 task 7.2 (R2.7): renderers select the backdrop from the district by this key. It is
+        // derived from the id, so no extra catalog field is needed and the PR1 loader test (which
+        // uses a background-less fake catalog) is untouched. Matches design.md's bg_district_* ids.
+        assertEquals("bg_district_slaughterhouse", District("slaughterhouse", "n", "d").backgroundKey())
+        assertEquals("bg_district_casino", District("casino", "n", "d").backgroundKey())
+        assertEquals("bg_district_boardroom", District("boardroom", "n", "d").backgroundKey())
+    }
 }

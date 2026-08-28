@@ -137,6 +137,13 @@ Strict TDD. Two chained PRs: **PR1 = model + data + zero-delta proof** (no UI, n
 **Not started.** Nothing in §§4–8 has been implemented. PR #7 is PR1 only: model, data
 and proof, with no UI and no art, exactly as this file scoped it.
 
+*Updated 2026-08-29.* Section 7 (Render) is implemented on branch `feat/f2-districts-runmanager`:
+`RunManager.currentDistrict` and the combat/node district backdrop + title wiring (7.1–7.4) are
+done and green — 235 tests, 0 failures, balance harness (`RunSimulationHarnessTest`) unchanged, so
+the zero-delta gate (R2.5) still holds. Tasks 4.x (design system) and 5.x (art) remain out of
+scope here and unstarted; the district backdrop PNGs are deferred to 5.x, after which the renderer's
+missing-file fallback stops painting the gradient.
+
 ## 4. Design system, first
 
 - [ ] 4.1 Extract from `Arts/Debts & Decks Design System.zip` into a tracked
@@ -186,11 +193,41 @@ and proof, with no UI and no art, exactly as this file scoped it.
 
 ## 7. Render
 
-- [ ] 7.1 `RunManager` exposes `currentDistrict`, derived from the current slot.
-- [ ] 7.2 Combat and node renderers select the background from it.
-- [ ] 7.3 District name + descriptor shown on entering a district.
-- [ ] 7.4 **RED then GREEN** layout test: the title position derives from viewport width via
+- [x] 7.1 `RunManager` exposes `currentDistrict`, derived from the current slot.
+      *Shipped on branch `feat/f2-districts-runmanager` (not yet merged). `RunManager` gains
+      `currentDistrict` — `districts.first { it.id == runSequence.slots[slotIndex].districtId }`
+      (`RunManager.kt:71`) — and `isDistrictEntrance` (`RunManager.kt:79`), both derived getters
+      over `slotIndex`, so neither adds stored state nor touches the phase machine (R2.6). The
+      catalog is a 6th ctor param defaulting to `emptyList()` (`RunManager.kt:32`) and is wired in
+      `Module.kt:38`+`Module.kt:40`, so PR1's 5-arg call sites and tests compile unchanged.
+      Covered by `RunManagerTest.currentDistrict is derived from the slot the run is on` and
+      `...isDistrictEntrance is true only on the first slot of each district`. Reproduce with
+      `rg -n "val currentDistrict" app/src/main/java/com/debtsdecks/core/combat/RunManager.kt` and
+      `./gradlew testDebugUnitTest --tests '*RunManagerTest*'`.*
+- [x] 7.2 Combat and node renderers select the background from it.
+      *Shipped. `District.backgroundKey()` (`District.kt:25`) returns `bg_district_<id>`, matching
+      design.md's catalog ids with no new data field — so PR1's background-less fake catalog test
+      (`DataLoaderDistrictTest`) is untouched. `CombatRenderer` draws it as the combat and node
+      backdrop (`CombatRenderer.kt:155` and `:718`), replacing the old single `bg_combat` /
+      `bg_reststop`. The PNGs are task 5 / PR2's 5.x; until they land the renderer's existing
+      missing-file fallback paints the gradient, same as today. Pure coverage:
+      `DistrictTest.district exposes a backdrop texture key derived from its id`.*
+- [x] 7.3 District name + descriptor shown on entering a district.
+      *Shipped. `CombatRenderer.drawDistrictTitle` (`CombatRenderer.kt:781`) paints the district
+      name + descriptor into a brass-bordered card on `isDistrictEntrance` during combat
+      (`CombatRenderer.kt:171`) and on every node screen (`CombatRenderer.kt:719`), satisfying
+      R2.7's "on entering it and on the node screen". The card bounds come from the layout helper
+      added in 7.4, so position is resolution-independent. (Pixel output is not headlessly
+      verifiable — proven by the helper test + the wiring, not a screenshot.)*
+- [x] 7.4 **RED then GREEN** layout test: the title position derives from viewport width via
       the existing layout helpers. No fixed 1280-space coordinate.
+      *Shipped. `CombatLayout.districtTitle(worldWidth)` (`CombatLayout.kt:51`) returns a card
+      centred on `worldWidth` (`x = (worldWidth - WIDTH) / 2`), with no 1280 constant. The RED
+      test (`DistrictTitleLayoutTest`, written before the helper existed) failed to compile; after
+      the helper landed it is GREEN. It asserts the title is centred at 1280 and at 2133 (a 20:9
+      phone), that a wider world shifts `x` right, and that the two widths never coincide — i.e.
+      the position derives from the viewport, not a fixed coordinate. Reproduce with
+      `./gradlew testDebugUnitTest --tests 'com.debtsdecks.gdx.render.DistrictTitleLayoutTest'`.*
 - [x] 7.5 Confirm `RunManager.Phase` is still `{ COMBAT, NODE, VICTORY, DEFEAT }` and none of
       the `when (phase)` sites gained a branch. `SlotRole` was introduced as a separate enum
       precisely so that no phase dispatch had to change for presentation data.

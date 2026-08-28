@@ -3,6 +3,7 @@ package com.debtsdecks.core.combat
 import com.debtsdecks.core.cards.CardRegistry
 import com.debtsdecks.core.enemies.EnemyDefinition
 import com.debtsdecks.core.model.CardDefinition
+import com.debtsdecks.core.model.District
 import com.debtsdecks.core.model.PlayerState
 import com.debtsdecks.core.model.TurnPhase
 import kotlin.random.Random
@@ -24,7 +25,11 @@ class RunManager(
     private val cardRegistry: CardRegistry,
     private val enemyDefinitions: List<EnemyDefinition>,
     private val runSequence: com.debtsdecks.core.model.RunSequence,
-    private val rng: Random
+    private val rng: Random,
+    /** District catalog, used only to resolve the current slot's currentDistrict. Defaults to empty
+     *  so the pure-sim call sites (and PR1 tests) need no change; production wires the real catalog in
+     *  com.debtsdecks.di.Module. */
+    private val districts: List<District> = emptyList()
 ) {
     enum class Phase { COMBAT, NODE, VICTORY, DEFEAT }
 
@@ -58,6 +63,22 @@ class RunManager(
 
     /** Current run deck (ids, acquisition order) — read-only, for sim instrumentation. */
     val deckList: List<String> get() = deck
+
+    /**
+     * Current district, derived from the slot the run is on. Pure identity — carries no combat,
+     * economy or reward value, so reading it never moves the balance gate (F2 R2.5). See R2.7.
+     */
+    val currentDistrict: District
+        get() = districts.first { it.id == runSequence.slots[slotIndex].districtId }
+
+    /**
+     * True on the first slot of a district (slot 0, or the slot whose predecessor belongs to a
+     * different district) — the moment the player "enters" the district, used to surface its title
+     * card. Computed, not stored, so it stays correct after restartRun or a forced collector.
+     */
+    val isDistrictEntrance: Boolean
+        get() = slotIndex == 0 ||
+            runSequence.slots[slotIndex - 1].districtId != runSequence.slots[slotIndex].districtId
 
     /** Resolves the node's removal-offer ids to their full card definitions (for rendering). */
     fun resolveNodeRemoveCards(): List<CardDefinition> =

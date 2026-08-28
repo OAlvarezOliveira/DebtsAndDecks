@@ -18,6 +18,7 @@ import com.debtsdecks.core.combat.RunManager
 import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.model.CardType
 import com.debtsdecks.core.model.CombatState
+import com.debtsdecks.core.model.District
 import com.debtsdecks.core.enemies.IntentType
 import com.debtsdecks.core.model.EnemyState
 import com.debtsdecks.core.model.TurnPhase
@@ -144,14 +145,14 @@ class CombatRenderer(private val bundle: I18NBundle) {
     fun setNodeMode(mode: NodeMode) { nodeMode = mode }
     fun getNodeMode(): NodeMode = nodeMode
 
-    fun render(state: CombatState, batch: SpriteBatch) {
+    fun render(state: CombatState, run: RunManager, batch: SpriteBatch) {
         lastFrameWasNode = false
         // ShapeRenderer defaults to a raw screen-pixel projection; without this it draws
         // out of sync with the batch text, which uses the viewport's world-space camera.
         shapeRenderer.projectionMatrix = batch.projectionMatrix
 
         // Background
-        drawBackground(batch, "bg_combat")
+        drawBackground(batch, run.currentDistrict.backgroundKey())
 
         // Enemy area
         drawEnemies(state.enemies, batch)
@@ -167,6 +168,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
 
         // Log
         drawLog(state.log, batch)
+        if (run.isDistrictEntrance) drawDistrictTitle(run.currentDistrict, batch)
     }
 
     private fun darken(color: Color, factor: Float): Color =
@@ -711,7 +713,8 @@ class CombatRenderer(private val bundle: I18NBundle) {
         if (!lastFrameWasNode) nodeMode = NodeMode.CHOICES
         lastFrameWasNode = true
         shapeRenderer.projectionMatrix = batch.projectionMatrix
-        drawBackground(batch, "bg_reststop")
+        drawBackground(batch, run.currentDistrict.backgroundKey())
+        drawDistrictTitle(run.currentDistrict, batch)
 
         batch.begin()
         font.draw(batch, bundle.format("node.header"), 50f, 690f)
@@ -766,6 +769,45 @@ class CombatRenderer(private val bundle: I18NBundle) {
                 drawNodeButton(0, bundle.get("node.button.loan"), true, batch)
             }
         }
+    }
+
+    /**
+     * District title card (F2 R2.7): the district name + descriptor, drawn into the bounds
+     * [CombatLayout.districtTitle] returns — centred on the live world width, never a fixed 1280
+     * coordinate. Shown on district entrance (combat) and on the node screen.
+     */
+    private fun drawDistrictTitle(district: District, batch: SpriteBatch) {
+        val bounds = CombatLayout.districtTitle(worldWidth)
+        shapeRenderer.projectionMatrix = batch.projectionMatrix
+
+        // Panel + brass border (district-card treatment, per design.md).
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(navy950.r, navy950.g, navy950.b, 0.82f)
+        shapeRenderer.rect(bounds.x, bounds.y, bounds.width, bounds.height)
+        shapeRenderer.end()
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.setColor(brass500)
+        shapeRenderer.rect(bounds.x, bounds.y, bounds.width, bounds.height)
+        shapeRenderer.end()
+
+        val padX = 18f
+        batch.begin()
+        // Name: one line, top of the card.
+        font.data.setScale(1.5f)
+        font.color = ink100
+        font.draw(batch, bundle.get(district.name), bounds.x + padX, bounds.y + bounds.height - 18f)
+        font.data.setScale(1f)
+        // Descriptor: wrapped, up to three lines, below the name.
+        smallFont.data.setScale(0.72f)
+        smallFont.color = ink300
+        smallFont.draw(
+            batch, bundle.get(district.description),
+            bounds.x + padX, bounds.y + bounds.height - 64f,
+            bounds.width - 2f * padX, Align.left, true
+        )
+        smallFont.data.setScale(1f)
+        smallFont.color = Color.WHITE
+        batch.end()
     }
 
     private fun drawNodeButton(index: Int, label: String, enabled: Boolean, batch: SpriteBatch) {
