@@ -70,9 +70,18 @@ F2 SHALL NOT change any simulated outcome.
 - **AND** any difference fails the change
 
 #### Scenario: Enemies and rewards are untouched
-- **WHEN** `git diff` is read for `run/sequence.json`
-- **THEN** every `enemyId` and every `rewards` object is byte-identical; only added fields
-  appear
+- **WHEN** the slots are **parsed** from `run/sequence.json` before and after the change
+- **THEN** the list of `(enemyId, rewards.gold, rewards.cardChoices)` is identical, slot for
+  slot, in order
+
+  *Corrected 2026-08-28. This scenario used to say "byte-identical; only added fields appear",
+  and that is false about what shipped: adding `districtId` and `role` realigned every slot
+  line, so `git diff 6b50164^ 6b50164 -- app/src/main/assets/run/sequence.json` shows 9
+  removed and 9 added lines and not one pure addition. A scenario a reviewer cannot satisfy
+  against the merged code is not a requirement, it is a trap. The **values** are what F2
+  promised not to touch, so the values are what this scenario now asserts — verified
+  2026-08-28, all 8 slots identical: `thug 10/1, thug 10/1, loan_shark 15/1, thug 12/1,
+  loan_shark 18/2, loan_shark 20/1, collector 25/1, collector 30/0`.*
 
 ### Requirement: R2.6 — No new run phase
 
@@ -81,7 +90,13 @@ F2 SHALL NOT add a value to `RunManager.Phase`.
 #### Scenario: The phase machine is unchanged
 - **WHEN** `RunManager.Phase` is read after F2
 - **THEN** it is still `{ COMBAT, NODE, VICTORY, DEFEAT }`
-- **AND** none of the four exhaustive `when` sites over it required a new branch
+- **AND** none of the five `when (phase)` sites over it required a new branch
+
+  *Corrected 2026-08-28: this said "the four exhaustive `when` sites". There are five, and
+  only three are exhaustive — `CombatInputHandler.kt:213` and `NodePolicyTest.kt:32` have
+  `else` arms. F2 satisfies this scenario either way because it adds no phase, but the number
+  and the word "exhaustive" were both wrong, and this is a delta spec that merges into the
+  main spec on archive. See `tasks.md` 7.5.*
 
 ### Requirement: R2.7 — District identity is visible in play
 

@@ -29,9 +29,14 @@ Strict TDD. Every code task is RED before GREEN.
 
 ## 0. Baseline capture (do this first, it is the acceptance evidence)
 
-- [ ] 0.1 On the fork point, run `./gradlew test --tests '*RunSimulationHarnessTest*' --info`
-      and save the full printed report to `/tmp/f1-baseline.txt`. Not in the repo — it is
-      evidence for one PR, not an artifact.
+- [ ] 0.1 On the fork point, capture the harness report **and its hash** with the recipe in
+      `openspec/VERIFICATION-CHECKLIST.md` row C6, and record both in the PR body. **Do not
+      write the baseline to `/tmp`**: an independent verifier does not have your file, C3
+      forbids depending on one, and this project has already lost working state to a wiped
+      `/tmp`. The hash is the portable evidence. The pre-F1 value on `6b50164` is already
+      recorded in C6 — `b0313d603580`, measured under `LANG=es_ES.UTF-8`; the report prints
+      `54,0%` there and `54.0%` on `en_US`, so both sides of any comparison must run in the
+      same locale until F1 fixes the format string.
 - [ ] 0.2 Record in the PR body: greedy win rate, leverage win rate, both avg peak debts,
       won-run peak debt, defeat breakdowns. These are the numbers the change must reproduce.
 
@@ -71,7 +76,8 @@ Strict TDD. Every code task is RED before GREEN.
 
 ## 5. Zero-delta gate
 
-- [ ] 5.1 Re-run the harness. Diff the report against `/tmp/f1-baseline.txt`.
+- [ ] 5.1 Re-run the harness with the **same C6 recipe, in the same locale**, and compare its
+      hash against the baseline hash recorded in 0.1. No `/tmp` file on either side.
 - [ ] 5.2 **Identical, or the change is wrong.** No tolerance, no explaining away a
       one-seed difference.
 - [ ] 5.3 `./gradlew test` — all tests green, and the total grows by exactly the

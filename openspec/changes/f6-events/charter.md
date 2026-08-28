@@ -17,8 +17,26 @@ fiction that this setting already produced.
 ## The cost that is easy to underestimate
 
 **This phase changes the run phase machine.** `RunManager.Phase` is
-`{ COMBAT, NODE, VICTORY, DEFEAT }` with exhaustive `when` over it in four places:
-`CombatInputHandler.kt:34`, `GameScreen.kt:43`, `RunSimulator.kt:71`, `NodePolicyTest.kt:32`.
+`{ COMBAT, NODE, VICTORY, DEFEAT }`, and `when` dispatches over it in **five** places, of
+which only **three** are exhaustive:
+
+| Site | Exhaustive? |
+| --- | --- |
+| `CombatInputHandler.kt:34` | yes |
+| `GameScreen.kt:43` | yes |
+| `RunSimulator.kt:71` | yes |
+| `CombatInputHandler.kt:213` | **no** — `else -> Unit` |
+| `NodePolicyTest.kt:32` | **no** — `else -> error(...)` |
+
+*Corrected 2026-08-28. This charter used to say "four places" and list `NodePolicyTest.kt:32`
+among the exhaustive ones. **F6 is the phase that adds `EVENT`, so this is the file the error
+would actually have hurt.** Adding a `Phase` value gets you a compile error from the three
+exhaustive sites and **silence** from `CombatInputHandler.kt:213`, whose `else -> Unit`
+swallows the new phase: an event node would simply play no sound, and nothing would tell you.
+`NodePolicyTest.kt:32` fails at runtime with a readable message, which is second best but is
+not the compiler. **Open `CombatInputHandler.kt:213` deliberately — it is the one site that
+will not ask.** Command:*
+`git grep -n "when *( *\(run\|runManager\)\.phase" develop -- 'app/src/**/*.kt'`
 
 Adding `EVENT` is not additive content. It touches input, render, **the simulator**, and a
 test — and the simulator matters most, because a phase the sim cannot drive is a phase the

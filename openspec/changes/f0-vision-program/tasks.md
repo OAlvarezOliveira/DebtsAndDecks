@@ -4,9 +4,17 @@ Documentation only. No test-first cycle applies (nothing executable changes), bu
 blast-radius check in 5.2 is the equivalent gate.
 
 > **Reconciled 2026-08-28.** Every box below was unticked while the work it describes had
-> shipped in `b7bfe4a`/`986a46e`/`d20bdb3` on this branch — the file said F0 had not started.
-> Each tick below carries the command that established it, run from this worktree on branch
-> `docs/vision-program`. Boxes that are still open are open on purpose, and say why.
+> already shipped on this branch — the file said F0 had not started. Each tick below carries the
+> command that established it, run from this worktree on branch `docs/vision-program`. Boxes
+> that are still open are open on purpose, and say why.
+>
+> **The branch SHAs this file used to cite (`b7bfe4a`, `986a46e`, `d20bdb3`) are gone after the
+> merge.** This repo squash-merges — `git log --merges develop | wc -l` → 0 — so no commit of
+> this branch becomes an ancestor of `develop`, and a reader who runs `git show b7bfe4a` on a
+> fresh clone gets nothing. After PR #8 merges, locate this work by content instead:
+> `git log --oneline -S 'openspec/VERIFICATION-CHECKLIST' -- openspec/`. The honest test for any
+> SHA cited anywhere in this program is `git merge-base --is-ancestor <sha> develop`; `git show`
+> succeeding locally proves only that your worktree still holds the object.
 
 ## 1. Scaffold the dual store
 
@@ -18,9 +26,13 @@ blast-radius check in 5.2 is the equivalent gate.
       (`git check-ignore -v openspec/config.yaml` must exit non-zero).
       *`git check-ignore -v openspec/config.yaml` → no output, `rc=1`.*
 - [x] 1.4 `git add openspec/` in the **first** commit of the branch. Not later.
-      *`git show --name-only --format="" b7bfe4a` lists `openspec/config.yaml` and the whole
-      `openspec/changes/` tree; `b7bfe4a` is the output of
-      `git log --format=%H develop..HEAD | tail -1`.*
+      *Checked while the branch existed: `git show --name-only --format="" \
+      $(git log --format=%H develop..HEAD | tail -1)` listed `openspec/config.yaml` and the whole
+      `openspec/changes/` tree. **This check expires with the branch.** After the squash-merge
+      `develop..HEAD` is empty and the derivation returns nothing, so the box records a result
+      that can no longer be re-run rather than one a verifier can reproduce. What survives the
+      merge is the weaker but checkable fact that `openspec/` is tracked and not ignored —
+      `git ls-files openspec/ | wc -l` and 1.3's `git check-ignore`.*
 
 ## 2. Write the vision
 
@@ -45,10 +57,12 @@ blast-radius check in 5.2 is the equivalent gate.
       *No hunk of `git diff develop -- docs/GDD.md` touches it.*
 - [x] 3.5 Verify the delta shape: `git diff develop -- docs/GDD.md` shows no removed line
       that was true about `develop`.
-      *`git diff develop -- docs/GDD.md | rg '^-[^-]'` → 7 removed lines, all of them false
-      about `develop`: the enemy stat table (HP 24/40/56, contradicted by
-      `app/src/main/assets/enemies/all.json`), the "`LEVY` fires once per fight" claim, and a
-      stale "last updated" footer. Nothing true was dropped.*
+      *`git diff develop -- docs/GDD.md | rg -c '^-[^-]'` → **8** removed lines, all of them
+      false about `develop`: the enemy stat table — 4 lines, its header row included (HP
+      24/40/56, contradicted by `app/src/main/assets/enemies/all.json`) — the "`LEVY` fires once
+      per fight" claim, and a 3-line stale "last updated" footer. Nothing true was dropped. This
+      note said 7 until 2026-08-28: it counted the table's data rows and forgot its header,
+      which is exactly the kind of by-eye count `rg -c` exists to replace.*
 
 ## 4. Write the change artifacts
 

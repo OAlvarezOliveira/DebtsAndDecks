@@ -244,12 +244,23 @@ Delivered by C4 (`57b11c2`) — see the reworked definitions in the Card Pool se
 - `bounced_check` was **not** resolved by C4. It still sits close to `foreclosure_express`, and
   the comparison is deferred to the C8 balance pass.
 
-### MVP Scope (target — the pivot has shipped, this run structure has not)
+### MVP Scope (target — the pivot has shipped; the district re-cut has shipped as data, not on screen)
 
-> **Planned:** the 8 encounters stay 8 — the run length is fixed by owner decision
-> (2026-08-28). What changes is that they are re-cut into 3 named districts (3+3+2) with a
-> boss seat at the end of each. Metadata only, zero balance delta. See `docs/VISION.md` §4 D3
-> and change `f2-districts`.
+> **Shipped as data, 2026-08-28.** The 8 encounters stay 8 — the run length is fixed by owner
+> decision (2026-08-28). They are now re-cut into 3 named districts (3+3+2) with a boss seat at
+> the end of each: `f2-districts` PR1 was squash-merged into `develop` as **`6b50164`**, adding
+> `app/src/main/assets/districts/all.json`, `districtId` and `role` on every slot, and the
+> loader rejection of an unknown id. Metadata only, zero balance delta — which is why the table
+> below is unchanged and still correct. Confirm with
+> `git show develop:app/src/main/assets/districts/all.json`.
+>
+> **Not shipped:** the districts have no name on screen and no background. That is
+> `f2-districts` PR2, not started. See `docs/VISION.md` §4 D3.
+>
+> This paragraph corrects an earlier one that still read "this run structure has not [shipped]"
+> after `6b50164` had merged. Note that `develop`'s own copy of this file says nothing about
+> districts at all (`git show develop:docs/GDD.md | rg -ci district` → 0) and stays stale until
+> the branch carrying this edit merges.
 
 | Element | Target | Why |
 |---|---|---|
@@ -355,5 +366,8 @@ already (see the 2026-08-25 note at the top).
 
 *Last updated: 2026-08-28 — Keep this file in sync with code. C2, C4, C5 and C7 have landed.
 Forward-looking design now lives in `docs/VISION.md`; this document stays the record of what
-`develop` actually does. The next required update lands with F2 (`f2-districts`), which is the
-first change in the vision program that alters anything described above.*
+`develop` actually does. **F2 (`f2-districts`) PR1 has already merged**, as `6b50164`; the MVP
+Scope section above records what it changed. The next required update lands with F2 PR2
+(district identity on screen). F1 will not require one — it is confined to `app/src/test/`.
+This footer previously named F2 as the *next* change to alter anything above, which stopped
+being true the moment PR1 merged.*

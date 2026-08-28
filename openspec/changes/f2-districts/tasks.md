@@ -93,8 +93,16 @@ Strict TDD. Two chained PRs: **PR1 = model + data + zero-delta proof** (no UI, n
       records that `SlotRole` is deliberately not a `RunManager.Phase` value — see 7.5.*
 - [x] 2.6 Confirm the existing `RunSequenceTest` assertions — 8 slots, gold list
       `[10,10,15,12,18,20,25,30]` — are **untouched**.
-      *Untouched. The only test file edited for compilation was `RunManagerTest`, whose
-      fixture helper gained `districtId = "fixture"`. No assertion was weakened.*
+      *Untouched, and no assertion anywhere was weakened. Corrected 2026-08-28: this claimed
+      `RunManagerTest` was "the only test file edited", which
+      `git show --name-status --format="" 6b50164 | rg "src/test"` disproves — PR1 touched eight
+      files under `app/src/test/`. Four modified: `RunManagerTest` (fixture helper gains
+      `districtId = "fixture"` — the only one edited purely for compilation), `TestAssetLoader`
+      (gains `loadDistricts()`), and `ScriptedPolicy` + `LeveragePolicy` (the `instanceId` →
+      `cardId` tie-break, i.e. the determinism fix, not this task). Four added:
+      `DataLoaderDistrictTest`, `DistrictTest`, `HarnessDeterminismTest`, and the district cases
+      in `I18nBundleTest`. Task 1.3 four lines above already records `TestAssetLoader`, so this
+      file contradicted itself.*
 
 ## 3. Zero-delta gate
 
@@ -112,8 +120,15 @@ Strict TDD. Two chained PRs: **PR1 = model + data + zero-delta proof** (no UI, n
 
 - [x] 3.1 Re-run the harness; diff against the baseline.
 - [x] 3.2 Identical, or the change is wrong. *Claimed identical; the command and its output are checklist row C6's to carry, not this line's.*
-- [x] 3.3 `git diff run/sequence.json` shows only added fields — no `enemyId` or `rewards`
-      byte changed.
+- [x] 3.3 The **parsed** slots of `run/sequence.json` are unchanged: the list of
+      `(enemyId, rewards.gold, rewards.cardChoices)` is identical, slot for slot.
+      *Rewritten 2026-08-28. This task used to claim "only added fields — no `enemyId` or
+      `rewards` byte changed", and it was ticked while being false:
+      `git diff 6b50164^ 6b50164 -- app/src/main/assets/run/sequence.json` shows 9 removed and
+      9 added lines, because `districtId` and `role` realigned every slot line. Checklist row
+      C7 already said so; this line did not. The values are untouched and that is the claim
+      worth making — verified, all 8 slots: `thug 10/1, thug 10/1, loan_shark 15/1,
+      thug 12/1, loan_shark 18/2, loan_shark 20/1, collector 25/1, collector 30/0`.*
 
 ---
 
@@ -154,8 +169,16 @@ and proof, with no UI and no art, exactly as this file scoped it.
 - [x] 6.1 **RED** parity test: every `district.*` key exists in both `strings.properties` and
       `strings_es.properties`.
       *Shipped early, in PR1 rather than PR2, because the catalog was useless without it.
-      Three tests added to `I18nBundleTest`, one of them data-driven over the real catalog,
-      so adding a district without translating it fails the build.*
+      **Four** tests added to `I18nBundleTest`, not three
+      (`git diff 6b50164^ 6b50164 -- app/src/test/java/com/debtsdecks/core/i18n/I18nBundleTest.kt
+      | rg '^\+.*fun `'`): `English district keys resolve`,
+      `Spanish district keys resolve with neutral thematic translations`,
+      `every district in the catalog is translated in both bundles` — the data-driven one, so
+      adding a district without translating it fails the build — and
+      `a key present only in English resolves to English through the bundle, which is why parity
+      reads raw files`, the guard against `I18NBundle`'s parent fallback making the whole check
+      vacuous. Counting `@Test` in the file gives 24 and answers a different question: that is
+      the file's total, not what `6b50164` added.*
 - [x] 6.2 **GREEN** author the district names and descriptors in EN, noir tone, neutral
       professional register.
 - [x] 6.3 Translate to ES. Neutral Spanish, no regional forms, no voseo.

@@ -49,7 +49,13 @@ edit is either additive or a marked forward-reference.
 ## Review workload forecast
 
 `docs/VISION.md` ~215 lines · GDD delta ~60 lines · openspec tree ~900 lines across 20 files.
-**Total ~1200 lines, all prose.** Over the 400-line threshold by volume, but it is
+**Total ~1200 lines, all prose.**
+
+*The forecast missed by roughly 2x, recorded 2026-08-28.* At `0faa08d`,
+`git diff --stat develop...HEAD | tail -1` reports **24 files changed, 2236 insertions(+),
+8 deletions(-)**. Almost the whole gap is the reconciliation evidence every artifact now
+carries — the command each tick cites. The figure grows with every further commit on this
+branch, so re-run the command; do not trust this number. Over the 400-line threshold by volume, but it is
 documentation with no execution semantics, so a single PR is defensible. If the reviewer
 wants it split, the natural cut is **PR1: `docs/` (VISION + GDD delta)**, **PR2:
 `openspec/` (tree + FV/F0/F1/F2 artifacts)**, **PR3: charters F3-F8**.

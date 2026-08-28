@@ -33,6 +33,10 @@ The last row is the reason the program starts with a validation phase instead of
 
 ## Program shape
 
-`FV -> F0 -> F1 -> F2 -> F3 -> F4 -> F5 -> F6 -> F7 -> F8`. See `docs/VISION.md` for the
+`FV -> F0 -> F1 -> F2 -> F3 -> F4 -> F5 -> F6 -> F7 -> F8` is the **planned** order, and it is
+already out of date: **F2 PR1 merged into `develop` as `6b50164` on 2026-08-28, before F1
+started**, because F2 PR1 carried the harness determinism fix that F1's own acceptance argument
+depends on. The sequence is a default, not a constraint. The constraints are the **Depends on**
+and **Blocks** lines in each proposal; read those, not this arrow. See `docs/VISION.md` for the
 reasoning and `openspec/changes/<phase>/` for the artifacts. This batch specs FV (short
 proposal), F0, F1 and F2 in full; F3-F8 are one-page charters on purpose.

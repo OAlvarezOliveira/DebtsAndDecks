@@ -14,7 +14,9 @@
 project:
   name: Debts & Decks
   id: debtsanddecks
-  repo: /home/oscardev/DebtsAndDecks
+  # GitHub slug, not a filesystem path: the previous absolute path was one machine's checkout
+  # and resolved to nothing anywhere else, including every worktree of this same clone.
+  repo: OAlvarezOliveira/DebtsAndDecks
   branch: develop
   stack: Kotlin + LibGDX (Android), JUnit 5, Gradle KTS
   language:

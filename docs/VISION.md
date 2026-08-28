@@ -201,6 +201,12 @@ The ordering principle: **instrument, then structure, then currency, then the th
 spend it.** The alternative — treasury last — forces F4 through F7 to be calibrated against
 an economy that is then replaced, and recalibrated wholesale afterwards.
 
+> **The first two already swapped, 2026-08-28.** F2 PR1 merged as `6b50164` before F1 started,
+> because the instrument F1 exists to normalize was itself non-deterministic and the fix shipped
+> inside F2 PR1. "Instrument first" survives as a principle — the gate was repaired before
+> anything was measured against it — but the phase *numbers* are not the order of execution.
+> The real edges are the **Depends on** / **Blocks** lines in each proposal.
+
 ## 6. What this vision does not do
 
 - It does not change the run length. Eight combats, decided by the owner. Re-length is a

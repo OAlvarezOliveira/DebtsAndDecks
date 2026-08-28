@@ -58,8 +58,11 @@ structure. One shape, learned once.
 background from it instead of the single `bg_combat`.
 
 Nothing about the phase machine changes. This is the load-bearing constraint of the phase:
-adding a `Phase` value would cost four exhaustive `when` sites plus a test, and F2 has no
-reason to pay that. F6 and F7 do, and their charters say so.
+adding a `Phase` value would cost **five** `when (phase)` sites — of which only three are
+exhaustive, so two of them would take the new value silently rather than failing to compile —
+and F2 has no reason to pay that. F6 and F7 do, and their charters carry the breakdown.
+*Corrected 2026-08-28: this said "four exhaustive sites"; see `tasks.md` 7.5 for the table and
+the command.*
 
 Text placement goes through the existing `HandLayout` / `CombatLayout` helpers. There is no
 fixed 1280 world — the viewport is `ExtendViewport` and layout is a pure function of width.

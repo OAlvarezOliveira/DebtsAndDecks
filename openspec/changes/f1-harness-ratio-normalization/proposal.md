@@ -87,9 +87,16 @@ equivalent" invariant) and F1 preserves it verbatim rather than quietly making i
 the only proof of that is the sweep output. If the report differs by a single seed, the
 change is wrong and must not be argued into acceptance.
 
-Second-order risk: F1 depends on FV. If FV's verbs move the win band, F1's ratios must be
-computed from the **post-FV** baseline. Normalizing against today's numbers and then landing
-FV would bake a stale anchor into the gate.
+Second-order risk: **FV can still invalidate F1's anchor later — but F1 does not wait for it.**
+This is not a dependency, and this paragraph used to say "F1 depends on FV", flatly contradicting
+the **Depends on** line at the top of this same file. The header wins: FV cannot complete (no
+`signingConfig`, no keystore, so its external playtest is undistributable) and blocking F1 on it
+would block F1 forever.
+
+What remains true is the risk: if FV's verbs eventually move the win band, F1's ratios must be
+re-derived from the **post-FV** baseline. F1 mitigates that by naming the anchor in exactly one
+place (`HarnessBands`) rather than by waiting — re-deriving after FV is then a one-file edit, not
+a re-audit. The mistake to avoid is treating the anchor as settled once it is written down.
 
 ## Review workload forecast
 
