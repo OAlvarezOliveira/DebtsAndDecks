@@ -52,7 +52,11 @@ object ScriptedPolicy : RunPolicy {
         val best = pool.maxWith(
             compareBy<CardInstance> { damagePerCost(it) }   // highest damage/cost
                 .thenBy { it.baseDamage }                   // then highest raw damage
-                .thenByDescending { it.instanceId }         // then lowest id (alphabetical)
+                .thenBy { it.cardId }                       // then lowest card id (alphabetical)
+            // NOT instanceId: that is a fresh UUID.randomUUID() per card instance, so this
+            // tie-break used to pick at random and the gate answered differently on identical
+            // input. cardId is the definition id and is stable across runs.
+            // See HarnessDeterminismTest.
         )
                 // Debt-as-Leverage safety: never play a shortfall attack whose borrow would cross the
         // Execution line (debt > EXECUTION_THRESHOLD is an instant loss). End the turn instead.

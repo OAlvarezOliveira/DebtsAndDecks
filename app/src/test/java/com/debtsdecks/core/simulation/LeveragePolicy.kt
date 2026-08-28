@@ -73,7 +73,7 @@ object LeveragePolicy : RunPolicy {
             val bestAffordable = affordable.maxWith(
                 compareBy<CardInstance> { projectedDamage(it, state.debt) }
                     .thenBy { projectedDamage(it, state.debt) / it.cost }
-                    .thenBy { it.instanceId }
+                    .thenBy { it.cardId }   // stable definition id; instanceId is a random UUID
             )
             return ScriptedPolicy.CombatAction.Play(bestAffordable.instanceId, ScriptedPolicy.enemyTargetId(state))
         }
