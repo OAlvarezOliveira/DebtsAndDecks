@@ -58,14 +58,13 @@ class CombatRenderer(private val bundle: I18NBundle) {
         CardType.POWER to loadTexture("art/card_frame_power.png")
     )
 
-    // Keyed by EnemyInstance.Intent.iconName
-    private val intentTextures: Map<String, Texture> = mapOf(
-        "intent_attack" to loadTexture("art/intent_attack.png"),
-        "intent_buff" to loadTexture("art/intent_buff.png"),
-        "intent_debuff" to loadTexture("art/intent_debuff.png"),
-        "intent_multi" to loadTexture("art/intent_multi.png"),
-        "intent_levy" to loadTexture("art/intent_levy.png")
-    )
+    /**
+     * Derived from [INTENT_ICON_PATHS], so it covers every [IntentType] by construction. It used to
+     * be five hand-typed string literals, which a sixth intent would not have extended: the lookup
+     * below treats a missing key as "draw nothing", so the bar rendered blank and no build noticed.
+     */
+    private val intentTextures: Map<IntentType, Texture> =
+        INTENT_ICON_PATHS.mapValues { (_, path) -> loadTexture(path) }
 
     // Screen backdrops, keyed by screen. A missing file falls back to the original
     // gradient instead of crashing, same contract as the card art below.
@@ -301,15 +300,14 @@ class CombatRenderer(private val bundle: I18NBundle) {
         shapeRenderer.rect(x, y, w, barH)
         shapeRenderer.end()
 
-        val icon = intentTextures[enemy.intentIconName]
-        val textX = if (icon != null) x + 36f else x + 10f
+        // Total by construction: intentTextures is keyed by the enum and built from its entries,
+        // so there is no missing-icon branch left to take.
+        val icon = intentTextures.getValue(enemy.intentType)
 
         batch.begin()
-        if (icon != null) {
-            val iconSize = 26f
-            batch.draw(icon, x + 4f, y + (barH - iconSize) / 2f, iconSize, iconSize)
-        }
-        font.draw(batch, enemy.intentDisplayName, textX, y + 20f)
+        val iconSize = 26f
+        batch.draw(icon, x + 4f, y + (barH - iconSize) / 2f, iconSize, iconSize)
+        font.draw(batch, enemy.intentDisplayName, x + 36f, y + 20f)
         batch.end()
     }
 
@@ -932,6 +930,15 @@ class CombatRenderer(private val bundle: I18NBundle) {
     }
 
     companion object {
+        /**
+         * Where each intent's icon lives, derived from the enum rather than listed by hand. Adding
+         * an [IntentType] extends this map for free; `IntentTypeCoverageTest` asserts both that it
+         * stays derived and that every path it yields is a file on disk, so a value declared without
+         * its PNG fails the build instead of shipping a blank intent bar.
+         */
+        internal val INTENT_ICON_PATHS: Map<IntentType, String> =
+            IntentType.entries.associateWith { "art/${it.iconName}.png" }
+
         /**
          * How much of the card the frame PNG's opaque border covers on each side, measured off
          * art/card_frame_attack.png (336x480): 46px of 336 horizontally, 62px of 480 vertically.

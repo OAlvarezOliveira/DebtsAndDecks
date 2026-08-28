@@ -1,6 +1,7 @@
 package com.debtsdecks.core.enemies
 
 import com.debtsdecks.core.i18n.Localizer
+import com.debtsdecks.gdx.render.CombatRenderer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -45,12 +46,31 @@ class IntentTypeCoverageTest {
     }
 
     @Test
-    fun `every intent type declares an icon asset that exists`() {
-        for (type in IntentType.entries) {
-            val icon = File("src/main/assets/art/${type.iconName}.png")
+    fun `the renderer derives its icon paths from the enum, not from a hand-written list`() {
+        // The gap this closes: intentTextures used to be five string literals typed by hand, and
+        // the lookup that reads it treats a miss as "draw nothing". A sixth IntentType with its PNG
+        // committed passed every other test in this file and still rendered a blank bar, because
+        // nothing connected the enum to the map. Derivation from `entries` makes that unrepresentable;
+        // this test is what stops the literals coming back.
+        assertEquals(
+            IntentType.entries.toSet(),
+            CombatRenderer.INTENT_ICON_PATHS.keys,
+            "CombatRenderer.INTENT_ICON_PATHS must cover every IntentType and be derived from " +
+                "IntentType.entries -- a hand-maintained map goes stale silently"
+        )
+    }
+
+    @Test
+    fun `every icon the renderer will load exists on disk`() {
+        // Reads the renderer's own paths rather than rebuilding them here. The previous version of
+        // this test built the "art/<iconName>.png" string itself, so it proved a file existed at a
+        // path nothing was obliged to use.
+        for ((type, path) in CombatRenderer.INTENT_ICON_PATHS) {
+            val icon = File("src/main/assets/$path")
             assertTrue(
                 icon.isFile,
-                "${type.name} declares icon '${type.iconName}', but ${icon.path} does not exist"
+                "${type.name} declares icon '${type.iconName}', so the renderer will load " +
+                    "'$path', but ${icon.path} does not exist"
             )
         }
     }
