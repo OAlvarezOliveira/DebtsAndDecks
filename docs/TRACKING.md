@@ -102,10 +102,15 @@ candidate, not a target change.
 **Done:**
 - Merged **PR #9** (F1 ratio bands) and **PR #10** (tracking) — `develop` → `c8ebcd3`.
 - Merged **PR #8** (vision SDD programme) — `3a18e4c`: `openspec/` + `docs/VISION.md` + GDD amendments on trunk; roadmap now governed in-tree (`openspec/project.md`).
-**Next:** P2 playtest humano en dispositivo (full loop con distritos, C7 node sign-off, economy feel, gold-sink decision) → después F3 treasury o FV según `openspec/project.md`.
+**Next:** P2 human playtest on device (full loop with districts, C7 node sign-off, economy feel, gold-sink decision) → then F3 treasury or FV, per `openspec/project.md`.
 
 ### 2026-08-28 (Session — F1 harness-ratio-normalization delivered)
-**Goal:** Make the balance gate survive an economy re-scale: every harness debt threshold becomes a FRACTION of `DebtConfig.EXECUTION_THRESHOLD` instead of an absolute (SDD change `f1-harness-ratio-normalization`, R1.1–R1.5; artifacts on `docs/vision-program`, PR #8).
+**Goal:** Make the balance gate survive an economy re-scale: every harness debt threshold becomes a FRACTION of `DebtConfig.EXECUTION_THRESHOLD` instead of an absolute (SDD change `f1-harness-ratio-normalization`, R1.1–R1.5).
+**Its artifact folder is not on `develop`.** F1 shipped as `3a7c201` while the
+snapshot on the vision branch still described F1 as unstarted, so PR #8 deliberately left the
+folder out rather than land a false one — `openspec/project.md` says so, and
+`git ls-tree -r develop --name-only | grep -i f1` returns no match. Locate the work by content:
+`git log --oneline -S 'HarnessBands' develop -- app/src/test/`.
 **Done:**
 - **`HarnessBands`** (test source set): single scale-free threshold source — 0.50/0.90/0.50/0.70/0.90/0.50 of the execution line — with LIVE getter derivation (a spike mutating `EXECUTION_THRESHOLD` is picked up on next access); `HarnessBandsTest` proves band identity at 50 and correct ratios at 100.
 - **Policies re-anchored**: `LeveragePolicy.LEVERAGE_TARGET` (was 35), `NodePolicy.SAFE_AFTER_LOAN` (45) and `REPAY_BAND` (25) now derive from `HarnessBands`; `LOAN_GOLD_NEED` stays absolute on purpose (coupled to gold, no anchor against the death line — deferred to F3).
