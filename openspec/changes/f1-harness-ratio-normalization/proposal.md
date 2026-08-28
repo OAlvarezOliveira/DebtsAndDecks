@@ -1,12 +1,18 @@
 # F1 — Normalize the balance gate to ratios
 
-**Status:** proposed, unverified. **Date:** 2026-08-28.
+**Status:** proposed, unverified. **Date:** 2026-08-28. **Unblocked:** 2026-08-28.
 
-> **Blocked until PR #7 merges (added 2026-08-28).** This phase's entire acceptance argument
-> is "the harness report is identical before and after". On `develop` the harness is
-> non-deterministic, so that sentence has no meaning: two runs of the same code disagree.
-> `f02b421` fixes it. Starting F1 before that merges means fighting noise.
-**Depends on:** FV deliverable 1 (the new intent verbs re-baseline the numbers F1 anchors).
+> **Was blocked until PR #7 merged; it has.** This phase's entire acceptance argument is
+> "the harness report is identical before and after". That sentence had no meaning while
+> the harness was non-deterministic. The fix is on `develop` in the squash commit
+> `6b50164`; PR #7 was squash-merged, so its individual commits are not on the trunk's
+> history and citing them sends a reader nowhere. Locate the fix by content instead:
+> `git log --oneline -S 'thenBy { it.cardId }' -- app/src/test/java/com/debtsdecks/core/simulation/`
+>
+> **F1 may start.** `tasks.md` carries the same note.
+**Depends on:** nothing outstanding. This previously read "FV deliverable 1"; `tasks.md`
+6.1 and checklist row E6 overturn that — FV cannot complete (no `signingConfig`, no
+keystore, so its external playtest is undistributable) and is independent of this phase.
 **Blocks:** F3. Nothing may re-scale the economy while the gate is coupled to the old scale.
 
 ## Why

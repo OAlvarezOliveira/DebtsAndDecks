@@ -1,13 +1,16 @@
 # F2 — Districts
 
-**Status:** proposed, unverified. **Date:** 2026-08-28.
+**Status:** PR1 merged; PR2 not started. **Date:** 2026-08-28.
 
-> **PR1 shipped 2026-08-28** as commit `38e0b9b` on branch `feat/districts`
-> ([PR #7](https://github.com/OAlvarezOliveira/DebtsAndDecks/pull/7)), together with
-> `f02b421`, which had to fix harness non-determinism before this phase's zero-delta gate
-> could mean anything at all. See `tasks.md` for what shipped, what the shipped names
-> actually are, and the one PR1 task that is still open (2.4, loader rejection of an unknown
-> `districtId`). **PR2 — design system, art, render — is not started.**
+> **PR1 shipped and merged 2026-08-28** as
+> [PR #7](https://github.com/OAlvarezOliveira/DebtsAndDecks/pull/7), squash-merged into
+> `develop` as **`6b50164`** — cite that, not the branch commits, which are not on the
+> trunk's history. It carried the districts, the harness determinism fix (without which
+> this phase's zero-delta gate could not mean anything), and the loader rejection of an
+> unknown `districtId`. **Every PR1 task is now done, 2.4 included.** See `tasks.md` for
+> what shipped and for the shipped names, which win over the planned ones.
+>
+> **PR2 — design system, art, render — is not started.**
 **Depends on:** F0 (the vision names the districts). **Blocks:** F5 (bosses need zone seats).
 **Balance delta:** zero, and provably so. That is the whole point of putting it here.
 
@@ -49,9 +52,14 @@ on entry and on the node screen. All prose lives in the i18n bundles as keys.
 - The number of combats. Eight, decided by the owner. Re-length is a separate, later change.
 - Any enemy, any reward, any economy constant.
 - The `RunManager.Phase` enum. **No new phase.** F2 adds no `EVENT` or `MARKET` — those are
-  F6 and F7, and each of them has to pay for four exhaustive `when` sites
-  (`CombatInputHandler.kt:34`, `GameScreen.kt:43`, `RunSimulator.kt:71`,
-  `NodePolicyTest.kt:32`). F2 pays none of that, because it introduces no phase.
+  F6 and F7, and each of them has to pay for **five** `when (phase)` sites, of which only
+  **three** are exhaustive: `CombatInputHandler.kt:34`, `GameScreen.kt:43` and
+  `RunSimulator.kt:71` fail to compile, while `CombatInputHandler.kt:213` (`else -> Unit`)
+  swallows the new phase silently and `NodePolicyTest.kt:32` (`else -> error(...)`) fails only
+  at runtime. *Corrected 2026-08-28: this originally said "four exhaustive sites" and listed
+  `NodePolicyTest.kt:32` among them, which would have let F6/F7 trust the compiler for a case
+  it does not cover. See `tasks.md` 7.5 for the command and the table.* F2 pays none of it,
+  because it introduces no phase.
 
 ## Acceptance: zero delta, measured
 

@@ -59,10 +59,14 @@ project `debtsanddecks`.
 F0 SHALL change no file outside `docs/` and `openspec/`.
 
 #### Scenario: Verifying the blast radius
-- **WHEN** a reviewer runs `git diff --stat develop...HEAD`
+- **WHEN** a reviewer runs `git diff --name-only develop...HEAD`
 - **THEN** every path in the output starts with `docs/` or `openspec/`
-- **AND** `./gradlew test` passes with the same 180 tests as on `develop`, none added, none
-  changed
+- **AND** `./gradlew test` passes with the **same count as the merge-base**, none added, none
+  changed — `git merge-base develop HEAD` then count `@Test` on both sides. *Corrected
+  2026-08-28: this scenario originally hardcoded 180. An absolute count is not a property of
+  F0; it is a property of whatever `develop` happened to hold the day this was written, and
+  it went stale the moment PR #7 merged (199). A requirement that a later true merge makes
+  false was never a requirement.*
 
 ### Requirement: R0.5 — The program is delivered unverified, with a checklist
 

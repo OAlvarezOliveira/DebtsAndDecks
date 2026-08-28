@@ -7,14 +7,25 @@ Strict TDD. Every code task is RED before GREEN.
 > deterministic, and on `develop` it is **not**: three sweeps of identical code returned
 > 53.5% / 54.0% / 54.5% greedy win rate, because the card-choice comparators tie-broke on
 > `CardInstance.instanceId`, a fresh `UUID.randomUUID()` per instance. The fix is
-> `f02b421`, which ships in [PR #7](https://github.com/OAlvarezOliveira/DebtsAndDecks/pull/7).
+> The fix ships in [PR #7](https://github.com/OAlvarezOliveira/DebtsAndDecks/pull/7).
 >
 > ~~**Do not start F1 until PR #7 is merged.**~~ **Unblocked 2026-08-28:** PR #7 was
-> squash-merged into `develop` as `6b50164`. The determinism fix is on `develop` and the
-> harness now reproduces byte-identically across runs (verified: two consecutive sweeps of
-> `6b50164` produced the same output, greedy 54.0% / peak debt 30.8). Confirm before
-> starting: `rg -n 'thenBy \{ it.cardId \}' app/src/test/java/com/debtsdecks/core/simulation/`
-> returns two hits, and `HarnessDeterminismTest` exists and passes. F1 may begin.
+> squash-merged into `develop` as `6b50164`. Because it was squashed, the branch commits
+> are not on the trunk's history — cite `6b50164`, or find the change by content.
+>
+> **Do not take that on trust. Run these first; the phase's whole argument rests on the
+> harness being reproducible:**
+>
+> ```
+> git log --oneline -S 'thenBy { it.cardId }' -- app/src/test/java/com/debtsdecks/core/simulation/
+> fd -t f 'HarnessDeterminismTest.kt' app/src/test
+> ./gradlew testDebugUnitTest --tests '*HarnessDeterminismTest*'
+> ```
+>
+> Then confirm reproducibility yourself rather than believing this file: run
+> `./gradlew testDebugUnitTest --tests '*RunSimulationHarnessTest*' --rerun-tasks` twice
+> and diff the `<system-out>` of `app/build/test-results/testDebugUnitTest/*.xml` between
+> the two runs. Identical output means the gate is usable and **F1 may begin.**
 
 ## 0. Baseline capture (do this first, it is the acceptance evidence)
 

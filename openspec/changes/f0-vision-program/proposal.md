@@ -29,7 +29,7 @@ precedent in this project of an apply agent deleting untracked files under
 
 ## What does not change
 
-No Kotlin. No JSON. No assets. No tests. `git diff --stat` after F0 must show `docs/` and
+No Kotlin. No JSON. No assets. No tests. `git diff --name-only` after F0 must show `docs/` and
 `openspec/` only — that is the acceptance shape, and it is checkable in one command.
 
 ## Non-goals

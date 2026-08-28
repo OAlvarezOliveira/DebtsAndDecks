@@ -5,16 +5,23 @@ Strict TDD. Two chained PRs: **PR1 = model + data + zero-delta proof** (no UI, n
 
 > **Reconciled 2026-08-28.** PR1 was implemented and opened as
 > [PR #7](https://github.com/OAlvarezOliveira/DebtsAndDecks/pull/7), branch
-> `feat/districts`, commit `38e0b9b`. The boxes below are ticked against what that commit
-> actually contains, not against what this file originally asked for. Where the shipped
+> `feat/districts`. The boxes below are ticked against what that branch actually
+> contained, not against what this file originally asked for. Where the shipped
 > names differ from the names planned here, **the shipped name wins** and is recorded
 > inline — renaming working code to match a plan is churn, not progress.
 >
-> PR1's acceptance gate (§3) depends on `f02b421`, in the same PR. See the note in §3.
+> PR1's acceptance gate (§3) depends on the determinism fix, in the same PR. See §3.
 >
 > **Updated 2026-08-28, after the merge.** PR #7 was squash-merged into `develop` as
-> `6b50164`. Task 2.4, left open at reconciliation time, was implemented in `c018648`
-> before the merge and is now ticked. Two independent verification passes ran over the
+> **`6b50164`**. That is the only SHA a reader can follow: a squash discards the branch
+> commits, so `38e0b9b`, `f02b421` and the rest are **not** ancestors of `develop` and never
+> appear in `git log develop`. In a worktree that still has the deleted branch's objects they
+> resolve, which is exactly the trap — `git show 38e0b9b` succeeds locally and fails for
+> everyone who clones. `git merge-base --is-ancestor <sha> develop` is the test that does not
+> lie. Where this file needs to point at a
+> specific change, it uses a content search (`git log -S`) rather than a branch SHA.
+> Task 2.4, left open at reconciliation time, was implemented before the merge and is now
+> ticked. Two independent verification passes ran over the
 > PR; between them they corrected three claims and forced one test to be rewritten —
 > recorded in §8.4 and in the PR description. **PR1 is complete.** What remains in F2
 > is PR2 in its entirety.
@@ -22,15 +29,17 @@ Strict TDD. Two chained PRs: **PR1 = model + data + zero-delta proof** (no UI, n
 ## 0. Baseline capture
 
 - [x] 0.1 On the fork point, run the harness and save the printed report.
-      *Done during PR #7. Note the ordering correction in §3: a baseline taken before
-      `f02b421` is not reproducible, so the usable baseline is `develop` + `f02b421`.*
+      *Done during PR #7. Note the ordering correction in §3: a baseline taken before the
+      determinism fix is not reproducible. Post-merge this is moot — the fix is on
+      `develop`, so a baseline taken from `develop` is now valid on its own.*
 - [x] 0.2 Record the six headline numbers in the PR1 body.
 
 ---
 
 # PR1 — `feat(run): district model + data + zero-delta proof`
 
-**Shipped as `38e0b9b` on branch `feat/districts` (PR #7), not `feat/f2-districts`.**
+**Shipped on branch `feat/districts` (PR #7), not `feat/f2-districts`; on `develop` as
+`6b50164`.**
 
 ## 1. District catalog
 
@@ -62,12 +71,20 @@ Strict TDD. Two chained PRs: **PR1 = model + data + zero-delta proof** (no UI, n
       slots three, six and eight", "a boss seat is always the last slot of its district".
       Plus "street slots stay street so the reskin adds no hidden encounter".*
 - [x] 2.4 **RED** an unknown `districtId` fails at load, naming the id.
-      *Done in `c018648`, after this file was first reconciled. `DataLoader.loadRunSequence`
-      now loads the district catalog from the same `AssetSource` and `require`s every
-      slot's `districtId` to be in it, failing with the slot index, the enemy id, the
-      offending id and the known set. The test was verified red before the production
-      change and green after. The check is on the production path: `di/Module.kt` binds
+      *Done after this file was first reconciled. `DataLoader.loadRunSequence` now loads
+      the district catalog from the same `AssetSource` and `require`s every slot's
+      `districtId` to be in it, failing with the slot index, the enemy id, the offending id
+      and the known set. The check is on the production path: `di/Module.kt` binds
       `single<RunSequence> { DataLoader.loadRunSequence(get()) }`.*
+      *Reproduce on `develop`:*
+      `rg -n -A12 'fun loadRunSequence' app/src/main/java/com/debtsdecks/core/data/DataLoader.kt`
+      *and the test:*
+      `./gradlew testDebugUnitTest --tests '*DataLoaderDistrictTest*'`
+      *(4 tests). To see it fail without the production change, restore the pre-merge
+      version of that one file —*
+      `git show "$(git log -1 --format=%H -S'names an unknown district' -- app/src/main/java/com/debtsdecks/core/data/DataLoader.kt)^:app/src/main/java/com/debtsdecks/core/data/DataLoader.kt"`
+      *— run the test class, then restore that exact path with `git checkout -- <path>`.
+      Never a wildcard: this checkout has had uncommitted work destroyed that way.*
       *Known limit, deliberately not addressed: the guard is one-directional. A district
       in the catalog that no slot references is not detected.*
 - [x] 2.5 **GREEN** add `SlotRole`, extend `EncounterSlot`, amend `sequence.json`.
@@ -88,13 +105,13 @@ Strict TDD. Two chained PRs: **PR1 = model + data + zero-delta proof** (no UI, n
 > a fresh `UUID.randomUUID()` per instance. Any zero-delta claim was unprovable, for this
 > change or any other.
 >
-> `f02b421` fixes that (tie-break on `cardId`, with `HarnessDeterminismTest` as the
-> regression) and ships in the same PR. **The valid comparison is `develop` + `f02b421`
+> The fix (tie-break on `cardId`, with `HarnessDeterminismTest` as the regression) ships
+> in the same PR. **At the time, the valid comparison was `develop` + that fix
 > versus the full branch — not `develop` versus the branch.** Anyone re-running this gate
 > from `develop` alone will chase a phantom diff.
 
 - [x] 3.1 Re-run the harness; diff against the baseline.
-- [x] 3.2 Identical, or the change is wrong. *Identical.*
+- [x] 3.2 Identical, or the change is wrong. *Claimed identical; the command and its output are checklist row C6's to carry, not this line's.*
 - [x] 3.3 `git diff run/sequence.json` shows only added fields — no `enemyId` or `rewards`
       byte changed.
 
@@ -110,6 +127,13 @@ and proof, with no UI and no art, exactly as this file scoped it.
 - [ ] 4.1 Extract from `Arts/Debts & Decks Design System.zip` into a tracked
       `docs/DESIGN-SYSTEM.md`: palette, type scale, spacing, district title-card treatment.
       Scope it to what F2 uses. Cite the ZIP as provenance.
+      > **This input is not in the repository.** `git ls-files Arts/` returns nothing and
+      > `.gitignore` excludes the whole directory, so a fresh clone cannot run this task at
+      > all — it depends on a file that exists only on the owner's machine. That is the exact
+      > condition the proposal calls out ("a style guide no other machine can read is not a
+      > style guide"), so the task is blocked on the owner producing the ZIP's contents, not
+      > on anything an implementer can do. Whoever picks up PR2 must ask for it first rather
+      > than inventing a palette and calling it extraction.
 - [ ] 4.2 Confirm it is tracked: `git ls-files docs/DESIGN-SYSTEM.md` is non-empty.
 
 ## 5. Art, with the pipeline fix applied first
@@ -145,10 +169,26 @@ and proof, with no UI and no art, exactly as this file scoped it.
 - [ ] 7.4 **RED then GREEN** layout test: the title position derives from viewport width via
       the existing layout helpers. No fixed 1280-space coordinate.
 - [x] 7.5 Confirm `RunManager.Phase` is still `{ COMBAT, NODE, VICTORY, DEFEAT }` and none of
-      the four exhaustive `when` sites gained a branch.
-      *Held. `SlotRole` was introduced as a separate enum precisely so that
-      `CombatInputHandler.kt:34`, `GameScreen.kt:43`, `RunSimulator.kt:71` and
-      `NodePolicyTest.kt:32` did not have to change for presentation data.*
+      the `when (phase)` sites gained a branch. `SlotRole` was introduced as a separate enum
+      precisely so that no phase dispatch had to change for presentation data.
+      *Held, but the count in this task was wrong and is corrected here.
+      `git grep -n "when *( *\(run\|runManager\)\.phase" develop -- 'app/src/**/*.kt'`
+      returns **five** sites, not four, and only **three** of them are exhaustive:*
+
+      | Site | Exhaustive? |
+      | --- | --- |
+      | `CombatInputHandler.kt:34` | yes |
+      | `GameScreen.kt:43` | yes |
+      | `RunSimulator.kt:71` | yes |
+      | `CombatInputHandler.kt:213` | **no** — `else -> Unit` |
+      | `NodePolicyTest.kt:32` | **no** — `else -> error(...)` |
+
+      *This matters for F6/F7, not for F2. F2 adds no phase, so nothing here changes either
+      way. But a phase added later gets a compile error from three sites and **silence** from
+      `CombatInputHandler.kt:213`, whose `else -> Unit` swallows it: the new phase would just
+      play no sound and nobody would be told. `NodePolicyTest.kt:32` fails at runtime with a
+      readable message, which is second best. Whichever phase adds `EVENT` or `MARKET` has to
+      open `CombatInputHandler.kt:213` deliberately, because the compiler will not.*
 
 ## 8. Deliver
 
@@ -158,8 +198,10 @@ and proof, with no UI and no art, exactly as this file scoped it.
 - [x] 8.3 PR1 body carries the sweep diff.
       *PR2's screenshot requirement is still open.*
 - [x] 8.4 Do not self-close. Independent pass re-runs 3.1 and eyeballs 5.3.
-      *Two independent passes ran on PR #7, each without knowledge of the implementation.
-      The first confirmed the zero-delta and determinism claims but found the i18n parity
+      *Two independent passes ran on PR #7, each without knowledge of the implementation;
+      their findings and the commands behind them are in the PR #7 description, which is
+      the durable record — this line only summarizes it.*
+      *The first re-ran the zero-delta and determinism checks and found the i18n parity
       test vacuous — `I18NBundle` falls back to the parent bundle, so a Spanish-missing
       key resolved to English and passed — and found a wrong comment on the one line a
       reader is sent to inspect. The second found the first attempt at fixing that i18n
