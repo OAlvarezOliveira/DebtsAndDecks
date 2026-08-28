@@ -11,4 +11,5 @@ interface AssetSource {
     fun readCards(): String
     fun readEnemies(): String
     fun readRunSequence(): String
+    fun readDistricts(): String
 }

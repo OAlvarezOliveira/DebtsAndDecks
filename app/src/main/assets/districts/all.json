@@ -1,0 +1,17 @@
+[
+  {
+    "id": "slaughterhouse",
+    "name": "district.slaughterhouse.name",
+    "description": "district.slaughterhouse.description"
+  },
+  {
+    "id": "casino",
+    "name": "district.casino.name",
+    "description": "district.casino.description"
+  },
+  {
+    "id": "boardroom",
+    "name": "district.boardroom.name",
+    "description": "district.boardroom.description"
+  }
+]

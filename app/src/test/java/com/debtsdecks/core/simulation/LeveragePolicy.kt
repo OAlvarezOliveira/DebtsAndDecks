@@ -70,10 +70,13 @@ object LeveragePolicy : RunPolicy {
         if (state.debt >= LEVERAGE_TARGET) {
             val affordable = attacks.filter { it.cost <= state.energy }
             if (affordable.isEmpty()) return ScriptedPolicy.CombatAction.EndTurn
+            // Same caveat as ScriptedPolicy: not a total order. Two instances of the same card
+            // tie all the way down and maxWith keeps the first in list order, so determinism
+            // rests on the hand being built deterministically. See HarnessDeterminismTest.
             val bestAffordable = affordable.maxWith(
                 compareBy<CardInstance> { projectedDamage(it, state.debt) }
                     .thenBy { projectedDamage(it, state.debt) / it.cost }
-                    .thenBy { it.instanceId }
+                    .thenBy { it.cardId }   // highest definition id; instanceId is a random UUID
             )
             return ScriptedPolicy.CombatAction.Play(bestAffordable.instanceId, ScriptedPolicy.enemyTargetId(state))
         }

@@ -4,8 +4,13 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.utils.I18NBundle
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.util.Locale
 
@@ -588,6 +593,104 @@ class I18nBundleTest {
         assertEquals("Toma 27 de oro, añade 18 de Deuda", b.format("node.loan_offer", 27, 18))
         assertEquals("CANCELAR", b.get("node.cancel"))
         assertEquals("Oro insuficiente", b.get("node.insufficient_gold"))
+    }
+
+    // --- F2 district keys ---
+    // The district catalog stores bundle keys, so an untranslated district is an invisible defect
+    // until it renders. The data-driven test below walks the real catalog rather than a literal
+    // list, so adding a fourth district without translating it fails here instead of on screen.
+    //
+    // It reads the .properties files directly, NOT through I18NBundle, and that is the whole
+    // point. I18NBundle chains to the parent bundle: ask the Spanish bundle for a key that only
+    // exists in strings.properties and it hands back the English string without complaint. A
+    // guard written on top of bundle.get() therefore passes on exactly the failure it was
+    // written to catch — someone adds a district in English and forgets the Spanish. Only the
+    // raw key sets can see that.
+
+    @Test
+    fun `English district keys resolve`() {
+        val b = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+        assertEquals("THE SLAUGHTERHOUSE OF THE INSOLVENT", b.get("district.slaughterhouse.name"))
+        assertEquals("THE VULTURE FUNDS CASINO", b.get("district.casino.name"))
+        assertEquals("THE BOARDROOM", b.get("district.boardroom.name"))
+        assertEquals(
+            "Where a first missed payment earns you a name. The debts are small here. So is the mercy.",
+            b.get("district.slaughterhouse.description")
+        )
+        assertEquals("They wager on which debtors fold. You are the table.", b.get("district.casino.description"))
+        assertEquals("Nobody raises their voice. The paperwork was signed years ago.", b.get("district.boardroom.description"))
+    }
+
+    @Test
+    fun `Spanish district keys resolve with neutral thematic translations`() {
+        val b = I18NBundle.createBundle(bundleBase, Locale("es"))
+        assertEquals("EL MATADERO DE LOS INSOLVENTES", b.get("district.slaughterhouse.name"))
+        assertEquals("EL CASINO DE LOS FONDOS BUITRE", b.get("district.casino.name"))
+        assertEquals("LA SALA DE JUNTAS", b.get("district.boardroom.name"))
+        assertEquals(
+            "Donde el primer impago te pone nombre. Aquí las deudas son pequeñas. La clemencia también.",
+            b.get("district.slaughterhouse.description")
+        )
+        assertEquals("Apuestan sobre qué deudores caen. Tú eres la mesa.", b.get("district.casino.description"))
+        assertEquals("Nadie levanta la voz. El papeleo se firmó hace años.", b.get("district.boardroom.description"))
+    }
+
+    /** Loads a `.properties` file as raw key/value pairs, with no bundle fallback of any kind. */
+    private fun rawProperties(fileName: String): Map<String, String> {
+        val file = File("src/main/assets/i18n/$fileName")
+        assertTrue(file.isFile, "expected ${file.path} to exist")
+        val props = java.util.Properties()
+        file.inputStream().reader(Charsets.UTF_8).use { props.load(it) }
+        return props.stringPropertyNames().associateWith { props.getProperty(it) }
+    }
+
+    @Test
+    fun `every district in the catalog is translated in both bundles`() {
+        val en = rawProperties("strings.properties")
+        val es = rawProperties("strings_es.properties")
+        for (district in com.debtsdecks.core.simulation.TestAssetLoader.loadDistricts()) {
+            for (key in listOf(district.name, district.description)) {
+                for ((tag, table) in listOf("en" to en, "es" to es)) {
+                    val text = table[key]
+                    assertNotNull(text, "district key $key is missing from the $tag properties file")
+                    assertTrue(
+                        text!!.isNotBlank(),
+                        "district key $key is present but blank in the $tag properties file"
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a key present only in English resolves to English through the bundle, which is why parity reads raw files`(
+        @TempDir dir: File
+    ) {
+        // Guards the guard. The parity test above deliberately does NOT go through I18NBundle,
+        // and this is the reason: on a purpose-built bundle pair where a key exists in English
+        // and is missing from Spanish, the Spanish bundle answers with the English text instead
+        // of failing. A parity check written as `assertNotEquals(en, bundle.get(k))` or
+        // `assertTrue(bundle.get(k).isNotBlank())` therefore passes on an untranslated key.
+        //
+        // The fixture is built here rather than taken from the shipped files because the shipped
+        // files are (and must stay) in parity, so they cannot express this case. If libGDX ever
+        // drops parent-bundle fallback this test fails, and the parity test above may then be
+        // simplified — but not before.
+        File(dir, "probe.properties").writeText("probe.key=ENGLISH ONLY\n", Charsets.UTF_8)
+        File(dir, "probe_es.properties").writeText("probe.other=ALGO EN ESPAÑOL\n", Charsets.UTF_8)
+        val probeBase = FileHandle(File(dir, "probe"))
+
+        val spanish = I18NBundle.createBundle(probeBase, Locale("es"))
+
+        assertEquals("ALGO EN ESPAÑOL", spanish.get("probe.other"), "the Spanish file must be the one loaded")
+        assertEquals(
+            "ENGLISH ONLY",
+            spanish.get("probe.key"),
+            "expected the parent-bundle fallback to answer in English; if this changed, revisit the parity test"
+        )
+
+        // And a key in neither file still throws, so the fallback is a fallback, not a blanket catch.
+        assertThrows(java.util.MissingResourceException::class.java) { spanish.get("probe.absent") }
     }
 
 }

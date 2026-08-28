@@ -50,8 +50,11 @@ class RunManagerTest {
      *  enemies' built-in cardChoices (3/4/5) to prove slot authority (R2.4/R4.2). */
     private val sequence = runSequence()
     private fun runSequence(): com.debtsdecks.core.model.RunSequence {
+        // F2: districtId is required metadata on every slot; this fixture pins one district so the
+        // sequence stays a pure C5 slot-authority fixture and asserts nothing about the run's re-cut.
         fun slot(id: String, gold: Int, picks: Int) = com.debtsdecks.core.model.EncounterSlot(
-            enemyId = id, rewards = com.debtsdecks.core.enemies.EnemyRewards(gold = gold, cardChoices = picks)
+            enemyId = id, districtId = "fixture",
+            rewards = com.debtsdecks.core.enemies.EnemyRewards(gold = gold, cardChoices = picks)
         )
         return com.debtsdecks.core.model.RunSequence(
             slots = listOf(
