@@ -18,6 +18,7 @@ import com.debtsdecks.core.combat.RunManager
 import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.model.CardType
 import com.debtsdecks.core.model.CombatState
+import com.debtsdecks.core.enemies.IntentType
 import com.debtsdecks.core.model.EnemyState
 import com.debtsdecks.core.model.TurnPhase
 
@@ -185,11 +186,14 @@ class CombatRenderer(private val bundle: I18NBundle) {
         shapeRenderer.end()
     }
 
-    private fun intentColor(intentType: String): Color = when (intentType) {
-        "ATTACK", "MULTI_ATTACK" -> Color(0.85f, 0.25f, 0.2f, 1f)
-        "BUFF" -> Color(0.3f, 0.75f, 0.35f, 1f)
-        "DEBUFF" -> Color(0.6f, 0.3f, 0.85f, 1f)
-        else -> Color(1f, 0.8f, 0.2f, 1f)
+    // Takes the enum, not its name, and has no `else`. As a `when` over String with a fallback
+    // this compiled happily for any intent it had never heard of and painted the bar the LEVY
+    // yellow -- which is how LEVY itself got its colour, by accident rather than by decision.
+    private fun intentColor(intentType: IntentType): Color = when (intentType) {
+        IntentType.ATTACK, IntentType.MULTI_ATTACK -> Color(0.85f, 0.25f, 0.2f, 1f)
+        IntentType.BUFF -> Color(0.3f, 0.75f, 0.35f, 1f)
+        IntentType.DEBUFF -> Color(0.6f, 0.3f, 0.85f, 1f)
+        IntentType.LEVY -> Color(1f, 0.8f, 0.2f, 1f)
     }
 
     private fun cardTypeColor(type: CardType): Color = when (type) {

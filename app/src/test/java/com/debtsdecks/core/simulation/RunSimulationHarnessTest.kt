@@ -4,6 +4,7 @@ import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.combat.CombatEngine
 import com.debtsdecks.core.combat.DebtConfig
 import com.debtsdecks.core.enemies.EnemyTier
+import com.debtsdecks.core.enemies.IntentType
 import com.debtsdecks.core.model.CardDefinition
 import com.debtsdecks.core.model.CardType
 import com.debtsdecks.core.model.CombatState
@@ -31,13 +32,13 @@ class RunSimulationHarnessTest {
     )
 
     private fun enemy(
-        id: String = "thug", intentType: String = "ATTACK", intentDamage: Int = 8,
+        id: String = "thug", intentType: IntentType = IntentType.ATTACK, intentDamage: Int = 8,
         intentParam: Int = 1, hp: Int = 24, maxHp: Int = 24, strength: Int = 0, weak: Int = 0,
     ): EnemyState = EnemyState(
         id = id, defId = id, name = id, hp = hp, maxHp = maxHp, block = 0, strength = strength,
         weak = weak, vulnerable = 0, poison = 0, intentType = intentType,
         intentDamage = intentDamage, intentParam = intentParam,
-        intentDisplayName = intentType, intentIconName = "intent_$intentType", tier = EnemyTier.NORMAL,
+        intentDisplayName = intentType.name, intentIconName = intentType.iconName, tier = EnemyTier.NORMAL,
     )
 
     private fun state(
@@ -117,7 +118,7 @@ class RunSimulationHarnessTest {
     fun `predicted damage applies strength and weak multipliers and multi-attack counts`() {
         val strong = enemy(strength = 4, intentDamage = 10)   // (10+4)*1.0 = 14
         val weakEnemy = enemy(weak = 1, intentDamage = 10)    // (10+0)*0.75 = 7 -> toInt 7
-        val multi = enemy(intentType = "MULTI_ATTACK", intentDamage = 6, intentParam = 3) // 6*3=18
+        val multi = enemy(intentType = IntentType.MULTI_ATTACK, intentDamage = 6, intentParam = 3) // 6*3=18
         val st = state(hand = emptyList(), enemies = listOf(strong, weakEnemy, multi))
 
         assertEquals(14 + 7 + 18, ScriptedPolicy.predictedIncomingDamage(st))

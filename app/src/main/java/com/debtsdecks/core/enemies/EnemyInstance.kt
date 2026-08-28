@@ -35,27 +35,27 @@ class EnemyInstance(
         return Intent(step.type, step.damage, step.param)
     }
 
-    /** Human-readable label for [currentIntent], e.g. for [com.debtsdecks.core.model.EnemyState]. */
+    /**
+     * Human-readable label for [currentIntent], e.g. for [com.debtsdecks.core.model.EnemyState].
+     *
+     * The key comes from [IntentType.l10nKey]; only the *arguments* vary per type, which is what
+     * this `when` is for. Keeping the key on the enum is what lets `IntentTypeCoverageTest` walk
+     * `IntentType.entries` and check every key really exists in both bundles.
+     */
     fun intentDisplayName(): String {
         val intent = currentIntent()
+        val key = intent.type.l10nKey
         return when (intent.type) {
-            ATTACK -> l10n.format("intent.attack", intent.damage)
-            BUFF -> l10n.format("intent.buff", intent.param)
-            DEBUFF -> l10n.format("intent.debuff", intent.param)
-            MULTI_ATTACK -> l10n.format("intent.multi_attack", intent.damage, intent.param)
-            LEVY -> l10n.format("intent.levy", intent.param)
+            ATTACK -> l10n.format(key, intent.damage)
+            BUFF -> l10n.format(key, intent.param)
+            DEBUFF -> l10n.format(key, intent.param)
+            MULTI_ATTACK -> l10n.format(key, intent.damage, intent.param)
+            LEVY -> l10n.format(key, intent.param)
         }
     }
 
     /** Icon asset key for [currentIntent], e.g. for [com.debtsdecks.core.model.EnemyState]. */
-    fun intentIconName(): String =
-        when (currentIntent().type) {
-            ATTACK -> "intent_attack"
-            BUFF -> "intent_buff"
-            DEBUFF -> "intent_debuff"
-            MULTI_ATTACK -> "intent_multi"
-            LEVY -> "intent_levy"
-        }
+    fun intentIconName(): String = currentIntent().type.iconName
 
     fun advanceIntent() {
         patternIndex++

@@ -261,9 +261,19 @@ class CombatEngine(
             // Boss `interest`: the engine owns the player's Debt and applies the squeeze here.
             // EnemyAI treats LEVY as advance-only; only its combat effect (debt) is applied above.
             val intent = enemy.currentIntent()
-            if (intent.type == IntentType.LEVY) {
-                if (addDebt(intent.param, DebtSource.LEVY)) { levyExecution = true }
-                enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_levy", intent.param), turnNumber))
+            // Exhaustive on purpose, and with no `else`. This is where an intent whose effect the
+            // *engine* owns gets wired; EnemyAI owns the rest. Written as an `if` on LEVY, a sixth
+            // IntentType needing engine-side handling would fall through in silence and simply
+            // never fire. The compiler now refuses to let that happen.
+            when (intent.type) {
+                IntentType.LEVY -> {
+                    if (addDebt(intent.param, DebtSource.LEVY)) { levyExecution = true }
+                    enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_levy", intent.param), turnNumber))
+                }
+                IntentType.ATTACK,
+                IntentType.BUFF,
+                IntentType.DEBUFF,
+                IntentType.MULTI_ATTACK -> Unit // resolved by EnemyAI.executeIntent below
             }
             val ai = enemyAIs[enemy.id]!!
             enemyLog.addAll(ai.executeIntent(player, enemies, turnNumber))
