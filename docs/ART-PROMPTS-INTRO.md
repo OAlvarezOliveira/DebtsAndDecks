@@ -153,10 +153,14 @@ Save to `app/src/main/assets/art/intro/intro_01.png` … `intro_04.png`.
 
 | File | Reads as | No lettering | Quiet bottom third | Opaque RGB 1280x720 |
 |---|---|---|---|---|
-| `intro_01.png` | hands appraising a ring, no face | | | |
-| `intro_02.png` | the same desk, cleared out | | | |
-| `intro_03.png` | the city from above, one warm window | | | |
-| `intro_04.png` | his back, walking into the district | | | |
+| `intro_01.png` | hands appraising a ring, no face | yes | yes (mean 11.7) | yes |
+| `intro_02.png` | the same desk, cleared out | yes | yes (mean 11.8) | yes |
+| `intro_03.png` | the city from above, one warm window | yes | yes (mean 18.7) | yes |
+| `intro_04.png` | his back, walking into the district | yes | yes (mean 32.1) | yes |
+
+All four generated and installed. "Quiet bottom third" is the mean luminance of the band the
+caption lands on, out of 255; bone white `#eef0fb` was checked against each one by rendering the
+real caption over the real frame, not judged by eye from a thumbnail.
 
 ## What art alone does NOT fix
 
