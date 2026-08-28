@@ -75,6 +75,11 @@ total. No map, no rest, no persistence between runs.
 
 ### The Debt Economy (`DebtConfig.kt`)
 
+> **Planned:** this economy becomes the player's life. Debt/Gold stay in these engine units —
+> the money scale is a presentation layer, cards are **not** renumbered — and a monthly minimum
+> payable at each node adds technical bankruptcy as a second defeat condition. See
+> `docs/VISION.md` §4 D1/D2/D4/D9 and change `f3-treasury`.
+
 | Constant | Value | Effect |
 |---|---|---|
 | `INTEREST_RATE` | 0.15 | Per-turn compounding interest, `ceil(debt * 0.15)`. |
@@ -142,13 +147,26 @@ See `assets/cards/all.json` for exact numbers.
 
 ### Enemies (3)
 
-| Enemy | HP | Tier | Notable |
+| Enemy | HP | Tier | Intent pattern |
 |---|---|---|---|
-| Thug | 24 | Normal | 8 dmg × 2, then Strength buff. |
-| Loan Shark | 40 | Elite | 10 dmg, Weak debuff, enrages below half HP. |
-| Collector (boss) | 56 | Boss | 12 dmg / 9×2 multi / **LEVY +5 Debt** / buff / debuff. Debuff-resistant. |
+| Thug | 22 | Normal | ATTACK 8, ATTACK 8, BUFF 3. |
+| Loan Shark | 36 | Elite | ATTACK 9, BUFF 3, ATTACK 9, DEBUFF 1, **LEVY +4 Debt**. Enrages below half HP. |
+| Collector (boss) | 52 | Boss | ATTACK 12, MULTI_ATTACK 7×2, **LEVY +5 Debt**, BUFF 4, DEBUFF 2. Debuff-resistant. |
 
-`LEVY` is currently the only enemy→economy interaction in the game, and it fires once per fight.
+> **Corrected 2026-08-28** against `app/src/main/assets/enemies/all.json`. The 2026-08-27 resync
+> recorded 24 / 40 / 56 HP and "Loan Shark 10 dmg / Collector 9×2 multi"; the data says
+> 22 / 36 / 52, 9 dmg and 7×2. The Loan Shark's `LEVY 4` step was added afterwards by
+> `c16b9f9` (2026-08-28 01:19), i.e. **after** the resync — so `LEVY` is no longer a
+> boss-only interaction, and the line claiming it fires once per fight was already false.
+
+`LEVY` is now the enemy→economy interaction of **two** of the three enemies. It remains the
+only *thematic* verb in the whole vocabulary: `IntentType` is
+`{ ATTACK, BUFF, DEBUFF, MULTI_ATTACK, LEVY }` and the other four are generic.
+
+> **Planned:** the roster is not a roster, it is a staircase — `loan_shark` is `thug` plus two
+> verbs, `collector` is `loan_shark` plus one, each with bigger numbers, so no enemy demands a
+> different plan. New *verbs* come before new heads. See `docs/VISION.md` §6 and change
+> `fv-core-validation`; district bosses follow in `f5-zone-bosses`.
 
 ---
 
@@ -228,6 +246,11 @@ Delivered by C4 (`57b11c2`) — see the reworked definitions in the Card Pool se
 
 ### MVP Scope (target — the pivot has shipped, this run structure has not)
 
+> **Planned:** the 8 encounters stay 8 — the run length is fixed by owner decision
+> (2026-08-28). What changes is that they are re-cut into 3 named districts (3+3+2) with a
+> boss seat at the end of each. Metadata only, zero balance delta. See `docs/VISION.md` §4 D3
+> and change `f2-districts`.
+
 | Element | Target | Why |
 |---|---|---|
 | Encounters per run | **8** (6 normal/elite + 1 mid-boss + 1 final boss) | Enough turns (~35-45) for the compound-interest curve to actually differentiate "leverage early" from "leverage late." |
@@ -300,6 +323,25 @@ above ~70%, tighten Execution before investing further down the sequence.
 
 ---
 
+## Vision (planned)
+
+This document describes the game **as built on `develop`**. Where it is going is a separate
+document: [`docs/VISION.md`](VISION.md) — *Financial Survival in a Noir City*.
+
+In one paragraph: the balance sheet becomes the life resource, the run walks named districts
+of a city instead of numbered slots, each district ends in an antagonist with a face, and
+between fights the player takes deals with teeth. Seven systems, six of which live *between*
+combats — which is why the program opens with a phase that validates the combat itself
+(`fv-core-validation`) before any of them are built.
+
+Program order and reasoning live in `docs/VISION.md` §5. The artifacts live in `openspec/`.
+Nothing in that program has been verified; `openspec/VERIFICATION-CHECKLIST.md` says how to.
+
+**Nothing above this section has been rewritten to match the vision.** Statements about
+`develop` were left as they are, with forward references added where the plan supersedes them.
+A GDD that describes an unbuilt game is how this document drifted a year out of sync once
+already (see the 2026-08-25 note at the top).
+
 ## Change Log
 
 | Date | Change | Author |
@@ -307,9 +349,11 @@ above ~70%, tighten Execution before investing further down the sequence.
 | 2025-08-11 | Initial MVP GDD (superseded — described unimplemented Debt system) | — |
 | 2026-08-25 | Full rewrite: documents actual current implementation + Debt-as-Leverage pivot design and SDD sequence | Claude Code + developer |
 | 2026-08-27 | `play-store-launch` P0 resync against `develop`: Debt constant table corrected to the 10 constants that exist (`USURY_HP_RATIO` and `REPAY_DISCARD_VALUE` removed); Gold's sink corrected to "none"; Part 2 marked shipped (C2 `0fb163b`, C4 `57b11c2`); Execution rule corrected to `EXECUTION_THRESHOLD = 50` with its rationale; card pool corrected to 27 (4 + 23); C0–C9 table gained a verified Status column with C3 flagged `NEEDS RE-VERIFICATION`; BD-1 recorded | Claude Code + developer |
+| 2026-08-28 | Vision delta: enemy table corrected against `enemies/all.json` (HP 22/36/52, Loan Shark 9 dmg + `LEVY 4` added post-resync by `c16b9f9`, Collector multi 7×2); `LEVY`-fires-once claim removed; forward references added for the district re-cut (F2), the treasury (F3) and the intent vocabulary (FV/F5); `## Vision (planned)` section added pointing at `docs/VISION.md` | Claude Code + developer |
 
 ---
 
-*Last updated: 2026-08-27 — Keep this file in sync with code. C2, C4, C5 and C7 have landed; the
-next required update lands with whichever change resolves C3's scope, or with C6/C8, whichever
-comes first.*
+*Last updated: 2026-08-28 — Keep this file in sync with code. C2, C4, C5 and C7 have landed.
+Forward-looking design now lives in `docs/VISION.md`; this document stays the record of what
+`develop` actually does. The next required update lands with F2 (`f2-districts`), which is the
+first change in the vision program that alters anything described above.*
