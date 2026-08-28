@@ -149,6 +149,75 @@ There is one opening — buy, then borrow — and then five nodes where the poli
 affordable alternative to pick from. Combats average **1.7 turns**, so the in-combat decision
 is nearly as shallow as the meta one.
 
+### F5 — The cost curve is not the lever. Measured, not argued.
+
+F3 says the shop is unaffordable. The obvious inference — lower `ESCALATION` — is wrong, and
+the sweep says so. Each row is a full 200-seed harness run with one constant changed and
+nothing else:
+
+| Variant | `ESCALATION` | Greedy win | Peak Debt | Defeats |
+| --- | --- | --- | --- | --- |
+| shipped | 1.50 | 54,0% | 30,8 | `{collector=92}` |
+| cost only | 1.35 | 35,0% | 41,5 | `{collector=130}` |
+| cost only | 1.25 | **20,5%** | 44,5 | `{collector=159}` |
+| cost only | 1.15 | 60,5% | 35,0 | `{collector=76, loan_shark=3}` |
+
+Making the shop affordable makes the game **harder**, and not smoothly: 54 → 35 → 20,5 → 60,5
+is not a knob, it is a cliff with a rebound. Two mechanisms are visible in the numbers. Cards
+bought are cards added, and a wider deck draws its good cards less often. And peak Debt climbs
+as prices fall — 30,8 → 41,5 → 44,5 — which points at the second mechanism.
+
+**The second mechanism is the decision ladder, and it is the dominant one.** `NodePolicy`
+evaluates *"front-load value while the shop is cheap"* (rule 1b) **before** *"repay when the
+debt band is hot"* (rule 3). An affordable shop therefore consumes the node that would
+otherwise have paid down Debt. Swap those two rules and change nothing else:
+
+| Variant | `ESCALATION` | Greedy win | Peak Debt | Defeats |
+| --- | --- | --- | --- | --- |
+| repay before shop | **1.50, unchanged** | **77,5%** | **63,1** | `{collector=44, loan_shark=1}` |
+| repay before shop | 1.25 | 61,0% | 41,7 | `{collector=78}` |
+
+On the economy exactly as it ships, a player who pays down before buying wins **77,5%** instead
+of 54,0%, peaks at **63,1** Debt — above the execution line of 50, so the Debt axis is finally
+live — and `loan_shark` records its first kill.
+
+**What this does and does not license.** `NodePolicy` lives in `app/src/test/` and its own
+docstring calls it *"the MEASUREMENT floor for balance tuning, not a design directive."*
+Reordering it does not change the game; it changes the ruler. So F5 does not say the economy is
+fine. It says something narrower and more awkward: **F2 and F4 above are partly properties of
+the measuring policy, not only of the game.** A yardstick that shops before it repays reports a
+Debt axis that never engages, because it never engages the Debt axis.
+
+That has to be settled before FV, for the same reason F3 did: E1 asks whether ignoring a verb
+costs you win rate. If the reference policy is leaving 23pp on the table for an unrelated
+reason, a 10pp verb signal is being measured against noise of larger amplitude than itself.
+
+### F6 — The credit line dies exactly where escalation makes it necessary.
+
+`NodeConfig` sets `LOAN_GOLD_BASE = 12`, and `12 = BUY_BASE (8) x ESCALATION (1.5)`. That is not
+a coincidence: a loan at node *n* yields **exactly** the buy price at node *n+1*, for all six
+pairs — (12,12), (18,18), (27,27), (40,40), (60,60), (91,91). Borrow here, buy next door. The
+late-game shop was never meant to be paid for out of income.
+
+But the loan's Debt cost escalates on the same exponent while `DebtConfig.EXECUTION_THRESHOLD`
+is a flat `50`, and `RunManager.takeLoan` rejects any loan that would cross it:
+
+| Node | Loan Debt cost | Max prior Debt allowed |
+| --- | --- | --- |
+| 4 | 27 | 23 |
+| 5 | 40 | 10 |
+| 6 | 60 | **impossible at any Debt** |
+| 7 | 91 | **impossible at any Debt** |
+
+Observed Debt at those nodes is 20, 19, 16, 13. So the loan is unavailable from node 5 in
+practice and from node 6 as arithmetic. `NodePolicy` is stricter still (`SAFE_AFTER_LOAN` = 0.90
+of the line = 45), which is why the trace shows no loan after node 4.
+
+An exponential credit instrument is gated by a constant. Whatever is done about F3, this ratio
+is the thing that is actually inconsistent, and `NodePolicy` already names the ticket in a
+comment: *"LOAN_GOLD_NEED stays absolute on purpose: it is coupled to the GOLD economy, which
+has no honest anchor against the execution line — deferred to F3."*
+
 ---
 
 ## 4. What this means for FV deliverable 1
@@ -169,15 +238,18 @@ harder; it does not make slots 1-7 a fight. Whatever else FV does, `sequence.jso
 `intentPattern` of `thug`/`loan_shark` have to change, or the sweep will report `{collector=N}`
 again with a different N.
 
-**F3 is not a verb problem at all, and it is the one FV cannot absorb.** The price wall is
-arithmetic in `NodeConfig` — an exponential cost against a flat income — and no intent verb
-touches it. It matters here because AUDIT's whole premise is that the player has a second line
-to fall back on, and F3 says the player stops being able to buy cards at node 4. Shipping AUDIT
-on top of this economy produces a verb that disables the only line the player owns, which is
-not "play your second-best line", it is a stun. Either the cost curve is re-derived first, or
-AUDIT's exit measurement will read as noise for a reason that has nothing to do with AUDIT.
-This is a finding, not a proposal: it belongs to whoever picks up the economy, and it should be
-recorded before FV starts so the two are not confused afterwards.
+**F3 is not a verb problem, and F5 says it is not a cost problem either.** AUDIT's premise is
+that the player has a second line to fall back on, and F3 says the player stops being able to
+buy cards at node 4 — so AUDIT on this economy is a stun, not a redirect. But the sweep in F5
+rules out the obvious fix: lowering `ESCALATION` moves the win rate to 35% and then 20,5%
+before recovering, so the price wall is currently *load-bearing*. It is what stops the
+measuring policy from spending the node it should have spent repaying.
+
+The order of work that follows from the evidence, rather than from the shape of the complaint:
+settle the reference policy first (F5), then the loan-versus-execution-line ratio (F6), and
+only then ask what the shop should cost. Doing it in the other order tunes a constant against a
+yardstick that is itself 23pp off, and no measurement taken that way can be trusted afterwards.
+This is a finding, not a proposal.
 
 ---
 
