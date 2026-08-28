@@ -17,7 +17,8 @@ busy being hit. The player stops merely surviving his debt and starts owning som
 
 The vision says the hook already exists: `applyInterest` in `startPlayerTurn`.
 
-**There is no `startPlayerTurn` anywhere in this repository.** Verified 2026-08-28:
+**There is no `startPlayerTurn` anywhere in this repository.** Claim, carried by checklist
+row A7:
 `applyInterest` is called from `CombatEngine.kt:319`, inside `private fun beginTurn()`
 (declared at line 304). It fires **once per combat turn**.
 

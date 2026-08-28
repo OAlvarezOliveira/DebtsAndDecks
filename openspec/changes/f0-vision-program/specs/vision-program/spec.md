@@ -77,6 +77,6 @@ verified.
   a runnable command — never this document and never a prior agent's summary
 
 #### Scenario: Searching the program for a false completion claim
-- **WHEN** a reviewer greps the F0 output for the words "verified" or "confirmed" as
+- **WHEN** a reviewer searches the F0 output for the words "verified" or "confirmed" as
   assertions about this program's own claims
 - **THEN** they find none

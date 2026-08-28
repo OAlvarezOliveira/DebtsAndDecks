@@ -91,7 +91,8 @@ landing, and no district fixes that.
 ## 5. Hard dependency — this phase cannot fully run today
 
 **E3 and E4 require putting a build in someone else's hands, and this repo cannot produce
-one.** Verified 2026-08-28 in `app/build.gradle.kts`: the `release` build type declares only
+one.** Claim, carried by checklist row B4: in `app/build.gradle.kts` the `release` build
+type declares only
 `isMinifyEnabled` and `proguardFiles` — there is **no `signingConfig`** — and there is no
 keystore anywhere in the tree. `versionCode` is still `1`.
 

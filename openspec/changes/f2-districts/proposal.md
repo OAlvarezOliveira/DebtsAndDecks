@@ -1,6 +1,13 @@
 # F2 — Districts
 
 **Status:** proposed, unverified. **Date:** 2026-08-28.
+
+> **PR1 shipped 2026-08-28** as commit `38e0b9b` on branch `feat/districts`
+> ([PR #7](https://github.com/OAlvarezOliveira/DebtsAndDecks/pull/7)), together with
+> `f02b421`, which had to fix harness non-determinism before this phase's zero-delta gate
+> could mean anything at all. See `tasks.md` for what shipped, what the shipped names
+> actually are, and the one PR1 task that is still open (2.4, loader rejection of an unknown
+> `districtId`). **PR2 — design system, art, render — is not started.**
 **Depends on:** F0 (the vision names the districts). **Blocks:** F5 (bosses need zone seats).
 **Balance delta:** zero, and provably so. That is the whole point of putting it here.
 

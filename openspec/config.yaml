@@ -6,7 +6,8 @@
 # the git tree wins, because it is the one a reviewer can diff.
 #
 # NOTE ON TOOLING: this repo has no package.json and no OpenSpec CLI installed
-# (`ls package.json` -> absent, verified 2026-08-28). The layout below follows the
+# (claim: `fd -d 1 package.json` prints nothing — run it, do not take this comment's
+# word for it). The layout below follows the
 # OpenSpec convention by hand; there is no `openspec validate` gate in CI yet.
 # Adding one is a candidate task for F0, not an assumption of this file.
 
