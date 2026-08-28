@@ -34,6 +34,7 @@ class RunSimulator(
     private val enemyDefinitions: List<EnemyDefinition>,
     private val l10n: Localizer = NoOpLocalizer,
     private val policy: RunPolicy = ScriptedPolicy,
+    private val sequence: com.debtsdecks.core.model.RunSequence = TestAssetLoader.loadSequence(),
 ) {
     /** Generous upper bound; any real 3-encounter run stays far below it. Guards runaways. */
     private val maxActionsPerRun = 500
@@ -41,7 +42,7 @@ class RunSimulator(
     fun simulate(seed: Long): SimulationResult {
         val rng = kotlin.random.Random(seed)
         val engine = CombatEngine(cardRegistry, l10n, rng)
-        val run = RunManager(engine, cardRegistry, enemyDefinitions, TestAssetLoader.loadSequence(), rng)
+        val run = RunManager(engine, cardRegistry, enemyDefinitions, sequence, rng)
         var actions = 0
         var peakDebt = 0
         val turnsPerCombat = mutableListOf<Int>()

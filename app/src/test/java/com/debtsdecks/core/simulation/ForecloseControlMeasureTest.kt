@@ -2,9 +2,18 @@ package com.debtsdecks.core.simulation
 
 import com.debtsdecks.core.cards.CardRegistry
 import com.debtsdecks.core.enemies.EnemyDefinition
+import com.debtsdecks.core.enemies.EnemyRewards
+import com.debtsdecks.core.enemies.EnemyTier
 import com.debtsdecks.core.enemies.IntentStep
 import com.debtsdecks.core.enemies.IntentType
+import com.debtsdecks.core.model.CardDefinition
+import com.debtsdecks.core.model.CombatState
+import com.debtsdecks.core.model.EncounterSlot
+import com.debtsdecks.core.model.RunSequence
+import com.debtsdecks.core.model.SlotRole
+import com.debtsdecks.core.model.TurnPhase
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.Locale
 
@@ -96,5 +105,52 @@ class ForecloseControlMeasureTest {
             assertEquals(a.outcome, b.outcome, "outcome drifted on seed $seed")
             assertEquals(a.forecloseSeizures, b.forecloseSeizures, "seizure count drifted on seed $seed")
         }
+    }
+
+    /**
+     * R3-001 guard: the run-level wiring ([RunSimulator] reading [CombatEngine.forecloseSeizureCount]
+     * at run end) must carry a POSITIVE value end-to-end, not only the zero and same-seed cases.
+     * Deterministic fixture: one FORECLOSE-only enemy whose fee is 0 damage and whose threshold is
+     * 27. A policy that only ends its turn lets the compounding interest (start 6, ceil(15%)/turn)
+     * cross 27 on turn 9, where the seizure fires exactly once and ends the run in defeat. If the
+     * simulator stopped reading the engine's counter (stale engine, per-combat reset, or a literal
+     * 0), this test fails while every real sweep would still print a silently undercounted number.
+     */
+    @Test
+    fun `run-level wiring carries a positive seizure count end-to-end`() {
+        val registry = CardRegistry.create(TestAssetLoader.loadCards())
+        val bailiff = EnemyDefinition(
+            id = "bailiff",
+            name = "Bailiff",
+            hp = 60,
+            intentPattern = listOf(IntentStep(IntentType.FORECLOSE, damage = 0, param = 27)),
+            rewards = EnemyRewards(gold = 10, cardChoices = 1),
+            tier = EnemyTier.ELITE,
+        )
+        val oneSlot = RunSequence(
+            slots = listOf(
+                EncounterSlot(
+                    enemyId = "bailiff",
+                    districtId = "slaughterhouse",
+                    rewards = EnemyRewards(gold = 10, cardChoices = 1),
+                    role = SlotRole.BOSS,
+                )
+            )
+        )
+        val result = RunSimulator(registry, listOf(bailiff), sequence = oneSlot, policy = EndTurnOnlyPolicy).simulate(0)
+        assertEquals(RunOutcome.DEFEAT, result.outcome, "the seizure must end the fixture run")
+        assertEquals(1, result.forecloseSeizures, "exactly one seizure: debt crosses 27 on turn 9, run ends there")
+    }
+
+    /**
+     * Minimal policy for [run-level wiring carries a positive seizure count end-to-end]: never plays
+     * a card, so nothing repairs, attacks, or blocks the fixture.
+     */
+    private object EndTurnOnlyPolicy : RunPolicy {
+        override fun chooseAction(state: CombatState): ScriptedPolicy.CombatAction {
+            return ScriptedPolicy.CombatAction.EndTurn
+        }
+
+        override fun chooseReward(choices: List<CardDefinition>): CardDefinition = choices.first()
     }
 }
