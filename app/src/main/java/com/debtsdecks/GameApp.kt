@@ -2,27 +2,46 @@ package com.debtsdecks
 
 import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Screen
 import com.debtsdecks.gdx.GameScreen
+import com.debtsdecks.gdx.IntroScreen
 import com.debtsdecks.gdx.audio.SoundManager
 
 class GameApp : ApplicationAdapter() {
     private lateinit var screen: GameScreen
+    /** The opening stills, or null once they are spent. Plays once per launch. */
+    private var intro: IntroScreen? = null
 
-    private fun <T> withScreen(block: GameScreen.() -> T): T? =
-        if (::screen.isInitialized) screen.block() else null
+    /** Whichever screen currently owns the frame: the opening while it lasts, then the game. */
+    private val active: Screen?
+        get() = intro ?: if (::screen.isInitialized) screen else null
+
+    private fun <T> withScreen(block: Screen.() -> T): T? = active?.block()
 
     override fun create() {
         screen = DebtsAndDecksApp.container.get()
-        Gdx.input.inputProcessor = screen.inputProcessor
-        screen.show()
+        val opening: IntroScreen = DebtsAndDecksApp.container.get()
+        intro = opening
+        Gdx.input.inputProcessor = opening.inputProcessor
+        // A still that fails to load leaves the sequence already finished, so the first render
+        // below hands straight over to the game rather than sitting on an empty screen.
+        opening.show()
     }
 
     override fun render() {
         super.render()
-        screen.render(Gdx.graphics.deltaTime)
+        intro?.takeIf { it.isFinished }?.let { spent ->
+            spent.dispose()
+            intro = null
+            Gdx.input.inputProcessor = screen.inputProcessor
+            screen.show()
+        }
+        active?.render(Gdx.graphics.deltaTime)
     }
 
     override fun dispose() {
+        intro?.dispose()
+        intro = null
         screen.dispose()
         DebtsAndDecksApp.container.get<SoundManager>().dispose()
     }

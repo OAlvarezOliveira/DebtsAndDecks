@@ -13,7 +13,9 @@ import com.debtsdecks.core.data.AssetSource
 import com.debtsdecks.core.data.DataLoader
 import com.debtsdecks.core.enemies.EnemyDefinition
 import com.debtsdecks.core.i18n.Localizer
+import com.debtsdecks.core.intro.IntroSequence
 import com.debtsdecks.gdx.GameScreen
+import com.debtsdecks.gdx.IntroScreen
 import com.debtsdecks.gdx.audio.SoundManager
 import com.debtsdecks.gdx.data.AndroidAssetSource
 import com.debtsdecks.gdx.i18n.BundleLocalizer
@@ -55,4 +57,7 @@ val gdxModule = module {
     single { SoundManager() }
     factory { CombatInputHandler(get(), get(), get(), get(), get()) }
     factory { GameScreen(get(), get(), get(), get(), get()) }
+    // Factories, not singles: the opening is played once per launch and then disposed.
+    factory { IntroSequence() }
+    factory { IntroScreen(get(), get(), get()) }
 }
