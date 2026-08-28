@@ -21,8 +21,10 @@ import com.debtsdecks.core.model.TurnPhase
  */
 object LeveragePolicy : RunPolicy {
 
-    /** Borrow up to this Debt ceiling; beyond it, stop taking Debt for Leverage. */
-    const val LEVERAGE_TARGET: Int = 35
+    /** Borrow up to this Debt ceiling (a ratio of the execution line, see [HarnessBands]); beyond it, stop taking Debt for Leverage. */
+    // F1 R1.3: the policy's debt threshold derives from the harness bands, so a re-scale keeps it
+    // playing the same RELATIVE game without editing this policy.
+    val LEVERAGE_TARGET: Int get() = HarnessBands.leverageTarget
 
     override fun chooseAction(state: CombatState): ScriptedPolicy.CombatAction {
         if (state.currentTurn != TurnPhase.PLAYER_ACTION) return ScriptedPolicy.CombatAction.EndTurn

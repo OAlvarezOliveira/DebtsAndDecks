@@ -61,8 +61,12 @@ object NodePolicy {
     // comfortable — the loan is THE progression engine (survive + buy), and the pivot wants wins to
     // involve real Debt (peak > 25). Conservative floor: still won't borrow into Execution.
     private const val LOAN_GOLD_NEED = 20
-    private const val SAFE_AFTER_LOAN = 45
-    private const val REPAY_BAND = 25
+    // F1 R1.3: debt thresholds derive from the harness bands; a re-scale keeps the policy playing
+    // the same relative game (refuses loans above 0.90, repays below 0.50 of the execution line)
+    // without editing this policy. LOAN_GOLD_NEED stays absolute on purpose: it is coupled to the
+    // GOLD economy, which has no honest anchor against the execution line — deferred to F3.
+    private val SAFE_AFTER_LOAN: Int get() = HarnessBands.safeAfterLoan
+    private val REPAY_BAND: Int get() = HarnessBands.repayBand
     private const val THIN_DECK = 14
     private const val THIN_NODE = 4
 
