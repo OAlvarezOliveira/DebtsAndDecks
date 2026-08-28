@@ -29,4 +29,7 @@ object TestAssetLoader {
 
     fun loadSequence(): com.debtsdecks.core.model.RunSequence =
         json.decodeFromString(File("src/main/assets/run/sequence.json").readText())
+
+    fun loadDistricts(): List<com.debtsdecks.core.model.District> =
+        json.decodeFromString(File("src/main/assets/districts/all.json").readText())
 }

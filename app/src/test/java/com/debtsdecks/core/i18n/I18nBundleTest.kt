@@ -4,6 +4,8 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.utils.I18NBundle
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -588,6 +590,54 @@ class I18nBundleTest {
         assertEquals("Toma 27 de oro, añade 18 de Deuda", b.format("node.loan_offer", 27, 18))
         assertEquals("CANCELAR", b.get("node.cancel"))
         assertEquals("Oro insuficiente", b.get("node.insufficient_gold"))
+    }
+
+    // --- F2 district keys ---
+    // The district catalog stores bundle keys, so an untranslated district is an invisible defect
+    // until it renders. The data-driven test below walks the real catalog rather than a literal
+    // list, so adding a fourth district without translating it fails here instead of on screen.
+
+    @Test
+    fun `English district keys resolve`() {
+        val b = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+        assertEquals("THE SLAUGHTERHOUSE OF THE INSOLVENT", b.get("district.slaughterhouse.name"))
+        assertEquals("THE VULTURE FUNDS CASINO", b.get("district.casino.name"))
+        assertEquals("THE BOARDROOM", b.get("district.boardroom.name"))
+        assertEquals(
+            "Where a first missed payment earns you a name. The debts are small here. So is the mercy.",
+            b.get("district.slaughterhouse.description")
+        )
+        assertEquals("They wager on which debtors fold. You are the table.", b.get("district.casino.description"))
+        assertEquals("Nobody raises their voice. The paperwork was signed years ago.", b.get("district.boardroom.description"))
+    }
+
+    @Test
+    fun `Spanish district keys resolve with neutral thematic translations`() {
+        val b = I18NBundle.createBundle(bundleBase, Locale("es"))
+        assertEquals("EL MATADERO DE LOS INSOLVENTES", b.get("district.slaughterhouse.name"))
+        assertEquals("EL CASINO DE LOS FONDOS BUITRE", b.get("district.casino.name"))
+        assertEquals("LA SALA DE JUNTAS", b.get("district.boardroom.name"))
+        assertEquals(
+            "Donde el primer impago te pone nombre. Aquí las deudas son pequeñas. La clemencia también.",
+            b.get("district.slaughterhouse.description")
+        )
+        assertEquals("Apuestan sobre qué deudores caen. Tú eres la mesa.", b.get("district.casino.description"))
+        assertEquals("Nadie levanta la voz. El papeleo se firmó hace años.", b.get("district.boardroom.description"))
+    }
+
+    @Test
+    fun `every district in the catalog is translated in both bundles`() {
+        val en = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+        val es = I18NBundle.createBundle(bundleBase, Locale("es"))
+        for (district in com.debtsdecks.core.simulation.TestAssetLoader.loadDistricts()) {
+            for (key in listOf(district.name, district.description)) {
+                for ((tag, bundle) in listOf("en" to en, "es" to es)) {
+                    val text = bundle.get(key)
+                    assertNotEquals(key, text, "district key $key is missing from the $tag bundle")
+                    assertTrue(text.isNotBlank(), "district key $key is blank in the $tag bundle")
+                }
+            }
+        }
     }
 
 }

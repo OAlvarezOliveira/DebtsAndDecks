@@ -13,6 +13,7 @@ class AndroidAssetSource(private val context: Context) : AssetSource {
     override fun readCards(): String = readAsset("cards/all.json")
     override fun readEnemies(): String = readAsset("enemies/all.json")
     override fun readRunSequence(): String = readAsset("run/sequence.json")
+    override fun readDistricts(): String = readAsset("districts/all.json")
 
     private fun readAsset(path: String): String =
         context.assets.open(path).reader().use { it.readText() }

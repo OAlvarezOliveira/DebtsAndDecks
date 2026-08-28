@@ -1,12 +1,12 @@
 {
   "slots": [
-    { "enemyId": "thug",        "rewards": { "gold": 10, "cardChoices": 1 } },
-    { "enemyId": "thug",        "rewards": { "gold": 10, "cardChoices": 1 } },
-    { "enemyId": "loan_shark",  "rewards": { "gold": 15, "cardChoices": 1 } },
-    { "enemyId": "thug",        "rewards": { "gold": 12, "cardChoices": 1 } },
-    { "enemyId": "loan_shark",  "rewards": { "gold": 18, "cardChoices": 2 } },
-    { "enemyId": "loan_shark",  "rewards": { "gold": 20, "cardChoices": 1 } },
-    { "enemyId": "collector",   "rewards": { "gold": 25, "cardChoices": 1 } },
-    { "enemyId": "collector",   "rewards": { "gold": 30, "cardChoices": 0 } }
+    { "enemyId": "thug",        "districtId": "slaughterhouse", "role": "STREET", "rewards": { "gold": 10, "cardChoices": 1 } },
+    { "enemyId": "thug",        "districtId": "slaughterhouse", "role": "STREET", "rewards": { "gold": 10, "cardChoices": 1 } },
+    { "enemyId": "loan_shark",  "districtId": "slaughterhouse", "role": "BOSS",   "rewards": { "gold": 15, "cardChoices": 1 } },
+    { "enemyId": "thug",        "districtId": "casino",         "role": "STREET", "rewards": { "gold": 12, "cardChoices": 1 } },
+    { "enemyId": "loan_shark",  "districtId": "casino",         "role": "STREET", "rewards": { "gold": 18, "cardChoices": 2 } },
+    { "enemyId": "loan_shark",  "districtId": "casino",         "role": "BOSS",   "rewards": { "gold": 20, "cardChoices": 1 } },
+    { "enemyId": "collector",   "districtId": "boardroom",      "role": "STREET", "rewards": { "gold": 25, "cardChoices": 1 } },
+    { "enemyId": "collector",   "districtId": "boardroom",      "role": "BOSS",   "rewards": { "gold": 30, "cardChoices": 0 } }
   ]
 }
