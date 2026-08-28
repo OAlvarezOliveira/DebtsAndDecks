@@ -109,10 +109,12 @@ class IntentVerbTest {
         start(IntentType.HEDGE, startingDebt = 30)
         resolveIntent()
         assertEquals(5, engine.getState().enemies[0].block)
-        // The player now attacks THROUGH it. The strike is not 6 damage: the flat leverage
-        // bonus adds floor(debt / 6) and interest compounds twice before the strike resolves
-        // (30 -> 35 on startCombat, 35 -> 41 on the next beginTurn), so the strike deals
-        // 6 + floor(41 / 6) = 12; 5 block absorbs 5 of it, net 7 -> 60 - 7 = 53.
+        // The player now attacks THROUGH it. The fixture baseline is hp = 60 (see [start]);
+        // the removed "55 - 1" implied a baseline of 55 that the fixture never had. The strike
+        // is not 6 damage either: the flat leverage bonus adds floor(debt / 6) and interest
+        // compounds twice before the strike resolves (30 -> 35 on startCombat, 35 -> 41 on the
+        // next beginTurn), so the strike deals 6 + floor(41 / 6) = 12; 5 block absorbs 5 of it,
+        // net 7 against baseline 60 -> 53.
         val strike = engine.getState().hand.first { it.cardId == "strike" }
         engine.playCard(strike.id, engine.getState().enemies[0].id)
         assertEquals(53, engine.getState().enemies[0].hp, "12 damage - 5 block")

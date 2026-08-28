@@ -11,9 +11,7 @@ import com.debtsdecks.core.model.CombatState
 import com.debtsdecks.core.model.EncounterSlot
 import com.debtsdecks.core.model.RunSequence
 import com.debtsdecks.core.model.SlotRole
-import com.debtsdecks.core.model.TurnPhase
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.Locale
 
@@ -29,21 +27,6 @@ import java.util.Locale
  * numbers for the calibration decision and only asserts that the instrumentation is honest.
  */
 class ForecloseControlMeasureTest {
-
-    private fun verbsOffControl(enemies: List<EnemyDefinition>): List<EnemyDefinition> {
-        val predecessorStep = mapOf(
-            "loan_shark" to (IntentType.FORECLOSE to IntentStep(IntentType.ATTACK, damage = 9)),
-            "collector" to (IntentType.HEDGE to IntentStep(IntentType.MULTI_ATTACK, damage = 7, param = 2)),
-        )
-        return enemies.map { def ->
-            val swap = predecessorStep[def.id] ?: return@map def
-            def.copy(
-                intentPattern = def.intentPattern.map { step ->
-                    if (step.type == swap.first) swap.second else step
-                }
-            )
-        }
-    }
 
     private fun sweep(
         registry: CardRegistry,
@@ -75,7 +58,7 @@ class ForecloseControlMeasureTest {
     fun `control build with verbs off vs verbs on, instrumented for FORECLOSE seizures`() {
         val cards = TestAssetLoader.loadCards()
         val enemies = TestAssetLoader.loadEnemies()
-        val control = verbsOffControl(enemies)
+        val control = VerbControl.verbsOffControl(enemies)
         val registry = CardRegistry.create(cards)
 
         val policies = listOf("responding" to RespondingPolicy, "ignoring" to LeveragePolicy)
