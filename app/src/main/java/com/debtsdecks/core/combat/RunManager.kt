@@ -270,7 +270,7 @@ class RunManager(
     fun takeLoan(): Boolean {
         val loanGold = NodeConfig.escalatedCost(NodeConfig.LOAN_GOLD_BASE, nodeIndex)
         val loanDebt = NodeConfig.escalatedCost(NodeConfig.LOAN_DEBT_BASE, nodeIndex)
-        if (debt + loanDebt > DebtConfig.EXECUTION_THRESHOLD) return false
+        if (debt + loanDebt > DebtConfig.DEBT_SCALE_ANCHOR) return false
         gold += loanGold
         debt += loanDebt
         if (!breakEncounterUsedThisRun && debt >= DebtConfig.BREAK_THRESHOLD) {

@@ -148,10 +148,10 @@ class DebtPressureTest {
     @Test
     fun `the execution line stays above the break threshold`() {
         // Guard for the re-scale: the collector must arrive before death, or the leverage band
-        // has no room to be played (see DebtConfig.EXECUTION_THRESHOLD).
+        // has no room to be played (see DebtConfig.DEBT_SCALE_ANCHOR).
         assertTrue(
-            DebtConfig.EXECUTION_THRESHOLD > DebtConfig.BREAK_THRESHOLD,
-            "EXECUTION_THRESHOLD (${DebtConfig.EXECUTION_THRESHOLD}) must stay above " +
+            DebtConfig.DEBT_SCALE_ANCHOR > DebtConfig.BREAK_THRESHOLD,
+            "DEBT_SCALE_ANCHOR (${DebtConfig.DEBT_SCALE_ANCHOR}) must stay above " +
                 "BREAK_THRESHOLD (${DebtConfig.BREAK_THRESHOLD})"
         )
     }

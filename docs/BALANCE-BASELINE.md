@@ -1066,3 +1066,64 @@ moved. `git diff --stat` names no path under `app/src/main/**`.
 **Phase two (the `respondToNode` hook) does not start.** Tasks 1.16 gates it on a *recorded PASS*;
 this is a recorded FAIL. The fifth FV.E1 lever is spent, and — like the four before it — its number is
 the deliverable.
+
+---
+
+## Pre fv-e1-arrears-lock (2026-08-29) — baseline before the arrears hard-lock, Work Unit 1 Phase 1
+
+**Measured:** 2026-08-29, on `feat/fv-verbs-foreclose-hedge` at `6b3e727` (worktree
+`DebtsAndDecks-fv-e1-leverage`), no code modified — `git status --short` clean under `app/`
+before this run (uncommitted `openspec/changes/fv-e1-arrears-lock/` work-order files present but
+untracked, no source touched). Reproduce:
+
+```
+<cached-gradle-8.11.1>/bin/gradle --no-daemon :app:testDebugUnitTest \
+  --tests '*IntentVerbsE1Test' --tests '*RunSimulationHarnessTest' --tests '*HarnessDeterminismTest' \
+  --rerun-tasks -i
+```
+
+(The repo's `gradle-wrapper.properties` pins 8.11.1, not the 8.9 the debtsanddecks skill doc
+names — the 8.9 cache is stale for this checkout; 8.11.1 is also cached locally.)
+
+`BUILD SUCCESSFUL`, all three test classes green (`IntentVerbsE1Test`: 1/1, `RunSimulationHarnessTest`:
+13/13, `HarnessDeterminismTest`: 3/3 — read from
+`app/build/test-results/testDebugUnitTest/TEST-*.xml`).
+
+### `IntentVerbsE1Test` (200 seeds/policy)
+
+```
+Responding -> verbs-on 49.5% | verbs-off 18.0% | difficulty weight 31.5pp
+Ignoring   -> verbs-on 47.5% | verbs-off 27.0% | difficulty weight 20.5pp
+Response gap (responding - ignoring, informational): 2.0pp
+```
+
+### `RunSimulationHarnessTest` (200 seeds/policy)
+
+```
+Win rate:          50,0%
+Avg peak Debt:     30,2
+  as fraction:     0,604 of execution line
+Avg HP at victory: 20,4
+Avg turns/combat:  1,8
+Defeats by encounter:
+  collector: 11
+  loan_shark: 89
+
+Greedy   -> win 50,0% | peak debt 30,2 | HP@win 20,4
+Leverage -> win 47,5% | peak debt 30,1 | HP@win 21,1
+Defeats greedy: {collector=11, loan_shark=89}
+Defeats leverage: {collector=12, loan_shark=93}
+Leverage spread: -2,5pp win | debt -0,1
+```
+
+Per-policy win rate (task 1.1 requirement): **greedy 50.0%, leverage 47.5%** — both inside the E2
+`[0.35,0.55]` band, neither >= 70%, matching the last recorded fa2236b-era measurement in this
+file within noise (the intervening commits since `fa2236b` touched only `docs/` per
+`git log --stat`).
+
+`DebtConfig.EXECUTION_THRESHOLD` is still `50` (pre-D1-split), `BREAK_THRESHOLD` is `30`.
+
+### `HarnessDeterminismTest` (task 1.2)
+
+`BUILD SUCCESSFUL`, 3/3 tests green — confirmed as the pre-change determinism control for
+Phase 5's re-check.

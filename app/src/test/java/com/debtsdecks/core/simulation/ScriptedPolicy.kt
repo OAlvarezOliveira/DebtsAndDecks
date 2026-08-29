@@ -69,10 +69,10 @@ object ScriptedPolicy : RunPolicy {
             // the hand is assembled must re-check HarnessDeterminismTest.
         )
         // Debt-as-Leverage safety: never play a shortfall attack whose borrow would cross the
-        // Execution line (debt > EXECUTION_THRESHOLD is an instant loss). End the turn instead.
+        // Execution line (debt > DEBT_SCALE_ANCHOR is an instant loss). End the turn instead.
         val wouldBorrow = best.cost > state.energy
         val debtAfter = state.debt + (best.cost - state.energy)
-        if (wouldBorrow && debtAfter >= DebtConfig.EXECUTION_THRESHOLD) {
+        if (wouldBorrow && debtAfter >= DebtConfig.DEBT_SCALE_ANCHOR) {
             return CombatAction.EndTurn
         }
         return CombatAction.Play(best.instanceId, enemyTargetId(state))

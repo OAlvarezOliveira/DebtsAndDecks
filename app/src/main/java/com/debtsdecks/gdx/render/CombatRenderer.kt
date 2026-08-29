@@ -362,7 +362,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         }
 
         val debtColor = when {
-            state.debt >= DebtConfig.EXECUTION_THRESHOLD -> Color.RED
+            state.debt >= DebtConfig.DEBT_SCALE_ANCHOR -> Color.RED
             state.debt >= DebtConfig.BREAK_THRESHOLD -> Color(1f, 0.6f, 0.1f, 1f) // amber
             else -> ink100
         }
@@ -384,7 +384,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         // instant death (the interest tick is exempt). NEW-5 playtest: the zone was invisible.
         smallFont.color = debtColor
         smallFont.draw(batch, bundle.format("hud.debt_gold", state.debt, state.gold), x + pad, debtY)
-        if (state.debt >= DebtConfig.EXECUTION_THRESHOLD) {
+        if (state.debt >= DebtConfig.DEBT_SCALE_ANCHOR) {
             smallFont.color = Color.RED
             smallFont.data.setScale(0.66f)
             smallFont.draw(batch, bundle.get("hud.execution_warning"), x + pad, warningY, barW, Align.left, true)
@@ -738,7 +738,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
                 drawNodeButton(1, bundle.get("node.button.repay"), run.gold > 0 && run.debt > 0, batch)
                 drawNodeButton(2, bundle.get("node.button.buy"), run.gold >= buyCost, batch)
                 drawNodeButton(3, bundle.get("node.button.remove"), run.gold >= removeCost, batch)
-                val affordableLoan = run.debt + loanDebt <= DebtConfig.EXECUTION_THRESHOLD
+                val affordableLoan = run.debt + loanDebt <= DebtConfig.DEBT_SCALE_ANCHOR
                 drawNodeButton(4, bundle.get("node.button.loan"), affordableLoan, batch)
                 // card-upgrades R9: 6th action — flat upgrade, capped, gold-gated.
                 val upgradeEnabled = run.gold >= NodeConfig.UPGRADE_BASE &&

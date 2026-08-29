@@ -16,7 +16,7 @@ import com.debtsdecks.core.model.TurnPhase
  * Behavior:
  * - Still blocks when incoming damage threatens > 50% HP (same rule as baseline).
  * - Otherwise plays the attack with the best projected damage-per-cost after Borrowing up to a
- *   target ring (`leverageTarget`), never crossing [DebtConfig.EXECUTION_THRESHOLD].
+ *   target ring (`leverageTarget`), never crossing [DebtConfig.DEBT_SCALE_ANCHOR].
  * - Prefers zero-shortfall attacks as long as debt is already above target (no more borrowing).
  */
 object LeveragePolicy : RunPolicy {
@@ -92,7 +92,7 @@ object LeveragePolicy : RunPolicy {
         for (attack in attacks) {
             val shortfall = (attack.cost - state.energy).coerceAtLeast(0)
             val debtAfter = state.debt + shortfall
-            if (debtAfter > DebtConfig.EXECUTION_THRESHOLD) continue
+            if (debtAfter > DebtConfig.DEBT_SCALE_ANCHOR) continue
             val projected = projectedDamage(attack, debtAfter).toDouble()
             val score = if (attack.cost > 0) projected / attack.cost else projected * 10.0
             if (score > bestScore) {

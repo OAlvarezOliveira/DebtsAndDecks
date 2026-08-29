@@ -27,13 +27,20 @@ object DebtConfig {
     const val BREAK_THRESHOLD: Int = 30
 
     /**
-     * Debt level above which any debt-increasing action is immediate defeat (Execution).
-     * Deliberately ABOVE [BREAK_THRESHOLD]: the collector (forced at BREAK_THRESHOLD) arrives
-     * before death, giving the Debt-as-Leverage range (5..EXECUTION-1) room to be played —
-     * with EXECUTION == BREAK (30), interest alone would cross the line every turn and the
-     * mechanic was unplayable. See C2 apply-progress decision A.
+     * Debt level at which the "En Mora" arrears lock arms (FV.E1). Deliberately ABOVE
+     * [BREAK_THRESHOLD]: the collector (forced at BREAK_THRESHOLD) arrives before the lock,
+     * giving the Debt-as-Leverage range room to be played before arrears bites.
      */
-    const val EXECUTION_THRESHOLD: Int = 50
+    const val ARREARS_THRESHOLD: Int = 40
+
+    /**
+     * Harness-scale anchor only — NOT a behavioral defeat line. [HarnessBands] derives every
+     * E2 band as a ratio of this constant, and the blind harness policies (`ScriptedPolicy`,
+     * `LeveragePolicy`) use it as their borrow ceiling so they stay lock-blind by design (D3).
+     * Deliberately ABOVE [BREAK_THRESHOLD] for the same reason [ARREARS_THRESHOLD] is: the
+     * Debt-as-Leverage range needs room to be played. See C2 apply-progress decision A.
+     */
+    const val DEBT_SCALE_ANCHOR: Int = 50
 
     /** Maximum fraction of a Gold reward that garnishment can redirect toward Debt repayment. */
     const val MAX_GARNISH_RATE: Double = 0.6
@@ -60,7 +67,7 @@ object DebtConfig {
      * The wipe is the reward, so the damage cannot also be the maximum: at 1:1 the card dealt the
      * whole Debt AND cleared it, which strictly dominated its designed counterweight
      * ([DEBT_PAYOFF_DIVISOR], same divisor but NO wipe) and inverted the Debt axis — parking at
-     * [EXECUTION_THRESHOLD] - 1 became optimal because interest compounded into free damage.
+     * [DEBT_SCALE_ANCHOR] - 1 became optimal because interest compounded into free damage.
      * Sharing the divisor with `debt_payoff` makes the trade explicit: identical raw damage, but
      * `debt_payoff` adds the flat leverage bonus and keeps the engine hot, while this one resets
      * the pressure and exhausts.

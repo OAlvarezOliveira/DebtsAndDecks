@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 
 /**
  * Scale-proof of [HarnessBands]. Task 1.1: the bands resolve to the historical absolutes at the
- * current `EXECUTION_THRESHOLD`. Task 1.3: the derivation is LIVE — a stubbed execution line
+ * current `DEBT_SCALE_ANCHOR`. Task 1.3: the derivation is LIVE — a stubbed execution line
  * resolves to the expected ratios, which a class-load-frozen object would fail.
  */
 class HarnessBandsTest {

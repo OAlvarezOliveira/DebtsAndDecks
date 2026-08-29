@@ -138,7 +138,7 @@ object RespondingPolicy : RunPolicy {
         for (attack in attacks) {
             val shortfall = (attack.cost - state.energy).coerceAtLeast(0)
             val debtAfter = state.debt + shortfall
-            if (debtAfter > DebtConfig.EXECUTION_THRESHOLD) continue
+            if (debtAfter > DebtConfig.DEBT_SCALE_ANCHOR) continue
             val projected = projectedDamage(attack, debtAfter).toDouble()
             val score = if (attack.cost > 0) projected / attack.cost else projected * 10.0
             if (score > bestScore) {

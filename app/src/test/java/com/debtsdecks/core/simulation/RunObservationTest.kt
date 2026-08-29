@@ -20,7 +20,7 @@ enum class DefeatCause { EXECUTION, HP_ZERO }
 
 /** [endDebt] >= the execution line is [DefeatCause.EXECUTION]; otherwise HP reached zero first. */
 fun classifyDefeat(endDebt: Int): DefeatCause =
-    if (endDebt >= DebtConfig.EXECUTION_THRESHOLD) DefeatCause.EXECUTION else DefeatCause.HP_ZERO
+    if (endDebt >= DebtConfig.DEBT_SCALE_ANCHOR) DefeatCause.EXECUTION else DefeatCause.HP_ZERO
 
 /**
  * Playtest-via-sim observation harness (test-source, deterministic, no asserts beyond health).
@@ -183,9 +183,9 @@ class RunObservationTest {
 
     @Test
     fun `defeat cause follows the execution threshold`() {
-        assertEquals(DefeatCause.HP_ZERO, classifyDefeat(DebtConfig.EXECUTION_THRESHOLD - 1))
-        assertEquals(DefeatCause.EXECUTION, classifyDefeat(DebtConfig.EXECUTION_THRESHOLD))
-        assertEquals(DefeatCause.EXECUTION, classifyDefeat(DebtConfig.EXECUTION_THRESHOLD + 1))
+        assertEquals(DefeatCause.HP_ZERO, classifyDefeat(DebtConfig.DEBT_SCALE_ANCHOR - 1))
+        assertEquals(DefeatCause.EXECUTION, classifyDefeat(DebtConfig.DEBT_SCALE_ANCHOR))
+        assertEquals(DefeatCause.EXECUTION, classifyDefeat(DebtConfig.DEBT_SCALE_ANCHOR + 1))
     }
 
 }

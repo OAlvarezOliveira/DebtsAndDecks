@@ -53,14 +53,14 @@ class CombatEngine(
 
         /**
          * Adds [amount] Debt, clamped to [DebtConfig.INTEREST_CAP], then checks Execution
-         * (Debt > EXECUTION_THRESHOLD). Returns true when Execution tripped — the caller MUST
+         * (Debt > DEBT_SCALE_ANCHOR). Returns true when Execution tripped — the caller MUST
          * endCombat(victory = false) and stop. All in-combat debt increases (Credit-shortfall
          * borrow, enemy LEVY, card AddDebt) route through this helper; the per-turn interest
          * tick in beginTurn is deliberately excluded (Decision B).
          */
         private fun addDebt(amount: Int, source: DebtSource = DebtSource.OTHER): Boolean {
             debt = minOf(debt + amount, DebtConfig.INTEREST_CAP)
-            if (debt > DebtConfig.EXECUTION_THRESHOLD) {
+            if (debt > DebtConfig.DEBT_SCALE_ANCHOR) {
                 val key = if (source == DebtSource.LEVY) "log.debt_execution_levy" else "log.debt_execution"
                 log.add(CombatLogEntry.create(l10n.get(key), turnNumber))
                 return true
