@@ -462,3 +462,59 @@ The one genuine improvement landed this session — the reactive branch now also
 fires when a seizure is already imminent, so it cannot regress the gap) but has no measurable
 effect on the 200-seed win rate because so few runs hold a `wipe_debt` card at the exact deadline
 turn.
+
+---
+
+## FV.E1 — draft-priority fix, isolated (2026-08-29, `fv-e1-wipe-debt-response`)
+
+**Measured:** 2026-08-29, on `feat/fv-verbs-foreclose-hedge` (PR #22), from HEAD `7eff86c`,
+headless sim only, no asset/DebtConfig/CombatEngine edits. Full proposal:
+`openspec/changes/fv-e1-wipe-debt-response/proposal.md`.
+
+The 2026-08-29 re-verification above (`7eff86c`) added a `wipe_debt`-before-`debtRepay` check to
+`RespondingPolicy.chooseAction`'s reactive branch, but never touched `chooseReward`'s draft
+priority — so the policy could still go an entire run without drafting a `wipe_debt` card at all
+(only 1 in 27 cards, `partial_forgiveness`, repays debt by amount at all; the two `wipe_debt`
+cards, `debt_forgiveness` and `tactical_bankruptcy`, sat below `debt_payoff` in the comparator).
+This session completed the untried half and re-measured, both changes real (`:app:testDebugUnitTest
+--tests '*IntentVerbsE1Test' --rerun-tasks -i`, 200 seeds/policy, seed-aligned):
+
+| change | scope | response gap (200 seeds) |
+|---|---|---|
+| `chooseAction`: HP-aware wipe selection (prefer the cheapest `wipe_debt` card that will not drop HP to 0 or below when both `debt_forgiveness`/`tactical_bankruptcy` are held; `tactical_bankruptcy`'s `selfDamage: 8` is now a real cost, not a free tiebreaker) | play-side only | **+2.5pp** (unchanged from `7eff86c`'s baseline — confirms this refinement alone is a no-op on the win rate, same reasoning as the prior session's finding) |
+| `chooseReward`: `wipe_debt` tier ranked above `debt_payoff` and `debtRepay > 0` (isolated — no change to borrowing behavior) | draft-side only | **-7.5pp** — a genuine, isolated regression, not noise |
+
+**Both changes were measured independently** (the `chooseAction` fix alone reproduces the exact
+`7eff86c` baseline of +2.5pp; the `chooseReward` bump layered on top drops it to -7.5pp), so the
+draft-priority bump is confirmed as the sole cause of the regression, not an interaction with an
+unrelated change.
+
+**Disposition:** `chooseAction`'s HP-aware wipe selection is kept (strict improvement, no
+downside — the class doc's `wipeCandidates` HP filter is new; the wipe-before-repay check itself
+was already `7eff86c`). `chooseReward`'s `wipe_debt` draft-priority bump is **reverted** — it is
+worse than every previously measured reward-bump variant except the borrow-ban combo (-10.0pp),
+and it trips this test's own pre-existing R3-1 reliability floor (`responseGap >= -5.0`), which
+this session did not touch or weaken.
+
+**Result:** the shipped `RespondingPolicy` response gap stays at **+2.5pp**, unchanged from the
+prior session's ceiling. This is a real, complete measurement of proposal §3 items 2-3, not a
+partial one: giving `wipe_debt` cards top draft priority — the specific fix the proposal
+hypothesized would close the gap by making Debt itself the managed axis rather than just
+HP/damage — was tried in isolation and it makes the response gap *worse*, not better. Every
+combination tried across both sessions (13 total: 6 from 2026-08-29's first pass, this session's
+2, plus the 5 from 2026-08-28) tops out at +2.5pp from the positive side.
+
+**E1 exit criterion (proposal §4): FAIL.** Measured gap (+2.5pp, and the isolated draft-priority
+attempt at -7.5pp) stays under the required 10pp bar over 200 seeds. Per the proposal's own exit
+criterion, this is a real, expected, complete outcome — not a manufactured pass. `IntentVerbsE1Test`'s
+current re-metriced gate (difficulty-weight floors 20/15pp, response gap kept informational and
+only guarded against a strong negative regression via the R3-1 `>= -5.0` floor) stays exactly
+as-is; it is **not** weakened and the original `>= 10.0` response-gap assertion is **not**
+restored, per the proposal's explicit "the failure hands the owner a scoped choice" framing.
+E1 remains unreachable on the FORECLOSE/HEDGE mechanics and 27-card pool as shipped; closing it
+needs one of the two out-of-scope levers proposal §4 names (FORECLOSE/HEDGE parameter tuning, or
+buffing/adding debt-reduction cards), each requiring its own proposal and the owner's go-ahead.
+
+**E2 confirmed still green in the same session**: `:app:testDebugUnitTest --tests
+'*RunSimulationHarnessTest*' --rerun-tasks` → `BUILD SUCCESSFUL`. Full unit suite (`:app:testDebugUnitTest
+--rerun-tasks`, all modules) also `BUILD SUCCESSFUL`, confirming nothing else regressed.

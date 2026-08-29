@@ -36,13 +36,22 @@ import com.debtsdecks.core.model.TurnPhase
  *   - Exact baseline behavior below (react on the actual deadline turn only, never restrict
  *     borrowing otherwise, reward priority unchanged from [LeveragePolicy]'s scheme): +2.5pp,
  *     matching the informational note this test already carries.
+ *   - (2026-08-29, FV.E1) `chooseReward` draft priority bumped so a `wipe_debt`-tagged card
+ *     outranks `debt_payoff` and `debtRepay > 0` — isolated (no borrow-ban), everything else
+ *     exact baseline: -7.5pp. Confirmed by isolating the change (`chooseAction`'s HP-aware wipe
+ *     selection alone reproduces the unchanged +2.5pp baseline). Reverted: it is a genuine
+ *     regression, not noise, and it is worse than every already-rejected reward-bump variant
+ *     except the borrow-ban combo. See `chooseReward` below for the shipped (reverted) priority.
  * Every attempt that meaningfully changes borrowing near a FORECLOSE trades away more Leverage
  * damage across the run than it recovers from avoided seizures, because the roster's FORECLOSE
  * threshold (27) sits well inside the shared leverage band (target 35, execution line 50) that
  * BOTH policies already operate in — there is no borrowing posture that avoids the threshold
  * without also giving up the leverage economy's core damage source. This is the same conclusion
  * the FORECLOSE/HEDGE calibration pass reached on 2026-08-28; this session re-verified it with 6
- * additional real (not estimated) measurements rather than taking the prior finding on faith.
+ * additional real (not estimated) measurements rather than taking the prior finding on faith, and
+ * with a 7th (2026-08-29, FV.E1) that isolated the DRAFT-priority half of the fix from the PLAY
+ * half — the play-side wipe/repay branch is a strict improvement (kept), the draft-side bump is a
+ * genuine regression (reverted).
  */
 object RespondingPolicy : RunPolicy {
 
@@ -63,9 +72,15 @@ object RespondingPolicy : RunPolicy {
         // FV E1 — FORECLOSE response: pay down on the deadline turn. Block does not help against a
         // seizure, so a wipe (Debt -> 0) beats a partial repay when both are held.
         if (forecloseAnnounced(state) && state.debt >= forecloseThreshold(state)) {
-            val wipe = state.hand
+            val wipeCandidates = state.hand
                 .filter { it.isPlayable(state.debt) && it.definition.tags.contains("wipe_debt") }
+            // Prefer the cheapest wipe that will not drop HP to 0 or below (tactical_bankruptcy's
+            // selfDamage: 8 is a real cost, not a free tiebreaker); if every candidate would be
+            // lethal, take the cheapest anyway — a seizure this turn is worse than surviving it.
+            val wipe = wipeCandidates
+                .filter { state.player.hp - it.baseSelfDamage > 0 }
                 .minByOrNull { it.cost }
+                ?: wipeCandidates.minByOrNull { it.cost }
             if (wipe != null) {
                 return ScriptedPolicy.CombatAction.Play(wipe.instanceId, null)
             }
@@ -146,12 +161,13 @@ object RespondingPolicy : RunPolicy {
 
     override fun chooseReward(choices: List<CardDefinition>): CardDefinition {
         if (choices.isEmpty()) error("chooseReward requires at least one offer")
-        // Same reward priority as LeveragePolicy's Leverage-identity pick (debt_payoff/debt_scaling
-        // first), with debtRepay cards ranked just below debt_payoff. Bumping debtRepay/wipe_debt
-        // above debt_payoff was tried and measured a NET-NEGATIVE response gap (-3.0 to -10.0pp,
-        // see the class doc) — it steals reward slots from the cards that carry the Leverage
-        // economy's actual damage output for a card that only helps on the rare FORECLOSE-deadline
-        // turn.
+        // FV.E1 (2026-08-29): same reward priority as LeveragePolicy's Leverage-identity pick
+        // (debt_payoff/debt_scaling first), with debtRepay ranked just below debt_payoff.
+        // wipe_debt was tried at the TOP of this comparator (above debt_payoff and debtRepay) —
+        // an isolated variant, borrow behavior unchanged from the row below — and measured
+        // -7.5pp (200 seeds), worse than every previously measured reward-bump variant except the
+        // borrow-ban combo (-10.0pp). It also trips the R3-1 floor (`responseGap >= -5.0`), so it
+        // was reverted; see the class doc's measurement table for the exact number.
         return choices.maxWith(
             compareBy<CardDefinition> {
                 when {
