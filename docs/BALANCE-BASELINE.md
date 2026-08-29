@@ -738,3 +738,139 @@ with weaker justification given the non-monotonic trend) or lever (a) — FORECL
 tuning, explicitly out of scope here and boxed in by E2's band per proposal §1. New art for the
 two cards rides `docs/ART-PIPELINE.md`'s existing backlog per proposal §3.5; it does not gate
 this merge.
+
+## FV.E1 — lever (a): FORECLOSE threshold sweep, 2 points, both upward (2026-08-29, `fv-e1-foreclose-hedge-tuning`)
+
+**Measured:** 2026-08-29, on `feat/fv-verbs-foreclose-hedge` (PR #22), from HEAD `9d32dc3`,
+data-only change to `app/src/main/assets/enemies/all.json` — `loan_shark` intent slot 1
+(`FORECLOSE`) `param` only. Full proposal:
+`openspec/changes/fv-e1-foreclose-hedge-tuning/proposal.md`. This is lever (a), the last lever
+named by `fv-core-validation` §4 criterion E1, deferred by both `fv-e1-wipe-debt-response` and
+`fv-e1-card-pool-expansion`.
+
+**Owner's §6 resolution (given before this apply, not chosen here):** §3/Q1 constraint scope read
+as intent — HP/ATTACK-damage inflation stays banned, the FORECLOSE *threshold* (a Debt-axis
+deadline knob) is in scope. FORECLOSE `damage` (9) and the HEDGE divisor (4) stay untouched —
+§4 already showed neither discriminates and both move the gap the wrong way. Q3: 2 sweep points,
+both upward from 27 — **30** and **33** — each measured independently, full pass, not combined.
+Q4: spend only the ~5pp upward win-rate room; never go below 27. Q5: "re-measured, lever confirmed
+dead at post-calibration HP" is an acceptable terminal deliverable if both points fail. Q6:
+`IntentVerbsE1Test`'s gate stays exactly as the 2026-08-28 re-metric left it
+(`responseGap >= -5.0`, gap printed informationally) regardless of outcome — restoring the
+original 10pp assertion is explicitly out of scope for this change.
+
+**Command, identical for both points:**
+
+```
+./gradlew :app:testDebugUnitTest --tests '*IntentVerbsE1Test' --tests '*ForecloseControlMeasureTest' \
+  --tests '*RunSimulationHarnessTest' --tests '*HarnessDeterminismTest' --tests '*EnemyTierRegressionTest'
+```
+
+### Sweep point 1 — threshold 27 → 30
+
+`IntentVerbsE1Test`:
+
+```
+Responding -> verbs-on 67.0% | verbs-off 18.0% | difficulty weight 49.0pp
+Ignoring   -> verbs-on 71.0% | verbs-off 27.0% | difficulty weight 44.0pp
+Response gap (responding - ignoring, informational): -4.0pp
+```
+
+`ForecloseControlMeasureTest`:
+
+```
+verbs-on (current) responding win 67.0% | peak 32.9 | hp@win 17.1 | defeats {collector=36, loan_shark=30} | forecloseSeizures 29 (in 29 runs)
+verbs-on (current) ignoring   win 71.0% | peak 32.6 | hp@win 19.3 | defeats {collector=18, loan_shark=40} | forecloseSeizures 40 (in 40 runs)
+verbs-off (control) responding win 18.0% | peak 33.8 | hp@win  9.8 | defeats {collector=158, loan_shark=6} | forecloseSeizures 0
+verbs-off (control) ignoring   win 27.0% | peak 33.6 | hp@win 10.3 | defeats {collector=139, loan_shark=7} | forecloseSeizures 0
+```
+
+`RunSimulationHarnessTest`:
+
+```
+Greedy   -> win 73.5% | peak debt 32.7 | HP@win 18.7
+Leverage -> win 71.0% | peak debt 32.6 | HP@win 19.3
+```
+
+**FAILED** — `greedy win rate 0.735 must stay under 70%` (E2's "neither policy ≥ 0.70" gate
+breached). `HarnessDeterminismTest` and `EnemyTierRegressionTest` both `BUILD SUCCESSFUL` (boss HP
+57 confirmed untouched).
+
+**Sweep point 1 verdict:** FAIL on both counts — the gap moved further negative (-4.0pp, worse
+than 27's +2.5pp), and E2 left its band in the same run (greedy 73.5% ≥ 70%). Per proposal §8 an
+E2 breach alone is already a fail; the gap regression makes it a fail on both named conditions.
+
+### Sweep point 2 — threshold 27 → 33
+
+`IntentVerbsE1Test`:
+
+```
+Responding -> verbs-on 72.5% | verbs-off 18.0% | difficulty weight 54.5pp
+Ignoring   -> verbs-on 77.5% | verbs-off 27.0% | difficulty weight 50.5pp
+Response gap (responding - ignoring, informational): -5.0pp
+```
+
+**FAILED** in-suite too — `IntentVerbsE1Test` itself failed (`responding must not be materially
+worse than ignoring (gap -5,0pp...)`), tripping its own `>= -5.0` floor at the boundary; the
+existing gate is left untouched per Q6, this is the gate doing exactly what it was built to catch.
+
+`ForecloseControlMeasureTest`:
+
+```
+verbs-on (current) responding win 72.5% | peak 33.3 | hp@win 16.7 | defeats {collector=37, loan_shark=18} | forecloseSeizures 18 (in 18 runs)
+verbs-on (current) ignoring   win 77.5% | peak 32.9 | hp@win 18.6 | defeats {collector=20, loan_shark=25} | forecloseSeizures 25 (in 25 runs)
+verbs-off (control) responding win 18.0% | peak 33.8 | hp@win  9.8 | defeats {collector=158, loan_shark=6} | forecloseSeizures 0
+verbs-off (control) ignoring   win 27.0% | peak 33.6 | hp@win 10.3 | defeats {collector=139, loan_shark=7} | forecloseSeizures 0
+```
+
+`RunSimulationHarnessTest`:
+
+```
+Greedy   -> win 79.0% | peak debt 33.1 | HP@win 18.1
+Leverage -> win 77.5% | peak debt 32.9 | HP@win 18.6
+```
+
+**FAILED** — `greedy win rate 0.79 must stay under 70%`, worse than point 1's 73.5%. `HarnessDeterminismTest`
+and `EnemyTierRegressionTest` both `BUILD SUCCESSFUL`.
+
+**Sweep point 2 verdict:** FAIL on all three named conditions — gap regressed further (-5.0pp),
+E2 badly out of band (greedy 79.0%), and the sweep even tripped `IntentVerbsE1Test`'s own
+informational-floor gate.
+
+### Why raising the threshold makes things worse, not better
+
+Both points move in the wrong direction on both axes at once: fewer FORECLOSE seizures for both
+policies (29→18 responding, 40→25 ignoring at 33 vs. 27's 85/96) let `greedy`'s baseline
+win rate climb past the E2 ceiling, while the *ignoring* policy's win rate climbs faster than the
+*responding* policy's, pushing the gap negative instead of toward +10pp. §5's "~5pp of upward
+win-rate room" was consumed by point 1 alone (greedy 50.0%→73.5%, already past the 55% target and
+into the 70% hard ceiling); point 2 only makes the breach larger. The room described in the
+proposal's §5 table was measured at a different HP calibration/game state than what actually
+shipped on this branch — the 5pp figure did not hold.
+
+### Final disposition
+
+**Threshold left at 27 (shipped value)** — both sweep points reverted; `git diff` against the
+pre-sweep commit on `app/src/main/assets/enemies/all.json` is empty. Confirmed with the same
+5-test command at 27: `BUILD SUCCESSFUL`, all 21 tests pass, matching the pre-existing 2026-08-29
+baseline (gap +2.5pp/2.0pp region, greedy/leverage inside `[0.35, 0.55]`).
+
+**E1 exit criterion (proposal §8): FAIL at both sweep points**, on every named condition:
+
+1. Response gap ≥ 10pp — FAIL both points (-4.0pp, then -5.0pp; moved away from the target, not
+   toward it).
+2. E2 green in the same run — FAIL both points (greedy 73.5% then 79.0%, both ≥ 70%).
+3. Numbers recorded — done, this section.
+
+Per proposal §6 Q5, this is an accepted terminal deliverable: **lever (a) is confirmed dead at
+post-calibration HP, in the upward direction, within the owner-approved scope (threshold only, ≥
+27).** This closes lever (a) — the last lever named by `fv-core-validation` §4 criterion E1. All
+three named levers (policy behaviour, card pool, FORECLOSE/HEDGE parameters) are now spent:
++2.5pp best (policy), +4.0pp→+2.0pp non-monotonic (card pool), -4.0pp/-5.0pp (this lever, upward
+direction only — downward was out of scope per Q4). E1 stands unreached with the current
+FORECLOSE/HEDGE mechanics and card pool; closing it further would require either a new mechanic
+(not a tuning lever) or lowering the threshold below 27 and testing against the debt-band floor
+(explicitly deferred by Q4, a separate decision the owner did not make here).
+
+`IntentVerbsE1Test`'s gate is unchanged (`responseGap >= -5.0`, informational print) per Q6 —
+left exactly as the 2026-08-28 re-metric set it, not strengthened or weakened by this change.
