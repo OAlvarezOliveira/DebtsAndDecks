@@ -166,6 +166,41 @@
     ]
   },
   {
+    "id": "debt_settlement",
+    "name": "card.debt_settlement.name",
+    "type": "SKILL",
+    "cost": 2,
+    "damage": 0,
+    "block": 0,
+    "draw": 0,
+    "strengthGain": 0,
+    "weakApply": 0,
+    "vulnerableApply": 0,
+    "targetType": "SELF",
+    "description": "card.debt_settlement.description",
+    "rarity": "COMMON",
+    "tags": [
+      "wipe_debt"
+    ]
+  },
+  {
+    "id": "emergency_payment",
+    "name": "card.emergency_payment.name",
+    "type": "SKILL",
+    "cost": 1,
+    "damage": 0,
+    "block": 0,
+    "draw": 0,
+    "strengthGain": 0,
+    "weakApply": 0,
+    "vulnerableApply": 0,
+    "debtRepay": 6,
+    "targetType": "SELF",
+    "description": "card.emergency_payment.description",
+    "rarity": "COMMON",
+    "tags": []
+  },
+  {
     "id": "reverse_mortgage",
     "name": "card.reverse_mortgage.name",
     "type": "SKILL",
