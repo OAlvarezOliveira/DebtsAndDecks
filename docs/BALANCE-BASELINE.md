@@ -417,3 +417,48 @@ Seizures -> 85/200 (responding), 96/200 (ignoring) at the new HP: the shark surv
 The extra difficulty lands almost entirely on loan_shark (greedy defeats 47 -> 97): living
 longer means its FORECLOSE/LEVY cycle actually resolves. Collector defeats stay flat. The pivot
 band and the 5pp leverage grace hold; hp@win stays sane (~20).
+
+---
+
+## FV E1 — response-gap re-verification, 6 additional real measurements (2026-08-29)
+
+**Measured:** 2026-08-29, on `feat/fv-verbs-foreclose-hedge` (working from HEAD `66ae7f6`),
+headless sim only, no asset/DebtConfig edits. Every number below came from an actual
+`:app:testDebugUnitTest --tests '*IntentVerbsE1Test' --rerun-tasks -i` run (200 seeds/policy,
+seed-aligned), not an estimate. Goal was to close the 10pp response gap with an actual behavioral
+change in `RespondingPolicy`, not to weaken the test further.
+
+The 2026-08-28 finding above already showed proactive repay (-9.5 to -12pp) and a lowered
+leverage target (-25.5pp) both lose. This session tried variants that had not yet been measured:
+
+| variant | change vs. exact-baseline `RespondingPolicy` | response gap |
+|---|---|---|
+| exact baseline | react to FORECLOSE only on the actual deadline turn (wipe/repay), never restrict borrowing otherwise, reward priority unchanged from `LeveragePolicy` | **+2.5pp** |
+| ban + reward bump | never borrow at all while FORECLOSE announced, plus reward priority: wipe_debt/debtRepay ranked above debt_payoff | -10.0pp |
+| ban, no reward bump | same borrow ban, reward priority reverted to baseline | -7.5pp |
+| ban, soft reward bump | same borrow ban, reward priority: debt_payoff kept top, wipe_debt/debtRepay tied one tier below | -3.0pp |
+| turn-scoped cap (shortfall loop) | not a ban — cap Debt growth from shortfall-borrow attacks at `forecloseThreshold - 1`, but only on turns FORECLOSE is the *currently displayed* intent (~1 in 8 turns); every other turn behaves exactly like baseline | -4.5pp |
+| turn-scoped cap (loan-taking only) | same cap, applied only to the loan-taking branch, never the shortfall-attack loop | +2.5pp (no-op — the condition almost never binds before the reactive branch already fires) |
+
+The two negative surprises (-4.5pp and -7.5pp) rule out the hypothesis that a *narrower*,
+turn-scoped restriction (as opposed to the already-measured blanket ban) would behave
+differently: it still fires on turns where Debt is nowhere near the FORECLOSE threshold, giving
+up Leverage-scaled damage for zero seizure-avoidance benefit, since the one turn where the
+seizure is actually live is already handled by the reactive wipe/repay branch. No variant tried,
+in this session or the prior one, gets within 7pp of the +10pp bar from the positive side; the
+best any variant achieves is the +2.5pp exact-baseline number, which is what the shipped
+`RespondingPolicy` implements.
+
+**Conclusion:** the original E1 gate (`responseGap >= 10.0`) is unreachable within the current
+FORECLOSE/HEDGE mechanics and card pool — the FORECLOSE threshold (27) sits inside the shared
+leverage band (target 35, execution line 50) that both policies operate in, so there is no
+borrowing posture that meaningfully avoids the threshold without giving up more Leverage damage
+than the avoided seizures are worth. This re-confirms, with additional real measurements rather
+than by taking the 2026-08-28 finding on faith, that the re-metriced gate in
+`IntentVerbsE1Test.kt` (difficulty-weight floors, response gap kept informational and only
+guarded against a strong negative regression) is the correct gate for the mechanics as shipped.
+The one genuine improvement landed this session — the reactive branch now also checks for a
+`wipe_debt`-tagged card before falling back to `debtRepay` — is a strict improvement (it only
+fires when a seizure is already imminent, so it cannot regress the gap) but has no measurable
+effect on the 200-seed win rate because so few runs hold a `wipe_debt` card at the exact deadline
+turn.

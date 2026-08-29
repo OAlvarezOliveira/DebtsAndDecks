@@ -10,17 +10,39 @@ import com.debtsdecks.core.model.TargetType
 import com.debtsdecks.core.model.TurnPhase
 
 /**
- * FV deliverable 1: the policy variant that RESPONDS to the new verbs. Identical to
- * [LeveragePolicy] except for three reactions the baseline (the non-responding control) never
- * takes, so the E1 gap measures the verbs, not the policies:
+ * FV deliverable 1: the policy variant that RESPONDS to the new verbs, as distinct from
+ * [LeveragePolicy] which never reacts to them.
  *
- * - **FORECLOSE**: when the bailiff is announced and Debt is at/above its threshold, play the
- *   hand's debt-repaying card FIRST — the seizure ignores Block; the only way to answer a
- *   deadline is to pay before it.
- * - **HEDGE**: while the hedge is announced, never take a loan — the enemy's block is scaled by
- *   your Debt, so borrowing feeds it.
- * - **Reward pick**: buy debt-repaying cards (`debtRepay > 0`) with priority, so the deadline is
- *   actually answerable when it comes (the baseline never buys them).
+ * **2026-08-29 calibration finding (see `docs/BALANCE-BASELINE.md`)**: this policy reacts to an
+ * announced FORECLOSE (pay down with a wipe/repay card before the deadline resolves) and never
+ * borrows into an announced HEDGE, but the measured "responding beats ignoring by >=10pp"
+ * win-rate gap could not be reached with any variant that was actually tried, and every variant
+ * that pushed harder than this one measured NEGATIVE relative to [LeveragePolicy]. What was
+ * tried and its real (200-seed) measured response gap:
+ *   - Lower [LEVERAGE_TARGET] below the FORECLOSE threshold (~20 vs the shared 35): -25.5pp.
+ *     Sacrifices too much of the flat Leverage damage bonus across the WHOLE run for a rare event.
+ *   - Ban ALL borrowing while FORECLOSE is announced (not just when it would cross the line),
+ *     plus reward priority bumped for wipe_debt/debtRepay above debt_payoff: -10.0pp.
+ *   - Same borrow ban, safety margin removed, reward priority unchanged: -7.5pp.
+ *   - Same borrow ban, reward priority only softened (debt_payoff kept top, wipe/repay tied
+ *     below): -3.0pp.
+ *   - Cap (not ban) debt growth from shortfall-borrow attacks at `forecloseThreshold - 1` only on
+ *     turns FORECLOSE is the displayed intent, everything else unchanged from baseline: -4.5pp,
+ *     because the cap fires on the ~1-in-8 turns FORECLOSE is displayed even when Debt is nowhere
+ *     near the threshold, giving up leverage tempo for no seizure-avoidance benefit (the reactive
+ *     wipe/repay branch below already handles the one turn where the seizure is actually live).
+ *     Isolating the SAME cap to only the loan-taking branch (never the shortfall-attack loop) was
+ *     a true no-op: +2.5pp, identical to doing nothing extra.
+ *   - Exact baseline behavior below (react on the actual deadline turn only, never restrict
+ *     borrowing otherwise, reward priority unchanged from [LeveragePolicy]'s scheme): +2.5pp,
+ *     matching the informational note this test already carries.
+ * Every attempt that meaningfully changes borrowing near a FORECLOSE trades away more Leverage
+ * damage across the run than it recovers from avoided seizures, because the roster's FORECLOSE
+ * threshold (27) sits well inside the shared leverage band (target 35, execution line 50) that
+ * BOTH policies already operate in — there is no borrowing posture that avoids the threshold
+ * without also giving up the leverage economy's core damage source. This is the same conclusion
+ * the FORECLOSE/HEDGE calibration pass reached on 2026-08-28; this session re-verified it with 6
+ * additional real (not estimated) measurements rather than taking the prior finding on faith.
  */
 object RespondingPolicy : RunPolicy {
 
@@ -38,8 +60,15 @@ object RespondingPolicy : RunPolicy {
     override fun chooseAction(state: CombatState): ScriptedPolicy.CombatAction {
         if (state.currentTurn != TurnPhase.PLAYER_ACTION) return ScriptedPolicy.CombatAction.EndTurn
 
-        // FV E1 — FORECLOSE response: pay down before the deadline. Block does not help.
+        // FV E1 — FORECLOSE response: pay down on the deadline turn. Block does not help against a
+        // seizure, so a wipe (Debt -> 0) beats a partial repay when both are held.
         if (forecloseAnnounced(state) && state.debt >= forecloseThreshold(state)) {
+            val wipe = state.hand
+                .filter { it.isPlayable(state.debt) && it.definition.tags.contains("wipe_debt") }
+                .minByOrNull { it.cost }
+            if (wipe != null) {
+                return ScriptedPolicy.CombatAction.Play(wipe.instanceId, null)
+            }
             val repay = state.hand
                 .filter { it.isPlayable(state.debt) && it.definition.debtRepay > 0 }
                 .maxByOrNull { it.definition.debtRepay }
@@ -62,8 +91,8 @@ object RespondingPolicy : RunPolicy {
         val attacks = playable.filter { it.type == CardType.ATTACK }
 
         // Leverage strategy: below target, take out a loan (add-debt card) when there is nothing
-        // better to spend the energy on. FV E1 — HEDGE response: never during an announced hedge,
-        // the enemy's block is scaled by your Debt.
+        // better to spend the energy on. FV E1 — HEDGE response: never borrow during an announced
+        // hedge, the enemy's block is scaled by your Debt.
         if (state.debt < LEVERAGE_TARGET && attacks.isNotEmpty() && state.energy > 0 && !hedgeAnnounced(state)) {
             val affordableAttack = attacks.any { it.cost <= state.energy }
             val loan = playable.firstOrNull {
@@ -117,8 +146,12 @@ object RespondingPolicy : RunPolicy {
 
     override fun chooseReward(choices: List<CardDefinition>): CardDefinition {
         if (choices.isEmpty()) error("chooseReward requires at least one offer")
-        // C4-aware pick, with the FV1 reply in the mix: debt-repaying cards are bought early so a
-        // FORECLOSE deadline can actually be paid; the baseline never buys them.
+        // Same reward priority as LeveragePolicy's Leverage-identity pick (debt_payoff/debt_scaling
+        // first), with debtRepay cards ranked just below debt_payoff. Bumping debtRepay/wipe_debt
+        // above debt_payoff was tried and measured a NET-NEGATIVE response gap (-3.0 to -10.0pp,
+        // see the class doc) — it steals reward slots from the cards that carry the Leverage
+        // economy's actual damage output for a card that only helps on the rare FORECLOSE-deadline
+        // turn.
         return choices.maxWith(
             compareBy<CardDefinition> {
                 when {
