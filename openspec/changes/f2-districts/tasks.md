@@ -165,7 +165,7 @@ missing-file fallback stops painting the gradient.
 - [x] 4.2 Confirm it is tracked: `git ls-files docs/DESIGN-SYSTEM.md` is non-empty.
       *Verified 2026-08-29 after `git add docs/DESIGN-SYSTEM.md`:
       `git ls-files docs/DESIGN-SYSTEM.md` → `docs/DESIGN-SYSTEM.md` (non-empty); the file is
-      6794 bytes (non-empty content).*
+      5938 bytes (non-empty content).*
 
 ## 5. Art, with the pipeline fix applied first
 

@@ -57,7 +57,7 @@ Scope: F2 §4 (Design system, first). Not §5 (art) — out of scope this run.
 - The source kit ZIP
   (`/home/oscardev/DebtsAndDecks/Arts/Debts & Decks Design System.zip`) was already extracted
   and verified by the orchestrator this session; it was **not** re-opened or re-scanned here.
-- Wrote `docs/DESIGN-SYSTEM.md` (6794 bytes, non-empty, tracked) covering what F2 uses:
+- Wrote `docs/DESIGN-SYSTEM.md` (5938 bytes, non-empty, tracked) covering what F2 uses:
   district backdrop rendering + district name/descriptor title display (F2 7.1–7.3).
 - Content, verbatim from the kit's tokens:
   - **Palette** from `tokens/colors.css`: navy 950–500, ink 100/300/500, rust/steel/brass
