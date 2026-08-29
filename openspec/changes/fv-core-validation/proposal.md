@@ -82,6 +82,23 @@ After the verbs land, `RunSimulationHarnessTest` must still pass: greedy win rat
 above 70%. If the verbs move the band, the new band is proposed **with sim output attached**,
 never on paper.
 
+> **E1 measured as unreachable through `RespondingPolicy` behavior alone, 2026-08-29.** PR #22
+> (`feat/fv-verbs-foreclose-hedge`) closes E2 cleanly (greedy 48.5%, leverage 45.5%, both inside
+> `[0.35, 0.55]`, other invariants intact — see `docs/BALANCE-BASELINE.md`), but E1's response
+> gap tops out at **+2.5pp measured, need ≥10pp**. Two independent rounds, 7 total policy
+> variants tried (borrow bans, reward-priority bumps, turn-scoped debt-growth caps, alone and
+> combined) — every variant that meaningfully restricts borrowing near an announced FORECLOSE
+> loses more win rate than it recovers from avoided seizures. Root cause: the FORECLOSE
+> threshold (27) sits inside the leverage band both policies already operate in (target 35,
+> execution line 50) — there is no borrowing posture that dodges the threshold without giving
+> up the core Leverage damage mechanic the harness already depends on. The card pool is also
+> thin for a real response: only 1 `debtRepay` card and 2 `wipe_debt` cards among 27. Closing
+> E1 for real needs a production-code change this policy-only work cannot make on its own —
+> FORECLOSE threshold/fee tuning, or new debt-reduction cards — which is a design decision, not
+> a measurement one. **Owner's call, not re-attempted here**; `IntentVerbsE1Test` still carries
+> the weakened re-metriced gate from the WIP, not the original ≥10pp assertion. PR #22 stays
+> `WIP:` and unmerged.
+
 > **The ordering consequence this paragraph predicted did not happen, 2026-08-28.** It read
 > "F1 normalizes these invariants to ratios, and it must be computed from the **post-FV**
 > baseline, not today's". F1 shipped first, as `3a7c201`, computed from today's baseline —
