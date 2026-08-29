@@ -664,3 +664,77 @@ current FORECLOSE/HEDGE mechanics would need either a much larger card-pool expa
 sub-lever (iii), its own proposal) or lever (a) — FORECLOSE/HEDGE parameter tuning, explicitly
 out of scope here and boxed in by E2's band per proposal §1. New art for the two cards rides
 `docs/ART-PIPELINE.md`'s existing backlog per proposal §3.5; it does not gate this merge.
+
+## FV.E1 — card-pool accessibility lever, sub-lever (iii) continued: 2 more cards (2026-08-29, `fv-e1-card-pool-expansion`)
+
+**Measured:** 2026-08-29, on `feat/fv-verbs-foreclose-hedge` (PR #22), from HEAD `fa2236b`,
+headless sim only, no `DebtConfig`/`CombatEngine`/`RespondingPolicy.kt`/`CardResolver`/enemy
+edits. Full proposal: `openspec/changes/fv-e1-card-pool-expansion/proposal.md`. Continues the
+prior session's sub-lever (iii) pass at the owner's explicit direction — past §3 Q2's original
+"27 → 28 or 27 → 30" scoping, treated as owner-approved for this round.
+
+Two more debt-answer cards added to the pool the uniform shuffle draws from, same mechanism as
+the prior pass and the owner's exact design:
+
+| card | cost | rarity | tags | effect |
+|---|---|---|---|---|
+| `debt_restructuring` | 3 | `COMMON` | (none) | `debtRepay: 10` (biggest single-card repay in the pool, above `partial_forgiveness`'s 8) |
+| `clean_slate` | 1 | `COMMON` | `wipe_debt` | wipes Debt to 0, `selfDamage: 4` (cheaper wipe than `tactical_bankruptcy`'s cost 1 / `selfDamage: 8`) |
+
+Both reuse existing `CardResolver` tag/field mappings (`wipe_debt`, `debtRepay`) — **zero engine
+code**. Added to `app/src/main/assets/cards/all.json` (pool 29 → 31) plus matching
+`card.debt_restructuring.{name,description}` / `card.clean_slate.{name,description}` keys in
+both `i18n/strings.properties` and `i18n/strings_es.properties`. No `RespondingPolicy.kt`, no
+`DebtConfig`, no `CombatEngine`, no enemy HP, no existing card's rarity touched.
+
+New-card addition also grew `LeveragePayoffCardsDataTest`'s non-starter reward-pool count
+invariant from 25 to 27 (neither new card carries the `starter` tag); that assertion was updated
+to match, the only other file touched besides the three the proposal named.
+
+**Measurement** (`:app:testDebugUnitTest --tests '*IntentVerbsE1Test' --rerun-tasks -i`,
+200 seeds/policy, seed-aligned, unchanged methodology from all 16 prior `RespondingPolicy`/pool
+variants):
+
+```
+Responding -> verbs-on 49.5% | verbs-off 18.0% | difficulty weight 31.5pp
+Ignoring   -> verbs-on 47.5% | verbs-off 27.0% | difficulty weight 20.5pp
+Response gap (responding - ignoring, informational): 2.0pp
+```
+
+**Response gap: +2.0pp** — down from the prior (29-card) pass's +4.0pp, and below sub-lever
+(i)'s +2.5pp no-op. Both absolute win rates *fell* for both policies relative to the 29-card
+baseline (responding 55.0%→49.5%, ignoring 51.0%→47.5%): a wider pool keeps diluting the free
+post-combat uniform draw for both policies roughly symmetrically, and this round the ignoring
+policy's win rate fell less than the responding policy's, so the gap moved backward instead of
+forward — the same "richer pool helps the filler policy almost as much as the targeted one"
+symmetry problem the proposal named in §2, now showing a round where it works against the gap
+rather than merely diluting it. This is not noise-adjacent: +2.0pp sits inside the documented
+0.5–4.0pp band the sub-lever has produced across all three of its passes so far, with no
+monotonic trend toward +10pp as the pool grows.
+
+**E1 exit criterion (proposal §5): FAIL.** Measured gap (+2.0pp) stays under the required 10pp
+bar over 200 seeds — a real, expected, complete outcome per the proposal's own framing, not a
+manufactured pass. `IntentVerbsE1Test`'s current re-metriced gate is left exactly as-is; the
+original `>= 10.0` response-gap assertion is **not** restored, since this pass gives no
+justification to do so.
+
+**E2 confirmed still green in the same session**:
+`:app:testDebugUnitTest --tests '*RunSimulationHarnessTest*' --rerun-tasks -i` → `BUILD
+SUCCESSFUL`, Greedy 50.0% / Leverage 47.5%, both inside `[0.35, 0.55]` (moved from 49.0%/51.0%
+pre-change — the wider pool again shifts both policies' win rates slightly, but the band and the
+leverage-debt band `[25, 45)` both still hold, and neither policy reaches 70%).
+`:app:testDebugUnitTest --tests '*HarnessDeterminismTest*' --rerun-tasks -i` → `BUILD
+SUCCESSFUL`. Full unit suite (`:app:testDebugUnitTest --rerun-tasks`, all modules) also `BUILD
+SUCCESSFUL` after the `LeveragePayoffCardsDataTest` count fix above, confirming nothing else
+regressed.
+
+**Disposition:** per proposal §5, this fail is complete and final for this round. The pool now
+stands at 31 (29 + 2), with 27 non-starter cards. Across three sub-lever (iii) passes the
+response gap has moved +2.5pp → +4.0pp → +2.0pp — non-monotonic and staying well clear of the
+required +10pp bar, which is evidence against "add more cards" as a viable path to close E1 at
+all, not just evidence this round's 2 cards weren't enough. Closing E1 within the current
+FORECLOSE/HEDGE mechanics still needs either a much larger card-pool expansion (own proposal, now
+with weaker justification given the non-monotonic trend) or lever (a) — FORECLOSE/HEDGE parameter
+tuning, explicitly out of scope here and boxed in by E2's band per proposal §1. New art for the
+two cards rides `docs/ART-PIPELINE.md`'s existing backlog per proposal §3.5; it does not gate
+this merge.
