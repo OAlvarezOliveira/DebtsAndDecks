@@ -955,3 +955,114 @@ Per proposal §5 (non-negotiables) and §10 (rollback), an E2 breach is a fail t
 The engine/window change must be **reverted** to restore snapshot FORECLOSE (`debt >= param`, fee 9) so
 `RunSimulationHarnessTest` is green again; the number above is the deliverable. `IntentVerbsE1Test`'s
 `responseGap >= -5.0` floor is left exactly as the 2026-08-28 re-metric set it (unchanged, not weakened).
+
+
+## FV.E1 — node-level response channel, PHASE ONE probe: `repayViaNode()` affordability (2026-08-29, `fv-e1-node-response-channel`)
+
+**Measured:** 2026-08-29, on `feat/fv-verbs-foreclose-hedge` (PR #22). **Test source only** — one new
+probe plus its slot mirror, zero `app/src/main` changes, zero behaviour changes. Full change:
+`openspec/changes/fv-e1-node-response-channel/`.
+
+This is a **gate, not an implementation step**. The direction (proposal §3) is to let the responding
+policy settle debt at the node *before* a `loan_shark` encounter, pre-empting the FORECLOSE seizure
+instead of reacting to it inside combat. Before wiring any hook, phase one measures how often
+`RunManager.repayViaNode()` would even be **affordable** at the three pre-`loan_shark` opportunities.
+The reason for asking first: §7 above already measured that repay rule **dormant** once (F5,
+2026-08-28, reorder came back byte-identical, zero delta).
+
+**Command (verbatim, task 1.11):**
+
+```
+./gradlew :app:testDebugUnitTest --tests '*NodeRepayAffordabilityProbeTest' --rerun-tasks -i
+```
+
+### Result — 200 seeds, `RespondingPolicy` as shipped
+
+```
+=== FV.E1 phase one — repayViaNode() affordability at the pre-loan_shark nodes ===
+200 seeds, policy=RespondingPolicy (as shipped); read-only, repayViaNode() never called
+slot=2 reached=200 affordable=2 (1.0%) alreadyRepaidByLadder=0 headroom=2
+slot=4 reached=155 affordable=20 (12.9%) alreadyRepaidByLadder=0 headroom=20
+slot=5 reached=131 affordable=6 (4.6%) alreadyRepaidByLadder=1 headroom=5
+AGGREGATE reached=486 affordable=28 (5.8%) alreadyRepaidByLadder=1 headroom=27  bar: >=30% and one slot >20% -> FAIL
+mirror assertions=1356 (engine enemy defId == RunSlotCursor.expected at every combat start); loan-armed BREAK rematches observed=7
+```
+
+| Slot (0-based `sequence.json`) | Node fee `escalatedCost(3, n)` | Reached | Affordable | Rate | `alreadyRepaidByLadder` | Headroom |
+|---|---|---|---|---|---|---|
+| 2 (`loan_shark`, slaughterhouse BOSS) | 4 | 200 | 2 | **1.0%** | 0 | 2 |
+| 4 (`loan_shark`, casino STREET) | 10 | 155 | 20 | **12.9%** | 0 | 20 |
+| 5 (`loan_shark`, casino BOSS) | 15 | 131 | 6 | **4.6%** | 1 | 5 |
+| **AGGREGATE** | — | **486** | **28** | **5.8%** | 1 | 27 |
+
+**Denominator is 486, not 600.** Only *reached* opportunities count (proposal §6.4): slot 2 is reached
+by all 200 seeds, slot 4 by 155, slot 5 by 131 — runs that die early never arrive. Fees are read from
+the live `run.nodeIndex`, so a BREAK rematch (which adds a node without advancing a slot) shifts them
+up by one rung on those runs rather than being assumed.
+
+### Verdict against the §6.4 bar: **FAIL**
+
+The bar, closed by the owner before any code was written: **≥ 30% of reached opportunities affordable,
+with at least one of the three slots above 20%.**
+
+- Aggregate **5.8%** vs the 30% bar — **FAIL**, by a factor of five.
+- Best single slot **12.9%** (slot 4) vs the >20% requirement — **FAIL**.
+- Headroom **27 of 28** affordable opportunities — **non-zero**, so design Open Question 2
+  ("PASS but the `NodePolicy.kt:45` rung already repays every time") is *not* what killed this. The
+  hook would have had room to act; there is simply almost nothing to act on.
+
+Both halves of the bar fail independently, so no re-run, seed extension or slot re-selection changes
+the answer. Per proposal §4 and tasks 1.13/1.16 the number is written down and **the direction stops
+here.** The bar was not softened to fit — it was answered.
+
+### Why it fails — the two verified mechanisms, now with numbers behind them
+
+1. **Cost.** `repayViaNode()` charges `debt + escalatedCost(3, nodeIndex)` and the debt band the
+   policies actually live in is `[25, 45)`. At node 2 that is ~29–39 gold in one payment, against a
+   gold pile that has just been garnished. Result: **2 affordable opportunities out of 200**. Slot 4
+   is the best of the three (12.9%) precisely because it sits latest in the gold curve while the fee
+   (10) is still below slot 5's (15) — after that, escalation outruns the accumulation.
+2. **Garnishment.** `MAX_GARNISH_RATE = 0.6` redirects up to 60% of every combat's gold reward toward
+   debt, ramping to the cap at `BREAK_THRESHOLD = 30`. The responder's gold is being taxed by exactly
+   the resource this lever needs it to spend. Gold accumulation is explicitly **out of scope**
+   (decision §6.6): if it were ever revisited it arrives as its own proposal, never folded in here.
+
+Independent corroboration of §7 above: `alreadyRepaidByLadder = **1** in 486` — the existing
+`NodePolicy.kt:45` repay rung fires essentially **never** at these nodes. F5's "the repay rule is
+dormant" finding is reproduced here from a different direction, by a different measurement.
+
+### What ships anyway
+
+Per decision §6.7 the probe is **not** a throwaway:
+
+- `app/src/test/java/com/debtsdecks/core/simulation/NodeRepayAffordabilityProbeTest.kt` — ships green
+  as a permanent regression test. It still computes and prints the §6.4 bar verdict every run (so this
+  table is reproducible), but the *asserted* guard is the design-D7 **floor canary**
+  `aggregate >= 5.8% − 5pp`, which fires if a future garnish/fee change pushes `repayViaNode()` even
+  further into dormancy. It is **not** shipped red, **not** `@Disabled`, and **not** deleted.
+- `app/src/test/java/com/debtsdecks/core/simulation/RunSlotCursor.kt` — the test-source mirror of the
+  private `RunManager.slotIndex`, needed because decision §6.5 forbids `nodeIndex` arithmetic and §8
+  forbids an `app/src/main` accessor.
+
+Two mechanical proofs back the numbers rather than asserting them:
+
+- **Mirror vs engine (design D2):** `1356` assertions that the mirrored upcoming enemy equals
+  `engine.getState().enemies.first().defId` at every combat start across all 200 seeds. **7** of those
+  runs armed the BREAK rematch from a node LOAN *inside* `NodePolicy.act`, i.e. after the flag was
+  sampled false — the edge case the `loanArmedBreak` term exists for. Deleting that term makes the
+  mirror fail at seed 15 (`expected loan_shark, was collector`), so the branch is load-bearing and
+  measured, not decoration.
+- **Non-perturbation (design D3):** per seed, the probe's own drive loop produces identical `outcome`,
+  `peakDebt`, `endHp`, `defeatEncounterId`, node count and per-combat turn counts to
+  `RunSimulator(policy = RespondingPolicy).simulate(seed)`. The probe measures the shipped run, and
+  never calls `repayViaNode()` — affordability is read from `gold`/`debt`/`nodeIndex`, which is
+  `repayViaNode`'s own guard.
+
+`IntentVerbsE1Test` is **untouched** (§7 non-negotiable): its `responseGap >= -5.0` floor and the
+`weightResponding >= 20.0 / weightIgnoring >= 15.0` difficulty floors stand exactly as the 2026-08-28
+re-metric set them. No enemy HP, damage, `HarnessBands` ratio or `DebtConfig.EXECUTION_THRESHOLD` was
+moved. `git diff --stat` names no path under `app/src/main/**`.
+
+**Phase two (the `respondToNode` hook) does not start.** Tasks 1.16 gates it on a *recorded PASS*;
+this is a recorded FAIL. The fifth FV.E1 lever is spent, and — like the four before it — its number is
+the deliverable.
