@@ -518,3 +518,77 @@ buffing/adding debt-reduction cards), each requiring its own proposal and the ow
 **E2 confirmed still green in the same session**: `:app:testDebugUnitTest --tests
 '*RunSimulationHarnessTest*' --rerun-tasks` → `BUILD SUCCESSFUL`. Full unit suite (`:app:testDebugUnitTest
 --rerun-tasks`, all modules) also `BUILD SUCCESSFUL`, confirming nothing else regressed.
+
+---
+
+## FV.E1 — card-pool accessibility lever, sub-lever (i) only (2026-08-29, `fv-e1-card-pool-expansion`)
+
+**Measured:** 2026-08-29, on `feat/fv-verbs-foreclose-hedge` (PR #22), from HEAD `7fe6c69`,
+headless sim only, no `DebtConfig`/`CombatEngine`/`RespondingPolicy.kt`/enemy edits. Full
+proposal: `openspec/changes/fv-e1-card-pool-expansion/proposal.md`.
+
+The sibling change above spent the policy lever completely (13 behavioural variants, ceiling
++2.5pp). This change attacked the remaining named lever — the 27-card pool — through its
+cheapest, most reversible sub-lever: **(i) accessibility**, lowering the rarity of the two
+`wipe_debt` cards from `RARE` to `UNCOMMON` in `app/src/main/assets/cards/all.json`:
+
+| card | before | after |
+|---|---|---|
+| `debt_forgiveness` (`cost: 2`, `selfDamage: 0`) | `RARE` | `UNCOMMON` |
+| `tactical_bankruptcy` (`cost: 1`, `selfDamage: 8`) | `RARE` | `UNCOMMON` |
+
+`UNCOMMON` was picked over `COMMON` because the pool already has four rarity tiers
+(`BASIC`/`COMMON`/`UNCOMMON`/`RARE`), and `UNCOMMON` is the natural one-step-down move rather
+than skipping a tier. No cost, `debtRepay`, `selfDamage` or tag field was touched — rarity only,
+per the proposal's §3.4 answer. Pool size stayed exactly 27; no new cards, i18n keys, or art.
+
+**Pre-implementation finding, not assumption:** before running the sim, the codebase was
+inspected for where card `rarity` actually feeds reward/shop generation. `CardRegistry.byRarity()`
+is defined but has **zero callers** anywhere in `app/src/main/java`. The only reward-offer
+weighting logic that exists —
+`RunManager.archetypeBiasedOffer()` (`app/src/main/java/com/debtsdecks/core/combat/RunManager.kt:284-303`)
+— weights candidate cards by **archetype/tag match** (`LEVERAGE_BIAS`/`LIQUIDITY_BIAS`/
+`ECONOMY_BIAS`), never by `rarity`. This means the `rarity` field has no effect on draft
+probability in this engine as shipped; the sim result below confirms this by direct measurement
+rather than by taking the code-reading finding on faith alone.
+
+**Measurement** (`:app:testDebugUnitTest --tests '*IntentVerbsE1Test' --rerun-tasks -i`,
+200 seeds/policy, seed-aligned, unchanged methodology from all 13 prior `RespondingPolicy`
+variants):
+
+```
+Responding -> verbs-on 48.0% | verbs-off 22.5% | difficulty weight 25.5pp
+Ignoring   -> verbs-on 45.5% | verbs-off 26.0% | difficulty weight 19.5pp
+Response gap (responding - ignoring, informational): 2.5pp
+```
+
+**Response gap: +2.5pp — byte-for-byte identical to the pre-change baseline**, exactly as the
+code-inspection finding above predicts: sub-lever (i) alone cannot move the reward pool's draft
+weights because rarity is not part of the weighting formula. Both absolute win rates
+(48.0%/45.5%) also match the shipped-baseline numbers to the decimal, confirming the change is a
+measured no-op on the sim, not merely an unmeasured one.
+
+**E1 exit criterion (proposal §5): FAIL.** Measured gap (+2.5pp) stays under the required 10pp
+bar over 200 seeds — a real, expected, complete outcome per the proposal's own framing, not a
+manufactured pass. `IntentVerbsE1Test`'s current re-metriced gate is left exactly as-is; the
+original `>= 10.0` response-gap assertion is **not** restored, since this pass gives no
+justification to do so.
+
+**E2 confirmed still green in the same session**:
+`:app:testDebugUnitTest --tests '*RunSimulationHarnessTest*' --rerun-tasks` → `BUILD SUCCESSFUL`,
+Greedy 48.5% / Leverage 45.5%, both inside `[0.35, 0.55]`, unchanged from the pre-change baseline
+(the archetype-weighted offer logic that both policies draft from is unaffected by a rarity-only
+edit).
+`:app:testDebugUnitTest --tests '*HarnessDeterminismTest*' --rerun-tasks -i` → `BUILD SUCCESSFUL`.
+Full unit suite (`:app:testDebugUnitTest --rerun-tasks`, all modules) also `BUILD SUCCESSFUL`,
+confirming nothing else regressed.
+
+**Disposition:** per proposal §5, this fail is complete and final for sub-lever (i). Per the
+proposal's explicit scope, sub-lever (iii) (new cards) is **not** attempted in this pass and
+requires its own owner approval round — and per this session's finding, any future round on this
+lever needs to change what the reward offer actually weights (tag/archetype, not rarity) to have
+a chance of moving the number, or a card carrying `wipe_debt`/`debtRepay` needs to be added under
+an existing archetype-bias tag so `archetypeBiasedOffer()` can surface it more often. The rarity
+edit is kept on the branch (documented, reversible, does not regress anything) rather than
+reverted, since it is a genuine one-step accessibility improvement for human play even though it
+does not move the sim.

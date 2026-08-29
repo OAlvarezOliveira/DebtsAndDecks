@@ -124,7 +124,7 @@
     "vulnerableApply": 0,
     "targetType": "SELF",
     "description": "card.debt_forgiveness.description",
-    "rarity": "RARE",
+    "rarity": "UNCOMMON",
     "tags": [
       "wipe_debt"
     ]
@@ -160,7 +160,7 @@
     "selfDamage": 8,
     "targetType": "SELF",
     "description": "card.tactical_bankruptcy.description",
-    "rarity": "RARE",
+    "rarity": "UNCOMMON",
     "tags": [
       "wipe_debt"
     ]
