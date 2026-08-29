@@ -874,3 +874,84 @@ FORECLOSE/HEDGE mechanics and card pool; closing it further would require either
 
 `IntentVerbsE1Test`'s gate is unchanged (`responseGap >= -5.0`, informational print) per Q6 —
 left exactly as the 2026-08-28 re-metric set it, not strengthened or weakened by this change.
+
+
+## FV.E1 — root-cause lever: FORECLOSE temporal deadline, 7-point cancelThreshold sweep (2026-08-29, `fv-e1-leverage-temporal-deadline`)
+
+**Measured:** 2026-08-29, on `feat/fv-verbs-foreclose-hedge` (PR #22), HEAD of the working tree at
+measurement time. Engine change to `CombatEngine.kt` (FORECLOSE arms a 3-turn pending window instead
+of resolving on the single snapshot) + `enemies/all.json` `loan_shark` FORECLOSE `cancelThreshold` field,
+plus the window-exploiting `WindowRespondingPolicy` fixture. Full change:
+`openspec/changes/fv-e1-leverage-temporal-deadline/`. This is the root-cause successor to the three
+spent levers — it tries to decouple FORECLOSE from the shared debt band by moving the trigger axis to a
+temporal deadline (repay below an independent `cancelThreshold` during the window cancels the seizure).
+
+**Sweep command (single measurement pass, all candidates in-test via `VerbControl.withForecloseCancelThreshold`,
+zero asset/code edits per candidate — design D8):**
+
+```
+./gradlew :app:testDebugUnitTest --tests '*ForecloseCancelThresholdSweepTest'
+```
+
+**Standing E1/E2 gate command (proposal §7, §8):**
+
+```
+./gradlew :app:testDebugUnitTest --tests '*IntentVerbsE1Test' --tests '*ForecloseControlMeasureTest'   --tests '*RunSimulationHarnessTest' --tests '*HarnessDeterminismTest' --tests '*EnemyTierRegressionTest'
+```
+
+### Sweep table — cancelThreshold ladder 27..45 (200 seeds per policy; resp = WindowRespondingPolicy,
+ign = LeveragePolicy, greedy = ScriptedPolicy)
+
+```
+cancelThreshold=27  | respWin  95.0% | ignWin  99.5% | gap   -4.5pp | E2 RED | seizures resp=0 ign=0 | respPeak  33.3 ignPeak  34.1 greedyPeak  34.0
+cancelThreshold=30  | respWin  97.0% | ignWin  99.5% | gap   -2.5pp | E2 RED | seizures resp=0 ign=0 | respPeak  33.4 ignPeak  34.1 greedyPeak  34.0
+cancelThreshold=33  | respWin  97.0% | ignWin  99.5% | gap   -2.5pp | E2 RED | seizures resp=0 ign=0 | respPeak  33.9 ignPeak  34.1 greedyPeak  34.0
+cancelThreshold=36  | respWin  97.5% | ignWin  99.5% | gap   -2.0pp | E2 RED | seizures resp=0 ign=0 | respPeak  33.9 ignPeak  34.1 greedyPeak  34.0
+cancelThreshold=39  | respWin  98.0% | ignWin  99.5% | gap   -1.5pp | E2 RED | seizures resp=0 ign=0 | respPeak  34.0 ignPeak  34.1 greedyPeak  34.0
+cancelThreshold=42  | respWin  98.0% | ignWin  99.5% | gap   -1.5pp | E2 RED | seizures resp=0 ign=0 | respPeak  34.0 ignPeak  34.1 greedyPeak  34.0
+cancelThreshold=45  | respWin  98.5% | ignWin  99.5% | gap   -1.0pp | E2 RED | seizures resp=0 ign=0 | respPeak  34.0 ignPeak  34.1 greedyPeak  34.0
+```
+
+E2 is RED at **every** candidate: the win rate (resp/ign/greedy ≈ 95-99%) is far above the `0.35..0.55`
+band and the `0.70` hard ceiling. `seizures = 0` at every candidate for **both** policies — the 3-turn
+window cancels the seizure the moment `debt` dips below `cancelThreshold` at any tick (debt oscillates
+around 27 inside the shared leverage band, so it almost always dips below 27 once), so FORECLOSE
+effectively never fires. The verb's difficulty sink is gone, which is exactly why E2 leaves its band.
+
+### Standing gate results (same run, seeded `cancelThreshold = 27`)
+
+- `IntentVerbsE1Test`: **PASS** — response gap (WindowRespondingPolicy vs LeveragePolicy) ≈ -4.5pp,
+  inside the `>= -5.0` floor; difficulty weights `weightResponding >= 20` / `weightIgnoring >= 15` hold
+  (verbs still load-bearing). The gap is negative because the ignoring policy also avoids seizures for
+  free (debt dips below 27 during the window) while the responding policy wastes cards repaying — so the
+  window-exploiting policy wins *less*, not more.
+- `ForecloseControlMeasureTest`: **PASS** — bailiff fixture re-derived for the window: FORECLOSE arms turn
+  1, re-arms every 3 turns, first seizure resolves at turn 12 (debt ≈ 44 ≥ 27); `assertEquals(1,
+  forecloseSeizures)` and `RunOutcome.DEFEAT` still hold.
+- `RunSimulationHarnessTest`: **FAIL** — `greedy win rate ≈ 0.95 must be in [0.35, 0.55]` (E2 band
+  assertion at `RunSimulationHarnessTest.kt:255`). Confirms the engine change broke E2.
+- `HarnessDeterminismTest` / `EnemyTierRegressionTest`: **PASS** — boss HP 57 and no iteration-order
+  drift (window state is per-`EnemyInstance`, no UUID-keyed map).
+
+### Final disposition
+
+**FAIL on every named exit condition (proposal §8):**
+
+1. Response gap ≥ 10pp — FAIL at all 7 candidates (-4.5 → -1.0pp, all negative; the temporal window
+   gives the *ignoring* policy the cancel-for-free benefit, so it does not buy the responding policy an
+   edge). The `>= -5.0` floor is respected (not weakened).
+2. E2 green in the same run — FAIL at all 7 candidates (win rate ≈ 95-99%, far above the 0.70 ceiling).
+   The window removes the FORECLOSE difficulty sink (seizures = 0 everywhere).
+3. Numbers recorded — done, this section + `/tmp/fv-e1-cancelThreshold-sweep.txt`.
+
+This is the genuine, new result FV was built to produce: decoupling the FORECLOSE trigger off the shared
+debt band does **not** rescue E1 — moving the axis to a temporal deadline just makes FORECLOSE free to
+avoid for *both* policies, so it stops being a difficulty sink (E2 breaks) without creating a responding
+edge (E1 gap negative). No `cancelThreshold` value is picked (proposal §8 "Fail" clause / tasks 5.4):
+the ladder was swept in one pass, every candidate failed, so the value is **not** written to `all.json`
+beyond the seeded `27` and the engine change is **not** shipped.
+
+Per proposal §5 (non-negotiables) and §10 (rollback), an E2 breach is a fail that must not be re-baselined.
+The engine/window change must be **reverted** to restore snapshot FORECLOSE (`debt >= param`, fee 9) so
+`RunSimulationHarnessTest` is green again; the number above is the deliverable. `IntentVerbsE1Test`'s
+`responseGap >= -5.0` floor is left exactly as the 2026-08-28 re-metric set it (unchanged, not weakened).

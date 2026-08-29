@@ -16,6 +16,14 @@ at window close) and MUST NOT be `DebtConfig` constant.
 - WHEN the intent data is loaded
 - THEN the FORECLOSE step MUST expose a cancel-threshold value distinct from `param`
 
+> Cross-reference (design D2): the close-check axis named here — "the level compared at window close" —
+> is the SAME axis stated by `combat-engine-foreclose/spec.md`'s **Requirement: Uncancelled Window Expiry**
+> (`debt` still at or above the cancel threshold, the system MUST run-end exactly as today's snapshot
+> check does: `forecloseSeizureCount` increments and `player.takeDamage(player.hp)` fires). Both spec
+> files name `param` as the value compared at window close; `cancelThreshold` is only the *early-escape*
+> bar observed during the window. The two requirements are intentionally consistent, not contradictory.
+
+
 ### Requirement: Cancel Threshold Value Is a Measured Tuning Parameter
 The numeric value of the cancel threshold is NOT fixed by this spec. It MUST be determined by
 measurement against the exit criterion (response gap >= 10pp/200 seeds, E2 green in the same
