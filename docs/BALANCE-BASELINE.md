@@ -61,6 +61,12 @@ avg peakDebt(all)=30   avg endGold(win)=70   avg endHp(win)=11
 die vs collector: 38 | avg peakDebt=31 avg endGold=47 avg endDebt=17 avg endHp=0
 reached final boss (won >= 7 fights): 80/80
 
+*The `reached final boss (won >= 7 fights): 80/80` line counts **nodes** (`encountersWon` is
+node steps), not run slots — a won BREAK collector rematch adds a node without adding a slot. The
+#16 instrumentation (`defeat cause & slot`) reports the truth by run slot: **8 defeats in slot 7**
+(all HP_ZERO), **30 in slot 8** (1 EXECUTION, 29 HP_ZERO). So 72/80 runs actually reach the final
+slot, not 80/80.*
+
 node1: BUY=80
 node2: BUY=5  | LOAN=75
 node3: FREE_PICK=78 | LOAN=2
