@@ -71,7 +71,10 @@ class CombatRenderer(private val bundle: I18NBundle) {
     // gradient instead of crashing, same contract as the card art below.
     private val backgroundTextures: Map<String, Texture> = run {
         val m = mutableMapOf<String, Texture>()
-        for (id in listOf("bg_combat", "bg_reststop")) {
+        for (id in listOf(
+            "bg_combat", "bg_reststop",
+            "bg_district_slaughterhouse", "bg_district_casino", "bg_district_boardroom"
+        )) {
             try {
                 m[id] = loadTexture("art/backgrounds/$id.png")
             } catch (t: Throwable) {
