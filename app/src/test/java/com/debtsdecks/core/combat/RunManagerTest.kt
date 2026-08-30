@@ -497,7 +497,10 @@ class RunManagerTest {
         assertTrue(runManager.removeCardFromDeck(removal))
         assertEquals(RunManager.Phase.COMBAT, runManager.phase)
         assertEquals(goldBefore - removeCost, runManager.gold)
-    }fun `taking a loan at the node gains gold and adds debt`() {
+    }
+
+    @Test
+    fun `taking a loan at the node gains gold and adds debt`() {
         val rm = RunManager(combatEngine, cardRegistry, enemies, sequence, rng)
         playSelfCardWhenDrawn(combatEngine, rm, "survive")
         finishSoleEnemy(combatEngine, rm)
@@ -526,7 +529,10 @@ class RunManagerTest {
         assertTrue(runManager.repayViaNode())
         assertEquals(0, runManager.debt)
         assertEquals(goldBefore - (debtBefore + fee), runManager.gold)
-    }fun `upgrade card costs flat gold and marks the id`() {
+    }
+
+    @Test
+    fun `upgrade card costs flat gold and marks the id`() {
         killCurrentEnemy() // slot 0 win -> NODE, gold 10
         runManager.takeNodeFreePick(runManager.rewardChoices.first())
         killCurrentEnemy() // slot 1 win -> NODE, gold 20
@@ -738,5 +744,112 @@ class RunManagerTest {
         assertFalse(rm.isDistrictEntrance)
         finishSoleEnemy(engine, rm); rm.chooseReward(rm.rewardChoices.first()) // slot 3 = casino entrance
         assertTrue(rm.isDistrictEntrance)
+    }
+
+    // --- Phase 4: Gatillo B outcome resolution (FV.E1 "En Mora") ---
+    // The engine has no persisted victory flag, so RunManager.refresh() is where a dead enemy at
+    // COMBAT_END is actually resolved into DEFEAT vs. the normal reward flow (design D5).
+
+    private fun debtBombCardDef(debtAdd: Int = 40): CardDefinition = CardDefinition(
+        id = "debt_bomb", name = "Debt Bomb", type = CardType.SKILL, cost = 0,
+        debtAdd = debtAdd, targetType = TargetType.SELF, description = "Add Debt.",
+        rarity = Rarity.UNCOMMON, tags = setOf("add_debt")
+    )
+
+    private fun wipeDebtCardDef(): CardDefinition = CardDefinition(
+        id = "wipe_debt_card", name = "Wipe", type = CardType.SKILL, cost = 0,
+        targetType = TargetType.SELF, description = "Wipe all Debt.",
+        rarity = Rarity.RARE, tags = setOf("wipe_debt")
+    )
+
+    @Test
+    fun `enemy defeated while still in arrears resolves as a defeat, not the reward flow`() {
+        val registry = CardRegistry.create(makeStarterCards() + rewardCards + listOf(debtBombCardDef()))
+        val engine = CombatEngine(registry, testLocalizer(), rng)
+        val rm = RunManager(engine, registry, enemies, runSequence(), rng)
+
+        engine.startCombat(listOf(enemies[0]), listOf("debt_bomb", "strike", "strike", "strike", "strike"))
+        rm.refresh()
+
+        val bomb = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        engine.playCard(bomb.id, null) // 0 -> 40, arms the lock
+        rm.refresh()
+        assertTrue(engine.getState().inArrears, "the lock must be armed before the kill")
+
+        val strike = engine.getState().hand.find { it.cardId == "strike" }!!
+        val target = engine.getState().enemies.first { it.hp > 0 }
+        engine.playCard(strike.id, target.id) // kills the sole enemy (hp 5) while still locked
+        rm.refresh()
+
+        assertEquals(
+            RunManager.Phase.DEFEAT, rm.phase,
+            "Gatillo B: a dead enemy with the lock still armed resolves as a defeat"
+        )
+    }
+
+    @Test
+    fun `enemy defeated after the lock escaped back to zero debt resolves as victory at the final slot`() {
+        val registry = CardRegistry.create(
+            makeStarterCards() + rewardCards + listOf(debtBombCardDef(), wipeDebtCardDef())
+        )
+        val engine = CombatEngine(registry, testLocalizer(), rng)
+        val rm = RunManager(engine, registry, enemies, runSequence(), rng)
+
+        // Walk the first 7 slots on the default starter deck to reach the final (8th) slot.
+        repeat(7) {
+            finishSoleEnemy(engine, rm)
+            rm.chooseReward(rm.rewardChoices.first())
+        }
+        assertEquals(RunManager.Phase.COMBAT, rm.phase)
+
+        // Override the final combat with a custom deck: arm the lock, then escape it before the kill.
+        val collector = enemies.first { it.id == "collector" }
+        engine.startCombat(listOf(collector), listOf("debt_bomb", "wipe_debt_card", "strike", "strike", "strike"))
+        rm.refresh()
+
+        val bomb = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        engine.playCard(bomb.id, null) // 0 -> 40, arms
+        val wipe = engine.getState().hand.find { it.cardId == "wipe_debt_card" }!!
+        engine.playCard(wipe.id, null) // 40 -> 0, escapes
+        rm.refresh()
+        assertTrue(!engine.getState().inArrears, "the lock must have cleared before the kill")
+
+        val strike = engine.getState().hand.find { it.cardId == "strike" }!!
+        val target = engine.getState().enemies.first { it.hp > 0 }
+        engine.playCard(strike.id, target.id)
+        rm.refresh()
+
+        assertEquals(
+            RunManager.Phase.VICTORY, rm.phase,
+            "an escaped lock at the final slot must resolve as the normal victory, not a defeat"
+        )
+    }
+
+    @Test
+    fun `arming the arrears lock mid-combat does not resolve anything while an enemy remains alive`() {
+        val registry = CardRegistry.create(makeStarterCards() + rewardCards + listOf(debtBombCardDef()))
+        val engine = CombatEngine(registry, testLocalizer(), rng)
+        val rm = RunManager(engine, registry, enemies, runSequence(), rng)
+
+        // High HP so arming the lock never coincides with the enemy dying: Gatillo B only fires
+        // at COMBAT_END, never mid-combat, even while armed.
+        val sturdy = EnemyDefinition(
+            id = "sturdy", name = "Sturdy", hp = 999,
+            intentPattern = listOf(IntentStep(IntentType.ATTACK, 1)),
+            rewards = EnemyRewards(gold = 10, cardChoices = 1)
+        )
+        engine.startCombat(listOf(sturdy), listOf("debt_bomb", "strike", "strike", "strike", "strike"))
+        rm.refresh()
+
+        val bomb = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        engine.playCard(bomb.id, null) // 0 -> 40, arms the lock
+        rm.refresh()
+
+        assertTrue(engine.getState().inArrears, "the lock must be armed")
+        assertTrue(engine.getState().enemies.any { it.hp > 0 }, "the enemy must still be alive")
+        assertEquals(
+            RunManager.Phase.COMBAT, rm.phase,
+            "Gatillo B must not fire before COMBAT_END, even while the lock is armed"
+        )
     }
 }

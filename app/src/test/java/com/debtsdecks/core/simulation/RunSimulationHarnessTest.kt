@@ -254,6 +254,12 @@ class RunSimulationHarnessTest {
         // R4.2: no dominant line — neither policy may win 70%+.
         assertTrue(greedy.winRate < 0.70, "greedy win rate ${greedy.winRate} must stay under 70%")
         assertTrue(leverage.winRate < 0.70, "leverage win rate ${leverage.winRate} must stay under 70%")
+        // FV.E1 task 7.2: the arrears lock must actually arm for both policies — a zero fire-rate
+        // on either would mean the lock is decoration for that policy, same disqualifier design D2
+        // pre-declares tuning knob #1 for.
+        println("Arrears fire rate -> greedy ${"%.1f".format(greedy.arrearsFireRate * 100)}% | leverage ${"%.1f".format(leverage.arrearsFireRate * 100)}%")
+        assertTrue(greedy.arrearsFireRate > 0.0, "greedy arrears fire rate ${greedy.arrearsFireRate} must be > 0 (the lock must actually arm)")
+        assertTrue(leverage.arrearsFireRate > 0.0, "leverage arrears fire rate ${leverage.arrearsFireRate} must be > 0 (the lock must actually arm)")
         // R4.3: the new payoff cards must actually be picked during runs (table is played,
         // not dead weight). Collect picks across both policies. NOTE (C5): with the 8-slot run
         // and no between-fight healing yet (node is C7, balance is C8), the sweep currently

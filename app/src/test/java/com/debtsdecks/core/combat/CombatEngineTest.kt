@@ -494,41 +494,192 @@ class CombatEngineTest {
         assertEquals(debtBefore, engine.getState().debt)
     }
 
-    // --- Execution loss condition (Debt-as-Leverage pivot) ---
+    // --- Arrears lock: "En Mora" (FV.E1) ---
+    // Replaces the deleted instant-defeat-at-threshold behavior: crossing ARREARS_THRESHOLD (40)
+    // now arms a per-combat lock instead of ending combat. See design.md D1/D2/D4.
 
-    @Test
-    fun `execution kills mid-turn when a card adds debt past 50`() {
+    private fun registerDebtBombCard(id: String = "debt_bomb", debtAdd: Int): CardDefinition =
         registerCard(CardDefinition(
-            id = "debt_bomb", name = "Debt Bomb", type = CardType.SKILL, cost = 0,
-            debtAdd = 5, targetType = TargetType.SELF, description = "Add 5 Debt.",
+            id = id, name = "Debt Bomb", type = CardType.SKILL, cost = 0,
+            debtAdd = debtAdd, targetType = TargetType.SELF, description = "Add Debt.",
             rarity = Rarity.UNCOMMON, tags = setOf("add_debt")
         ))
-        // interest pushes 43 -> 50 at turn start (survives: == threshold); +5 crosses to 55.
-        engine.startCombat(listOf(standardThug()), listOf("debt_bomb", "strike", "strike", "strike", "strike"), startingDebt = 43)
-        assertEquals(50, engine.getState().debt) // 43 + ceil(43*15%)=50, survives
+
+    private fun registerRepayCard(id: String, amount: Int): CardDefinition =
+        registerCard(CardDefinition(
+            id = id, name = "Repay", type = CardType.SKILL, cost = 0,
+            debtRepay = amount, targetType = TargetType.SELF, description = "Repay Debt.",
+            rarity = Rarity.UNCOMMON
+        ))
+
+    private fun registerWipeCard(id: String = "wipe_debt_card"): CardDefinition =
+        registerCard(CardDefinition(
+            id = id, name = "Wipe", type = CardType.SKILL, cost = 0,
+            targetType = TargetType.SELF, description = "Wipe all Debt.",
+            rarity = Rarity.RARE, tags = setOf("wipe_debt")
+        ))
+
+    @Test
+    fun `crossing ARREARS_THRESHOLD for the first time arms the lock and combat continues`() {
+        registerDebtBombCard(debtAdd = 40)
+        engine.startCombat(listOf(standardThug()), listOf("debt_bomb", "strike", "strike", "strike", "strike"))
 
         val card = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
         val result = engine.playCard(card.id, null)
 
         assertTrue(result.success)
-        assertEquals(55, engine.getState().debt) // 50 + 5 = 55 -> executed
-        assertTrue(engine.getState().currentTurn == com.debtsdecks.core.model.TurnPhase.COMBAT_END)
+        val state = engine.getState()
+        assertEquals(40, state.debt)
+        assertTrue(state.inArrears, "debt >= ARREARS_THRESHOLD must arm the lock")
+        assertTrue(state.arrearsUsedThisCombat, "the one-shot charge must be marked spent")
+        assertTrue(state.currentTurn != com.debtsdecks.core.model.TurnPhase.COMBAT_END, "arming must NOT end combat")
+        assertEquals(1, engine.arrearsArmedCount)
     }
 
     @Test
-    fun `execution adds distinct log for levy-triggered debt`() {
+    fun `debt one below ARREARS_THRESHOLD does not arm the lock`() {
+        registerDebtBombCard(debtAdd = 39)
+        engine.startCombat(listOf(standardThug()), listOf("debt_bomb", "strike", "strike", "strike", "strike"))
+
+        val card = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        engine.playCard(card.id, null)
+
+        val state = engine.getState()
+        assertEquals(39, state.debt)
+        assertTrue(!state.inArrears)
+        assertTrue(!state.arrearsUsedThisCombat)
+        assertEquals(0, engine.arrearsArmedCount)
+    }
+
+    @Test
+    fun `arrears lock does not re-arm after the one-shot charge is spent, even after escaping`() {
+        registerDebtBombCard(debtAdd = 40)
+        registerWipeCard()
         engine.startCombat(
-            listOf(levyCollector()),
-            listOf("strike", "strike", "strike", "strike", "strike"),
-            startingDebt = 44
+            listOf(standardThug()),
+            listOf("debt_bomb", "debt_bomb", "wipe_debt_card", "strike", "strike")
         )
-        // interest 44 -> 51 at turn start; LEVY +6 -> 57 > 50 executes.
-        val result = engine.endPlayerTurn()
-        assertTrue(result.success)
-        assertTrue(
-            engine.getState().log.any { it.message == testLocalizer().get("log.debt_execution_levy") },
-            "expected levy execution log"
+
+        val firstBomb = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        engine.playCard(firstBomb.id, null) // 0 -> 40, arms (charge spent)
+        assertTrue(engine.getState().inArrears)
+
+        val wipe = engine.getState().hand.find { it.cardId == "wipe_debt_card" }!!
+        engine.playCard(wipe.id, null) // 40 -> 0, escapes
+        assertTrue(!engine.getState().inArrears)
+
+        val secondBomb = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        engine.playCard(secondBomb.id, null) // 0 -> 40 again, charge already spent
+
+        val state = engine.getState()
+        assertEquals(40, state.debt)
+        assertTrue(!state.inArrears, "the spent charge must NOT re-arm on a second crossing")
+        assertTrue(state.arrearsUsedThisCombat)
+        assertEquals(1, engine.arrearsArmedCount, "only the first crossing counts as an arm")
+    }
+
+    @Test
+    fun `dipping below the threshold without reaching zero keeps the lock armed`() {
+        registerDebtBombCard(debtAdd = 40)
+        registerRepayCard("repay_30", amount = 30)
+        engine.startCombat(
+            listOf(standardThug()),
+            listOf("debt_bomb", "repay_30", "strike", "strike", "strike")
         )
+
+        val bomb = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        engine.playCard(bomb.id, null) // 0 -> 40, arms
+        val repay = engine.getState().hand.find { it.cardId == "repay_30" }!!
+        engine.playCard(repay.id, null) // 40 -> 10, well below the threshold but not zero
+
+        val state = engine.getState()
+        assertEquals(10, state.debt)
+        assertTrue(state.inArrears, "dipping below the threshold without hitting zero must NOT clear the lock")
+    }
+
+    @Test
+    fun `debt reaching exactly zero clears the arrears lock`() {
+        registerDebtBombCard(debtAdd = 40)
+        registerRepayCard("repay_40", amount = 40)
+        engine.startCombat(
+            listOf(standardThug()),
+            listOf("debt_bomb", "repay_40", "strike", "strike", "strike")
+        )
+
+        val bomb = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        engine.playCard(bomb.id, null) // 0 -> 40, arms
+        val repay = engine.getState().hand.find { it.cardId == "repay_40" }!!
+        engine.playCard(repay.id, null) // 40 -> 0
+
+        val state = engine.getState()
+        assertEquals(0, state.debt)
+        assertTrue(!state.inArrears, "debt == 0 must clear the lock")
+    }
+
+    @Test
+    fun `wipe_debt while never armed does not consume the one-shot charge`() {
+        registerDebtBombCard(debtAdd = 20)
+        registerWipeCard()
+        engine.startCombat(
+            listOf(standardThug()),
+            listOf("debt_bomb", "wipe_debt_card", "strike", "strike", "strike")
+        )
+
+        val bomb = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        engine.playCard(bomb.id, null) // 0 -> 20, below the threshold: never armed
+        val wipe = engine.getState().hand.find { it.cardId == "wipe_debt_card" }!!
+        engine.playCard(wipe.id, null) // 20 -> 0
+
+        val state = engine.getState()
+        assertEquals(0, state.debt)
+        assertTrue(!state.inArrears)
+        assertTrue(!state.arrearsUsedThisCombat, "wiping while never locked must NOT spend the charge")
+        assertEquals(0, engine.arrearsArmedCount, "no arm ever happened, so the count must stay zero")
+    }
+
+    @Test
+    fun `interest is frozen while the arrears lock is armed, but active debt increases still apply`() {
+        registerDebtBombCard(debtAdd = 40)
+        engine.startCombat(listOf(standardThug()), listOf("debt_bomb", "strike", "strike", "strike", "strike"))
+
+        val bomb = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        engine.playCard(bomb.id, null) // 0 -> 40, arms
+        assertTrue(engine.getState().inArrears)
+        assertEquals(40, engine.getState().debt)
+
+        // End the turn: the enemy attacks, then beginTurn's interest tick would normally fire.
+        // While locked, that passive tick must be a no-op.
+        engine.endPlayerTurn()
+        assertEquals(40, engine.getState().debt, "the interest tick must be frozen while inArrears")
+        assertTrue(engine.getState().inArrears, "the lock stays armed across the frozen tick")
+
+        // An ACTIVE debt-applying card still raises debt even while locked (only the PASSIVE
+        // interest tick freezes, per design D2/D5's addDebt-only arming rule). The discarded
+        // debt_bomb (not exhausted) reshuffles back into hand at this new turn's draw.
+        val secondBomb = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        engine.playCard(secondBomb.id, null)
+        assertEquals(80, engine.getState().debt, "active card-applied debt must NOT be frozen by the lock")
+    }
+
+    @Test
+    fun `a single non-uniform jump across the threshold arms the lock the same as a stepped increment`() {
+        // startingDebt=33 -> interest ceil(33*0.15)=5 -> 38 at turn start (below the threshold).
+        // A +4 card then jumps 38 -> 42 in one step, crossing 40 without ever landing exactly on it.
+        registerDebtBombCard(debtAdd = 4)
+        engine.startCombat(
+            listOf(standardThug()),
+            listOf("debt_bomb", "strike", "strike", "strike", "strike"),
+            startingDebt = 33
+        )
+        assertEquals(38, engine.getState().debt)
+
+        val bomb = engine.getState().hand.find { it.cardId == "debt_bomb" }!!
+        engine.playCard(bomb.id, null)
+
+        val state = engine.getState()
+        assertEquals(42, state.debt)
+        assertTrue(state.inArrears, "a jump across the threshold must arm just like a +1 step would")
+        assertEquals(1, engine.arrearsArmedCount)
     }
 
 

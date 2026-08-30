@@ -69,6 +69,24 @@ object RespondingPolicy : RunPolicy {
     override fun chooseAction(state: CombatState): ScriptedPolicy.CombatAction {
         if (state.currentTurn != TurnPhase.PLAYER_ACTION) return ScriptedPolicy.CombatAction.EndTurn
 
+        // FV.E1 — Arrears lock escape: while state.inArrears, only a wipe_debt-tagged card
+        // actually clears the lock (D4: debt == 0 or a wipe_debt resolve; a partial repay does
+        // not escape). This is the one branch that makes RespondingPolicy escape-capable — the
+        // E1 differential against the lock-blind ScriptedPolicy/LeveragePolicy. Reuses the same
+        // HP-aware cheapest-playable wipe_debt selection as the FORECLOSE branch below; if no
+        // wipe is playable, fall through unchanged (no repay fallback — repay does not escape).
+        if (state.inArrears) {
+            val wipeCandidates = state.hand
+                .filter { it.isPlayable(state.debt) && it.definition.tags.contains("wipe_debt") }
+            val wipe = wipeCandidates
+                .filter { state.player.hp - it.baseSelfDamage > 0 }
+                .minByOrNull { it.cost }
+                ?: wipeCandidates.minByOrNull { it.cost }
+            if (wipe != null) {
+                return ScriptedPolicy.CombatAction.Play(wipe.instanceId, null)
+            }
+        }
+
         // FV E1 — FORECLOSE response: pay down on the deadline turn. Block does not help against a
         // seizure, so a wipe (Debt -> 0) beats a partial repay when both are held.
         if (forecloseAnnounced(state) && state.debt >= forecloseThreshold(state)) {
