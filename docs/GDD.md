@@ -85,7 +85,8 @@ total. No map, no rest, no persistence between runs.
 | `INTEREST_RATE` | 0.15 | Per-turn compounding interest, `ceil(debt * 0.15)`. |
 | `INTEREST_CAP` | 200 | Hard ceiling Debt can never exceed. Not a difficulty signal — just prevents runaway numbers. |
 | `BREAK_THRESHOLD` | 30 | Schedules the forced "collector" encounter; garnishment ramps to max here. |
-| `EXECUTION_THRESHOLD` | 50 | Death line. Debt above this makes any debt-increasing action immediate defeat. Deliberately **above** `BREAK_THRESHOLD` — see Part 2, confirmed rule 2. |
+| `ARREARS_THRESHOLD` | 40 | **Behavioral.** Debt reaching this arms the "En Mora" arrears lock (FV.E1, change `fv-e1-arrears-lock`). Not a death line — see Part 2, confirmed rule 2. Deliberately **above** `BREAK_THRESHOLD`, so the forced collector arrives before arrears bites. |
+| `DEBT_SCALE_ANCHOR` | 50 | **Not behavioral — scale only.** The former `EXECUTION_THRESHOLD`, renamed by `fv-e1-arrears-lock`. `HarnessBands.kt` derives every E2 sim band as a ratio of it, and the sim policies use it as their borrow ceiling; `RunManager.takeLoan`'s affordability guard also reads it. Nothing about the arrears lock is keyed to this number. |
 | `MAX_GARNISH_RATE` | 0.75 | Max fraction of a Gold reward redirected to Debt repayment at/above `BREAK_THRESHOLD`. |
 | `DEBT_SCALING_ATTACK_DIVISOR` | 10 | Extra damage per hit for `debt_scaling` ATTACK cards: `floor(debt / 10)`, on top of the unconditional flat Leverage bonus every attack already gets. |
 | `DEBT_PAYOFF_DIVISOR` | 2 | `debt_payoff` cards deal damage / gain Block equal to `floor(debt / 2)`. No wipe, no repayment — the "keep the band" sibling of the all-in execution wipe. |
@@ -93,10 +94,20 @@ total. No map, no rest, no persistence between runs.
 | `DEBT_DRAW_BASE` | 1 | Base draw for `debt_draw` cards at zero/low Debt. |
 | `CHAPTER_11_HP_COST` | 15 | HP cost of the Chapter 11 card's full Debt wipe. |
 
-> This table is the complete set of `const val` declared in `core/combat/DebtConfig.kt`,
-> verified 2026-08-27. `USURY_HP_RATIO` and `REPAY_DISCARD_VALUE`, documented in earlier
-> versions of this file, **no longer exist in the codebase** — the usury mechanic and the free
-> discard-to-repay valve were both removed during the Part 2 pivot.
+> `USURY_HP_RATIO` and `REPAY_DISCARD_VALUE`, documented in earlier versions of this file,
+> **no longer exist in the codebase** — the usury mechanic and the free discard-to-repay valve
+> were both removed during the Part 2 pivot.
+>
+> **This table is not the complete set of `const val` in `core/combat/DebtConfig.kt`, and the
+> earlier claim that it was is withdrawn.** Re-derived 2026-08-29 (`rg -n 'const val'
+> app/src/main/java/com/debtsdecks/core/combat/DebtConfig.kt`): the file declares **14**
+> constants, this table now lists **11**. The `fv-e1-arrears-lock` docs pass verified only the two
+> rows it owns (`ARREARS_THRESHOLD`, `DEBT_SCALE_ANCHOR`) and left the rest untouched and
+> unreconciled. Open, pre-existing and **unowned by this change**: `STARTING_DEBT = 6`,
+> `LEVERAGE_DIVISOR = 6` and `EXECUTION_DAMAGE_DIVISOR = 2` are absent from the table, and two
+> listed values disagree with the code — `MAX_GARNISH_RATE` is **0.6**, not 0.75, and
+> `DEBT_SCALING_ATTACK_DIVISOR` is **8**, not 10. Read the file, not this table, until a pass owns
+> those five rows.
 
 **Known imbalance — historical, resolved by C2/C4 (kept for context, no longer true):**
 
@@ -104,7 +115,8 @@ total. No map, no rest, no persistence between runs.
   5:1 exchange rate lets a player cycle debt to ~0 every 2-3 turns indefinitely.~~ The free
   discard-to-repay valve no longer exists.
 - ~~Usury cannot kill — it has no teeth as a loss condition.~~ The usury HP burn was replaced by
-  the Execution death line at `EXECUTION_THRESHOLD`.
+  the Execution death line at `EXECUTION_THRESHOLD` — itself since replaced by the "En Mora"
+  arrears lock at `ARREARS_THRESHOLD` (FV.E1, confirmed rule 2 below).
 - ~~Debt and Gold are effectively one signed scalar (`gold − debt`).~~ They are now fully
   independent, because Gold's 1:1 Debt sink was removed — which is its own open problem (see the
   Gold row above and change C7).
@@ -196,24 +208,50 @@ under pressure, not a corner.
    Strike (6 dmg) hits for 12. Implemented alongside the existing `debt_scaling` tag read in
    `CardResolver` (already used by `compound_interest`).
 
-2. **Execution — Debt above `EXECUTION_THRESHOLD` (50) is immediate defeat.**
-   As shipped, the death line is its **own** constant, `EXECUTION_THRESHOLD = 50`, deliberately
-   set **above** `BREAK_THRESHOLD = 30`. The two numbers do different jobs and must not be
-   re-unified:
+2. **"En Mora" — Debt reaching `ARREARS_THRESHOLD` (40) locks the run, it does not end it.**
+   *Superseded 2026-08-29 by change `fv-e1-arrears-lock` (FV.E1). This rule previously read
+   "Execution — Debt above `EXECUTION_THRESHOLD` (50) is immediate defeat". Instant Execution is
+   **deleted outright**: no code path is left to restore it. `rg -n EXECUTION_THRESHOLD app/src`
+   returns nothing.*
 
-   | Constant | Value | Job |
-   |---|---|---|
-   | `BREAK_THRESHOLD` | 30 | Schedules the forced collector encounter; garnishment ramp ceiling. |
-   | `EXECUTION_THRESHOLD` | 50 | Death line — any debt-increasing action above it is defeat. |
+   The mechanic as shipped:
 
-   **Why they differ (do not "simplify" this away):** the forced collector must arrive *before*
-   death, so the Leverage band `5..49` is actually playable. The original design reused
-   `BREAK_THRESHOLD` for both, and with Execution == Break == 30 an interest tick alone crossed
-   the line almost every turn — the mechanic was unplayable. The split is the fix. See the KDoc
-   on `EXECUTION_THRESHOLD` in `core/combat/DebtConfig.kt` and C2 apply-progress decision A.
+   | Event | Behaviour |
+   |---|---|
+   | Arm | The **first** time in-combat Debt reaches `>= 40` via `CombatEngine.addDebt` (Credit-shortfall borrow, enemy `LEVY`, or a debt-applying card), the arrears lock arms: `inArrears = true`. Combat continues. **The interest tick cannot arm it** — only `addDebt` does (design D2), so passive compounding alone never puts you in arrears. |
+   | While armed | **Passive interest is frozen** — the per-turn `applyInterest` tick is skipped. Active, card-applied Debt increases are *not* frozen. Debt stops compounding, so the lock is a trap you can still climb out of. |
+   | Clear | One exit rule only: `debt == 0` clears `inArrears`, checked after every `RepayDebt`/`WipeDebt` (`wipe_debt` cards, Chapter 11, Ejecución). The freeze lifts immediately; the next tick is a no-op regardless, because `applyInterest` already no-ops at `debt <= 0`. |
+   | Once per combat | Arming sets `arrearsUsedThisCombat`, which never resets inside a combat. After escaping once, the player is **immune for the rest of that combat** — crossing 40 again does nothing. Both flags reset in `startCombat`. |
+   | **Gatillo B** | Killing the last enemy while still `inArrears` resolves the run to `Phase.DEFEAT`, not victory (`RunManager.refresh()`, checked after `allEnemiesDead` and before garnishment). You cannot win a fight you are in arrears for. |
 
-   Execution replaces `usuryDamage`'s HP-burn-that-never-kills with a real loss condition: the
-   same resource that gives you power is the resource that kills you.
+   **The two-constant split (do not merge these back into one).** `fv-e1-arrears-lock` split the
+   old single constant in two, because one number was doing a behavioral job and a measurement job
+   at once:
+
+   | Constant | Value | Job | Read by |
+   |---|---|---|---|
+   | `BREAK_THRESHOLD` | 30 | Schedules the forced collector encounter; garnishment ramp ceiling. | `CombatEngine`, `DebtConfig.garnishAmount` |
+   | `ARREARS_THRESHOLD` | 40 | **Behavioral.** The only line that arms the arrears lock. | `CombatEngine.armArrearsIfCrossed`, `CombatRenderer`'s red-debt display |
+   | `DEBT_SCALE_ANCHOR` | 50 | **Scale anchor only, no behavioral claim.** The renamed `EXECUTION_THRESHOLD`. | `HarnessBands` E2 band ratios, the sim policies' borrow ceilings (`Scripted`, `Leverage`, `Responding`), `RunManager.takeLoan`'s affordability guard, `CombatRenderer`'s loan affordance |
+
+   The harness and loan-affordability call sites are **deliberately blind to the lock** (design
+   decision D3). Pointing them at 40 would make the simulated policies lock-*avoidant*, which is
+   exactly how a prior attempt measured a 0/200 fire rate and destroyed the E1 signal; and it would
+   move every E2 band, breaking comparability with `docs/BALANCE-BASELINE.md`. Node loans are also
+   ungated by the lock on purpose: `takeLoan` never routes through `addDebt`, so it cannot arm it.
+
+   **Why 40 sits above `BREAK_THRESHOLD = 30`:** the forced collector must arrive *before* arrears,
+   so the Leverage band is actually playable. The original design reused `BREAK_THRESHOLD` for both
+   jobs, and with the hard line == Break == 30 an interest tick alone crossed it almost every turn.
+   See the KDoc on `ARREARS_THRESHOLD`/`DEBT_SCALE_ANCHOR` in `core/combat/DebtConfig.kt`,
+   `openspec/changes/fv-e1-arrears-lock/design.md` (D1-D6) and C2 apply-progress decision A.
+
+   **Why a lock and not a death line:** instant defeat on a debt-increasing action ended the run
+   *for* the player, with no decision in between — the resource that gave you power simply killed
+   you, off-screen. The lock keeps the loss condition (Gatillo B) but puts a playable escape in
+   front of it, and freezing interest is what makes that escape reachable instead of theatre.
+   Measured cost, 200 seeds/policy: greedy win rate 50.0% → 47.5%, avg peak debt unchanged at
+   ~30.1 (`docs/BALANCE-BASELINE.md` §"Post fv-e1-arrears-lock").
 
 3. **Liquidation — two card templates that spend accumulated Debt:**
    - **Ejecución** (cost 2): deal damage equal to current Debt, then Debt → 0. The all-in payoff.
@@ -330,7 +368,9 @@ picks it up next, not of this documentation pass.
 
 Open risk to watch: the leverage hypothesis itself could be wrong (an obvious optimal line would
 make the risk axis decorative). Re-run the simulator's greedy policy after C2 lands — if it wins
-above ~70%, tighten Execution before investing further down the sequence.
+above ~70%, tighten the debt loss condition (as of FV.E1, the arrears lock and Gatillo B) before
+investing further down the sequence. Last measured: greedy 47.5% over 200 seeds
+(`docs/BALANCE-BASELINE.md` §"Post fv-e1-arrears-lock"), so the ~70% risk is not live today.
 
 ---
 
@@ -361,11 +401,16 @@ already (see the 2026-08-25 note at the top).
 | 2026-08-25 | Full rewrite: documents actual current implementation + Debt-as-Leverage pivot design and SDD sequence | Claude Code + developer |
 | 2026-08-27 | `play-store-launch` P0 resync against `develop`: Debt constant table corrected to the 10 constants that exist (`USURY_HP_RATIO` and `REPAY_DISCARD_VALUE` removed); Gold's sink corrected to "none"; Part 2 marked shipped (C2 `0fb163b`, C4 `57b11c2`); Execution rule corrected to `EXECUTION_THRESHOLD = 50` with its rationale; card pool corrected to 27 (4 + 23); C0–C9 table gained a verified Status column with C3 flagged `NEEDS RE-VERIFICATION`; BD-1 recorded | Claude Code + developer |
 | 2026-08-28 | Vision delta: enemy table corrected against `enemies/all.json` (HP 22/36/52, Loan Shark 9 dmg + `LEVY 4` added post-resync by `c16b9f9`, Collector multi 7×2); `LEVY`-fires-once claim removed; forward references added for the district re-cut (F2), the treasury (F3) and the intent vocabulary (FV/F5); `## Vision (planned)` section added pointing at `docs/VISION.md` | Claude Code + developer |
+| 2026-08-29 | `fv-e1-arrears-lock` Phase 8.1: confirmed rule 2 rewritten from instant Execution to the "En Mora" arrears lock (arm at 40, interest frozen while armed, clear at `debt == 0`, once per combat, Gatillo B defeat-on-victory-if-still-in-arrears) with the `ARREARS_THRESHOLD` / `DEBT_SCALE_ANCHOR` split and D3's deliberately lock-blind call sites; constant table row split in two; the "complete set of `const val`, verified 2026-08-27" claim withdrawn after re-derivation found 14 constants, 3 missing rows and 2 wrong values (all pre-existing, all still unowned); the ~70% greedy-win open risk given its last measured number | Pi (`fv-e1-arrears-lock` apply) |
 
 ---
 
-*Last updated: 2026-08-28 — Keep this file in sync with code. C2, C4, C5 and C7 have landed.
-Forward-looking design now lives in `docs/VISION.md`; this document stays the record of what
+*Last updated: 2026-08-29 — Keep this file in sync with code. C2, C4, C5 and C7 have landed;
+FV.E1's arrears lock (`fv-e1-arrears-lock`) is implemented on `feat/fv-verbs-foreclose-hedge` and
+**not yet merged**, so confirmed rule 2 above describes that branch, not `develop`. Delete this
+sentence when it merges — while it stands, the constant table and rule 2 are ahead of trunk.*
+
+*Forward-looking design now lives in `docs/VISION.md`; this document stays the record of what
 `develop` actually does. **F2 (`f2-districts`) PR1 has already merged**, as `6b50164`; the MVP
 Scope section above records what it changed. The next required update lands with F2 PR2
 (district identity on screen). F1 will not require one — it is confined to `app/src/test/`.

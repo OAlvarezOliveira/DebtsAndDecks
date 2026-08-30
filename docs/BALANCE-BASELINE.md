@@ -1127,3 +1127,106 @@ file within noise (the intervening commits since `fa2236b` touched only `docs/` 
 
 `BUILD SUCCESSFUL`, 3/3 tests green — confirmed as the pre-change determinism control for
 Phase 5's re-check.
+
+---
+
+## Post fv-e1-arrears-lock (2026-08-29) — Phase 7 empirical validation
+
+**Measured:** 2026-08-29, on `feat/fv-verbs-foreclose-hedge` (`DebtsAndDecks-fv-e1-leverage` worktree),
+headless sim. All Phase 2-6 source changes present and uncommitted: the arrears lock is live with
+`ARREARS_THRESHOLD = 40`, Gatillo B **on**, `DEBT_SCALE_ANCHOR = 50`. Reproduce the standing gate:
+
+```
+<cached-gradle-8.11.1>/bin/gradle --no-daemon :app:testDebugUnitTest \
+  --tests '*IntentVerbsE1Test' --tests '*RunSimulationHarnessTest' --tests '*HarnessDeterminismTest'
+```
+
+Locale `LANG=C` so report decimals print as dots (the §"Pre fv-e1-arrears-lock" section above used
+`es_ES`, which prints commas — read a comma there as a decimal point; the numbers are identical).
+`BUILD SUCCESSFUL`; `IntentVerbsE1Test` 1/1, `RunSimulationHarnessTest` 13/13, `HarnessDeterminismTest` 3/3.
+
+### 7.1 `IntentVerbsE1Test` (200 seeds/policy) — post-change
+
+```
+Responding -> verbs-on 49.0% | verbs-off 16.0% | difficulty weight 33.0pp
+Ignoring   -> verbs-on 47.0% | verbs-off 25.5% | difficulty weight 21.5pp
+Response gap (responding - ignoring, informational): 2.0pp
+```
+
+**Gate note (read before judging ">= 10.0pp").** `tasks.md` Phase 7.1's wording "assert response-gap
+>= 10.0pp" is the *original* pre-re-metric E1 bar. This branch's `IntentVerbsE1Test` deliberately does
+**not** restore it — the 2026-08-28 re-metric (sections above) proved the 10pp response gap is
+unreachable on the FORECLOSE/HEDGE mechanics and 27-card pool, and left the gate as
+`responseGap >= -5.0` (advisory) plus the **difficulty-weight floors** `weightResponding >= 20.0pp` /
+`weightIgnoring >= 15.0pp`. Those hard asserts are what the test enforces, and both hold post-change
+(33.0 / 21.5). The measured response gap is **+2.0pp**, byte-similar to the pre-lock baseline — the
+arrears lock is a debt-axis mechanic and does not move the FORECLOSE-verb response signal. Restoring
+the literal 10pp assertion would require re-opening the re-metric decision and is out of scope here.
+
+### 7.2 `RunSimulationHarnessTest` (200 seeds/policy) — post-change
+
+```
+Greedy   -> win 47.5% | peak debt 30.1 | HP@win 20.0 | arrears fire rate 2.5% | defeats {collector=13, loan_shark=92}
+Leverage -> win 47.0% | peak debt 30.1 | HP@win 21.0 | arrears fire rate 0.5% | defeats {collector=12, loan_shark=94}
+```
+
+E2 / 7.2 gates (all asserted by the test, all pass):
+- Greedy win rate **47.5%** ∈ [0.35, 0.55] ✓
+- Avg peak debt **30.1** ∈ [25, 45) ✓ (both policies; leverage peak 30.1)
+- Neither policy ≥ 70% win rate (47.5 / 47.0) ✓
+- **Arrears lock fires for BOTH policies** — greedy fire rate **2.5%** (> 0) ✓, leverage fire rate
+  **0.5%** (> 0) ✓. This is the explicit task-7.2 requirement (design D2's "lock must actually arm,
+  else it is decoration"): both policies arm the lock at least once across 200 seeds.
+- Phase 6 balance assertions (leverage within 5pp of greedy, both in the leverage band, won-run peak
+  debt > 25, payoff cards played) also green in the same run.
+
+vs the pre-lock baseline (§"Pre fv-e1-arrears-lock"): greedy win 50.0% → 47.5% (−2.5pp — the
+Gatillo-B defeats); peak debt unchanged (~30.1). The lock is live but rarely the binding outcome:
+it arms in only ~2.5% / 0.5% of runs because peak debt (~30) sits well below `ARREARS_THRESHOLD = 40`.
+
+### 7.3 Joint diagnostic 2×2 sweep (ARREARS_THRESHOLD ∈ {40,45} × Gatillo B {on,off})
+
+Local **temporary source overrides only — not shipped**. After the run both files were reverted by
+targeted edits; `git status` confirms `DebtConfig.kt` / `RunManager.kt` carry no stray override (the
+`ARREARS_THRESHOLD = 40` split and the Gatillo-B branch are exactly as Phase 2-6 left them). Threshold
+override edited `DebtConfig.ARREARS_THRESHOLD` (40↔45, a `const val`, recompiled each run); Gatillo-B
+off commented the `if (state.inArrears)` defeat branch in `RunManager.refresh()` with
+`if (false && state.inArrears)`. 200 seeds/policy each, same harness.
+
+| Cell | Greedy win | Greedy peak | Greedy fire | Greedy defeats | Leverage win | Leverage peak | Leverage fire | Leverage defeats |
+|---|---|---|---|---|---|---|---|---|
+| 40 / on (shipped) | 47.5% | 30.1 | 2.5% | {collector=13, loan_shark=92} | 47.0% | 30.1 | 0.5% | {collector=12, loan_shark=94} |
+| 40 / off | 49.5% | 30.1 | 2.5% | {collector=11, loan_shark=90} | 47.5% | 30.1 | 0.5% | {collector=12, loan_shark=93} |
+| 45 / on | 47.5% | 30.2 | 2.5% | {collector=12, loan_shark=93} | 47.0% | 30.1 | 0.5% | {collector=12, loan_shark=94} |
+| 45 / off | 49.5% | 30.2 | 2.5% | {collector=11, loan_shark=90} | 47.5% | 30.1 | 0.5% | {collector=12, loan_shark=93} |
+
+**Reading.** The owner-locked choice (40/on) is the right one; the sweep does not re-open it:
+- **Gatillo B is the only lever that moves anything.** Turning it off lifts greedy win ~+2pp
+  (47.5% → 49.5%) because the few runs that arm the lock and then kill the enemy flip from a
+  Gatillo-B defeat back to a victory. Leverage is essentially unaffected (fire rate 0.5% ≈ 1 run).
+- **`ARREARS_THRESHOLD` 40 vs 45 is immaterial.** Peak debt (~30) never approaches either line, so
+  almost no run crosses 40 in the first place; raising the bar to 45 changes zero outcomes. The
+  threshold is not the sensitive knob at this debt level — D2's pre-declared tuning knob #1 (arm on
+  `addDebt` only) and the owner-locked 40 value stand.
+
+Informational only: it attributes the small post-change greedy win-rate shift to Gatillo B, and
+confirms the lock's low fire rate is a property of the debt band, not of the threshold value.
+
+### 7.4 `HarnessDeterminismTest` — post-change
+
+3/3 green, identical to the Phase 1.2 control (§"Pre fv-e1-arrears-lock"). The new combat state is two
+`Boolean`s + one `Int` with no UUID-keyed maps or iteration-order dependence, so determinism is
+preserved by the lock change.
+
+---
+
+### Phase 7 verdict
+
+All four Phase 7 tasks verified against real 200-seed sim output (captured from
+`app/build/test-results/testDebugUnitTest/TEST-*.xml` `system-out`, not estimated):
+- 7.1 — E1 re-metriced gate holds (response gap +2.0pp; difficulty weights 33.0 / 21.5pp).
+- 7.2 — E2 band + fire-rate > 0 per policy both confirmed.
+- 7.3 — 2×2 sweep recorded (informational).
+- 7.4 — determinism green vs the Phase 1.2 control.
+
+Phase 8 (docs cleanup) is out of scope for this task and is intentionally left untouched.

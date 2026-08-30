@@ -362,7 +362,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         }
 
         val debtColor = when {
-            state.debt >= DebtConfig.DEBT_SCALE_ANCHOR -> Color.RED
+            state.debt >= DebtConfig.ARREARS_THRESHOLD -> Color.RED
             state.debt >= DebtConfig.BREAK_THRESHOLD -> Color(1f, 0.6f, 0.1f, 1f) // amber
             else -> ink100
         }
@@ -380,11 +380,12 @@ class CombatRenderer(private val bundle: I18NBundle) {
         }
 
         // R9: Debt/Gold flagged at both thresholds — amber at BREAK (the collector is coming),
-        // hard red plus an explicit warning past EXECUTION, where any debt-raising action is
-        // instant death (the interest tick is exempt). NEW-5 playtest: the zone was invisible.
+        // hard red plus an explicit warning at ARREARS_THRESHOLD, where the En Mora lock arms:
+        // interest freezes and the player has one escape charge for the rest of the combat.
+        // NEW-5 playtest: the zone was invisible.
         smallFont.color = debtColor
         smallFont.draw(batch, bundle.format("hud.debt_gold", state.debt, state.gold), x + pad, debtY)
-        if (state.debt >= DebtConfig.DEBT_SCALE_ANCHOR) {
+        if (state.debt >= DebtConfig.ARREARS_THRESHOLD) {
             smallFont.color = Color.RED
             smallFont.data.setScale(0.66f)
             smallFont.draw(batch, bundle.get("hud.execution_warning"), x + pad, warningY, barW, Align.left, true)
