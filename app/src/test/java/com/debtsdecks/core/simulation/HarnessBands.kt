@@ -21,7 +21,9 @@ object HarnessBands {
     const val LEVERAGE_BAND_LOW_RATIO  = 0.50   // was 25
     const val LEVERAGE_BAND_HIGH_RATIO = 0.90   // was 45
     const val WON_PEAK_MIN_RATIO       = 0.50   // was 25
-    const val LEVERAGE_TARGET_RATIO    = 0.70   // was LeveragePolicy 35
+    const val LEVERAGE_TARGET_RATIO    = 0.82   // was 0.70 (LeveragePolicy target 35). WU7: a committed
+                                                // leverage player borrows to ~41 so the archetype keeps its
+                                                // debt-fuel damage and stays within 5pp of greedy.
     const val SAFE_AFTER_LOAN_RATIO    = 0.90   // was NodePolicy 45
     const val REPAY_BAND_RATIO         = 0.50   // was NodePolicy 25
 
