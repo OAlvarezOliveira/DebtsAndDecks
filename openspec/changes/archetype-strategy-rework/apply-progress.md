@@ -2,7 +2,7 @@
 
 Artifact store: `both` (OpenSpec file + Engram topic `sdd/archetype-strategy-rework/apply-progress`).
 Mode: Standard (strict_tdd not active in init).
-Last updated: WU3 (Pressure cards + synergy).
+Last updated: WU4 (Enemy scaling + intents).
 
 ## Cumulative Task State (all WUs)
 
@@ -22,7 +22,7 @@ Last updated: WU3 (Pressure cards + synergy).
 | T3.5 `low_debt_escalator` card | WU3 | [x] complete |
 | T3.6 End-of-turn POWER hook (`low_debt_bonus`) | WU3 | [x] complete |
 | T3.7 `audit_punish` card + resolver tag-disable | WU3 | [ ] **DEFERRED** — depends on PR #22 AUDIT verb (unmerged WIP). Left unchecked by design. |
-| T4.1–T4.5 Enemy scaling + intents | WU4 | [ ] pending |
+| T4.1–T4.5 Enemy scaling + intents | WU4 | [x] complete |
 | T5.1–T5.5 Reward economy | WU5 | [ ] pending |
 | T6.1–T6.4 HUD | WU6 | [ ] pending |
 | T7.1–T7.6 Tuning + sim validation | WU7 | [ ] pending |
@@ -182,3 +182,35 @@ Last updated: WU3 (Pressure cards + synergy).
 - None blocking. The `LeveragePayoffCardsDataTest` "exactly 23 non-starter cards" assertion had to be updated to 26
   (3 new PRESSURE cards), and its pressure-contract test extended — expected, since WU3 adds cards to the reward pool.
 - `audit_punish` (T3.7) intentionally omitted per slice scope; its checkbox remains `[ ]` with a `DEFERRED` note.
+
+## WU4 Work Unit Evidence
+
+| Evidence | Value |
+|----------|-------|
+| Focused test command | `~/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle :app:testDebugUnitTest --tests "com.debtsdecks.core.enemies.EnemyScalingTest" --tests "com.debtsdecks.core.enemies.IntentTypeCoverageTest" --tests "com.debtsdecks.core.enemies.EnemyInstanceTest"` |
+| Focused test result | `EnemyScalingTest` (7 tests: act-I 30 HP + baseline dmg, act-II HP+dmg together, no-modifier unscaled, slot→act mapping, HEDGE block, FORECLOSE debt-branch, FORECLOSE HP-branch) PASS. `IntentTypeCoverageTest` (5, incl. new FORECLOSE/HEDGE icon+l10n+renderer-map coverage) PASS. `EnemyInstanceTest` (13) PASS. Full `testDebugUnitTest`: **264 passed, 1 failed, 2 skipped** — the 1 failure is `RunSimulationHarnessTest.H1.1` (win-rate band 0.35–0.55), a WU7 tuning target (see Issues). |
+| Runtime harness command/scenario | FORECLOSE is exercised through the real `CombatEngine` in `EnemyScalingTest` (`startCombat` → `endPlayerTurn`, debt-branch adds 10 Debt via the cap/Execution path; no-debt branch deals 5 HP). HEDGE is exercised through `EnemyAI.executeIntent` (gainBlock). Both run the unmodified engine, so the new intents are validated against the actual combat pipeline, not just the resolver. |
+| Rollback boundary | Revert `EnemyDefinition.kt` (new `ActModifier` data class + `actModifiers` field + `FORECLOSE`/`HEDGE` enum entries), `EnemyInstance.kt` (`act` param, `modifier`/`scaledPattern`, HP scaling, `intentDisplayName` 2 branches, `EnemyAI` HEDGE/FORECLOSE branches), `CombatEngine.kt` (`act` param in `startCombat` + FORECLOSE `when` branch), `RunManager.kt` (`actForSlotIndex` + 3 `act` args), `enemies/all.json` (actModifiers + FORECLOSE/HEDGE intents), `strings.properties`/`strings_es.properties` (4 new keys), `CombatRenderer.kt` (`intentColor` 2 branches), and delete `EnemyScalingTest.kt`. Enemies without `actModifiers` stay unscaled, so WU1–WU3 behavior is unchanged. |
+
+### WU4 Implementation Notes
+
+- T4.1 `ActModifier(act, hpMultiplier, damageMultiplier)` + `EnemyDefinition.actModifiers: List<ActModifier>` (default empty). Foreach-enemy, `EnemyInstance` picks the entry whose `act == act`.
+- T4.2 Scaling applied in `EnemyInstance` constructor (not `startCombat` body): `hp = round(hp * hpMult)`, and each `intentPattern` step with `damage > 0` is copied with `damage = round(damage * dmgMult)`. `IntentStep` `param` (HEDGE/FORCLOSE extra payload) is never scaled. Both HP and damage use the SAME per-act modifier, satisfying the HP-Matters invariant.
+- T4.3 `actForSlotIndex(slot)`: `slot<=2→1, slot<=5→2, else 3`, matching `sequence.json` 3+3+2. Threaded as `act` into all three `CombatEngine.startCombat` calls (`beginRun`, `advanceToNextCombat` normal + forced-collector). `act` defaults to `1` so all pre-WU4 callers/tests are unaffected.
+- T4.4 `actModifiers` added to all three catalog enemies (thug, loan_shark, collector) per the design §E table. godfather is NOT in `enemies/all.json` and NOT in `sequence.json`, so it is out of scope (design §E lists it but it is unused in the run) — see Deviations #1.
+- T4.5 New intents FORECLOSE + HEDGE implemented end-to-end:
+  - FORECLOSE: engine-owned (same pattern as LEVY). `CombatEngine.endPlayerTurn` applies it: if `debt > 10` → `addDebt(10)` (routes through cap/Execution), else `player.takeDamage(5)`. `EnemyAI` FORECLOSE branch is a no-op that only advances the pattern.
+  - HEDGE: engine-independent, applied in `EnemyAI.executeIntent` as `enemy.gainBlock(intent.param)`.
+  - One new intent per enemy so each has ≥1 non-ATTACK intent beyond its prior repertoire: thug→FORECLOSE, loan_shark→HEDGE, collector→HEDGE.
+
+### WU4 Deviations
+
+1. **godfather omitted.** Design §E table lists godfather with act modifiers (40/75/140), but `enemies/all.json` contains only thug / loan_shark / collector, and `sequence.json` references only those three (godfather never spawns). Implementing godfather would mean ADDING an unused enemy to the catalog — out of WU4 scope and not referenced by the run. If godfather is meant to appear, that is a data/sequence change for a later WU. WU4 therefore scales exactly the three enemies that exist and are used.
+2. **Rounding instead of `floor` for scaling.** Design §E formula text says `floor(...)`, but the target Result-HP column (thug I=30, loan_shark II=65, collector III=120, etc.) is `round(base × mult)`: `22×1.36=29.92`, `floor=29` (FAILS the spec acceptance scenario "thug 30 HP vs baseline 22 HP"), `round=30`. Every present target in the §E table equals `round`, not `floor`. To satisfy the spec's acceptance scenario (and the stated table), HP and damage are scaled with `kotlin.math.round`. Flagged because it contradicts the literal formula wording in design.md.
+3. **AUDIT intent deferred.** Tasks.md T4.5 lists FORECLOSE / HEDGE / AUDIT and marks AUDIT as RISK (depends on FV WIP). The spec's only concrete new-intent acceptance scenario is FORECLOSE ("forces a decision"). AUDIT's real effect (tag-disable of cards on an AUDIT enemy intent) is part of the FV-core-validation verb set (PR #22, unmerged WIP), the same dependency that deferred WU3 T3.7. To avoid a dead/no-op intent, AUDIT is NOT added to the `IntentType` enum in WU4; FORECLOSE + HEDGE fully satisfy the "≥1 non-ATTACK intent per enemy" requirement. AUDIT will land together with FV (PR #22), gated on that work.
+
+### WU4 Issues
+
+- **`RunSimulationHarnessTest` H1.1 fails (win rate 0.0, expected 0.35–0.55).** This is the WU7 balance target (`T7.6 Iterate constants`); the harness loads the real (now-scaled) catalog and asserts a tuned win-rate band that is only reachable after all WU1–WU8 tuning. The test's own comment (C5, lines ~258–261) documents the sweep "currently wins ~0%" with win-rate recovery deferred to later concerns (C7/C8). WU4 scaling makes enemies tougher, shifting balance as intended — but bringing the band back to 0.35–0.55 is WU7's job, explicitly out of WU4 scope. The failure is an assertion (win-rate out of band), NOT a crash: the simulation ran to completion (no exception), confirming the new FORECLOSE/HEDGE intents and scaled enemies do not break the engine. No WU4 logic defect is implied.
+- No blockers. WU4 depends only on WU1–WU3 artifacts already present on `feat/asr-wu3-pressure`; the `act` parameter threads cleanly on top of the existing `startCombat` signature.
+

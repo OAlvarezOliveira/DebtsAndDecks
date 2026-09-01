@@ -99,10 +99,13 @@ class CombatEngine(
         startingGold: Int = 0,
         startingDebt: Int = 0,
         startingHp: Int = PlayerState().maxHp,
-        upgradedCopiesById: Map<String, Int> = emptyMap()
+        upgradedCopiesById: Map<String, Int> = emptyMap(),
+        /** Act the combat runs in (1–3). Threaded from [RunManager] so the spawned [EnemyInstance]
+         *  applies the right per-act HP/damage scaling. Defaults to 1. */
+        act: Int = 1
     ) {
         // Create enemies
-        enemies = enemyDefinitions.map { EnemyInstance(it, l10n) }.toMutableList()
+        enemies = enemyDefinitions.map { EnemyInstance(it, l10n, act) }.toMutableList()
         enemyAIs = enemies.associateBy({ it.id }, { EnemyAI(it, l10n) })
 
         // Create player
@@ -283,10 +286,22 @@ class CombatEngine(
                     if (addDebt(intent.param, DebtSource.LEVY)) { levyExecution = true }
                     enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_levy", intent.param), turnNumber))
                 }
+                IntentType.FORECLOSE -> {
+                    // FORECLOSE forces a debt payment or penalty: already-debted players take on more
+                    // Debt (routed through the cap/Execution check); otherwise it deals direct HP damage.
+                    if (debt > 10) {
+                        if (addDebt(10)) { levyExecution = true }
+                        enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_foreclose_debt", 10), turnNumber))
+                    } else {
+                        val actual = player.takeDamage(5)
+                        enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_foreclose_hp", actual), turnNumber))
+                    }
+                }
                 IntentType.ATTACK,
                 IntentType.BUFF,
                 IntentType.DEBUFF,
-                IntentType.MULTI_ATTACK -> Unit // resolved by EnemyAI.executeIntent below
+                IntentType.MULTI_ATTACK,
+                IntentType.HEDGE -> Unit // resolved by EnemyAI.executeIntent below (HEDGE gains Block)
             }
             val ai = enemyAIs[enemy.id]!!
             enemyLog.addAll(ai.executeIntent(player, enemies, turnNumber))

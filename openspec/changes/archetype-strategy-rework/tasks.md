@@ -53,11 +53,11 @@ Chain strategy: pending
 - [ ] **T3.7 `audit_punish`.** `cards/all.json` + resolver tag-disable. Dep: FV verb mechanism (PR #22 WIP — RISK). POWER,"pressure","audit"; enemy BUFF/EMPOWER→vulnerable2. Accept: pressure "AUDIT-Punish". DEFERRED: depends on PR #22 AUDIT verb (unmerged WIP).
 
 ## WU4: Enemy Scaling + Intents
-- **T4.1 ActModifier model.** `core/enemies/EnemyDefinition.kt`. Dep: none. Add `ActModifier(act,hpMultiplier,damageMultiplier)` + `actModifiers` field. Accept: enemy-scaling "Data-Driven Scaling".
-- **T4.2 Apply scaling.** `EnemyInstance.kt` + `CombatEngine.startCombat` (add `act` param). Dep: T4.1. `hp=floor(hp*m)`, `intentDamage=floor(d*m)`. Accept: enemy-scaling "Act I thug tanks", "HP Matters" (hits≥4).
-- **T4.3 Derive act.** `core/combat/RunManager.kt` `advanceToNextCombat`. Dep: T4.2. Slots 0–2→I,3–5→II,6–7→III; pass act. Accept: enemy-scaling per-act table.
-- **T4.4 Add actModifiers.** `assets/enemies/all.json`. Dep: T4.1. Per design table E (thug 30/55, loan_shark 65/90, collector 120, godfather 40/75/140). Accept: enemy-scaling table.
-- **T4.5 New intents.** `EnemyDefinition.kt` `IntentType` FORECLOSE/HEDGE/AUDIT + icon + `EnemyAI` + engine hook. Dep: none. Accept: enemy-scaling "Intent Variety", "FORECLOSE forces decision". RISK: AUDIT depends on FV WIP.
+- [x] **T4.1 ActModifier model.** `core/enemies/EnemyDefinition.kt`. Dep: none. Add `ActModifier(act,hpMultiplier,damageMultiplier)` + `actModifiers` field. Accept: enemy-scaling "Data-Driven Scaling".
+- [x] **T4.2 Apply scaling.** `EnemyInstance.kt` + `CombatEngine.startCombat` (add `act` param). Dep: T4.1. `hp=round(hp*m)`, `intentDamage=round(d*m)`. Accept: enemy-scaling "Act I thug tanks", "HP Matters" (hits≥4).
+- [x] **T4.3 Derive act.** `core/combat/RunManager.kt` `advanceToNextCombat`. Dep: T4.2. Slots 0–2→I,3–5→II,6–7→III; pass act. Accept: enemy-scaling per-act table.
+- [x] **T4.4 Add actModifiers.** `assets/enemies/all.json`. Dep: T4.1. Per design table E (thug 30/55, loan_shark 65/90, collector 120; godfather omitted — not in catalog/sequence). Accept: enemy-scaling table.
+- [x] **T4.5 New intents.** `EnemyDefinition.kt` `IntentType` FORECLOSE/HEDGE + icon + `EnemyAI` + engine hook (AUDIT deferred — FV WIP, per RISK note). Dep: none. Accept: enemy-scaling "Intent Variety", "FORECLOSE forces decision".
 
 ## WU5: Reward Economy
 - **T5.1 Raise cap.** `RunManager.kt` companion `MAX_UPGRADES_PER_RUN` 2→4. Dep: none. Accept: reward-economy "Cap enforcement".

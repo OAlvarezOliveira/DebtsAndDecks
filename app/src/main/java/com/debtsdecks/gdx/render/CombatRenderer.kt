@@ -195,6 +195,8 @@ class CombatRenderer(private val bundle: I18NBundle) {
         IntentType.BUFF -> Color(0.3f, 0.75f, 0.35f, 1f)
         IntentType.DEBUFF -> Color(0.6f, 0.3f, 0.85f, 1f)
         IntentType.LEVY -> Color(1f, 0.8f, 0.2f, 1f)
+        IntentType.FORECLOSE -> Color(1f, 0.45f, 0.1f, 1f)
+        IntentType.HEDGE -> Color(0.3f, 0.7f, 0.95f, 1f)
     }
 
     private fun cardTypeColor(type: CardType): Color = when (type) {
