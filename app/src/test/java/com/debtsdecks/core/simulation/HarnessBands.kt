@@ -7,8 +7,9 @@ import com.debtsdecks.core.combat.DebtConfig
  * [DebtConfig.EXECUTION_THRESHOLD] — the death line — because that is the only debt number
  * the design guarantees to keep meaning the same thing across a re-scale.
  *
- * At EXECUTION_THRESHOLD = 50 these resolve to the historical absolutes: 25.0, 45.0, 35, 45, 25.
- * If they ever stop doing so at 50, this refactor was wrong.
+ * At EXECUTION_THRESHOLD = 50 these resolve to: 25.0, 45.0, 41 (WU7-tuned, was 35), 45, 25.
+ * leverageTarget is the one band retuned by WU7; the 35->41 shift is the lever that keeps the
+ * leverage archetype within 5pp of greedy. The other four ratios remain historical absolutes.
  *
  * The thresholds are derived live ([get] rather than constructor values) so a spike that mutates
  * the execution line (spec R1.3) is picked up on the next access instead of being frozen at
@@ -21,9 +22,7 @@ object HarnessBands {
     const val LEVERAGE_BAND_LOW_RATIO  = 0.50   // was 25
     const val LEVERAGE_BAND_HIGH_RATIO = 0.90   // was 45
     const val WON_PEAK_MIN_RATIO       = 0.50   // was 25
-    const val LEVERAGE_TARGET_RATIO    = 0.82   // was 0.70 (LeveragePolicy target 35). WU7: a committed
-                                                // leverage player borrows to ~41 so the archetype keeps its
-                                                // debt-fuel damage and stays within 5pp of greedy.
+    const val LEVERAGE_TARGET_RATIO    = 0.82   // WU7 tuning: a committed leverage player targets ~41 debt (0.82*50) to keep debt-fuel damage and stay within 5pp of greedy (RunSimulationHarnessTest sweep). Overrides the pre-WU7 historical absolute 35.
     const val SAFE_AFTER_LOAN_RATIO    = 0.90   // was NodePolicy 45
     const val REPAY_BAND_RATIO         = 0.50   // was NodePolicy 25
 
