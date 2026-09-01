@@ -80,3 +80,10 @@ fun archetypeTiers(deck: List<String>, registry: CardRegistry): Map<Archetype, I
         min(DebtConfig.ARCHETYPE_TIER_MAX, count / DebtConfig.ARCHETYPE_TIER_TAGS_PER_TIER)
     }
 }
+
+/**
+ * True when [tags] identify a LEVERAGE-archetype card (drive the Leverage synergy tier bonus in
+ * [com.debtsdecks.core.combat.resolution.CardResolver]). WU2 reads this instead of duplicating the
+ * private [LEVERAGE_TAGS] set.
+ */
+fun isLeverageTagged(tags: Set<String>): Boolean = tags.any { it in LEVERAGE_TAGS }

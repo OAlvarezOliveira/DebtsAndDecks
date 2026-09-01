@@ -39,9 +39,9 @@ Chain strategy: pending
 - [x] **T1.4 Populate tiers.** `core/combat/CombatEngine.kt`. Dep: T1.1,T1.3. Compute `archetypeTiers(starterDeck, cardRegistry)` in `startCombat`; thread into `getState()`. Accept: resolver reads `state.archetypeTiers`.
 
 ## WU2: Leverage Band-Cap + Divisor
-- **T2.1 Band-cap payoff.** `core/combat/resolution/CardResolver.kt` (debt_payoff branch ~L114). Dep: T1.2. `if debt<=40 floor(debt/N) else floor(40/N)+floor((debt-40)/M)`. Accept: leverage "Linear below cap" (15), "Diminishing above cap" (22), trap "EXECUTION-1 parking".
+- [x] **T2.1 Band-cap payoff.** `core/combat/resolution/CardResolver.kt` (debt_payoff branch ~L114). Dep: T1.2. `if debt<=40 floor(debt/N) else floor(40/N)+floor((debt-40)/M)`. Accept: leverage "Linear below cap" (15), "Diminishing above cap" (22), trap "EXECUTION-1 parking".
 - [x] **T2.2 Divisor unification.** `CardResolver.kt` L188 `state.debt/10` → `state.debt/DebtConfig.DEBT_STRENGTH_DIVISOR`. Dep: T1.2. Accept: leverage "Named constants only".
-- **T2.3 Leverage tier damage.** `CardResolver.kt` ATTACK branch. Dep: T1.4. `+tier` flat damage per attack (stacks `floor(debt/LEVERAGE_DIVISOR)`). Accept: synergy "Tier stacks with base leverage" (debt24,tier2→6).
+- [x] **T2.3 Leverage tier damage.** `CardResolver.kt` ATTACK branch. Dep: T1.4. `+tier` flat damage per attack (stacks `floor(debt/LEVERAGE_DIVISOR)`). Accept: synergy "Tier stacks with base leverage" (debt24,tier2→6).
 
 ## WU3: Pressure Cards + Synergy
 - **T3.1 PRESSURE status tier.** `CardResolver.kt` weak/vuln apply. Dep: T1.4. PRESSURE-tagged cards get `+tier` weak/vuln. Accept: synergy "Status escalation" (weak1→2 @tier1).

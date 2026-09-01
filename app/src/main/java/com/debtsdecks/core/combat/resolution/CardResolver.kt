@@ -1,6 +1,8 @@
 package com.debtsdecks.core.combat.resolution
 
 import com.debtsdecks.core.combat.DebtConfig
+import com.debtsdecks.core.combat.Archetype
+import com.debtsdecks.core.combat.isLeverageTagged
 import com.debtsdecks.core.i18n.Localizer
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.model.CombatLogEntry
@@ -85,11 +87,17 @@ class CardResolver(private val l10n: Localizer) {
                     )
                 }
 
+                // WU2 (T2.3): Leverage-tagged attacks gain a flat +tier damage bonus scaling with the
+                // player's current LEVERAGE synergy tier (carried in CombatState.archetypeTiers).
+                // Non-Leverage cards (no leverage tag) receive no tier bonus.
+                val leverageTier = state.archetypeTiers[Archetype.LEVERAGE] ?: 0
+                val leverageTierBonus = if (isLeverageTagged(card.definition.tags)) leverageTier else 0
+
                 // Liquidation — Ejecución: damage equal to HALF the current Debt, then wipes it all.
                 // The wipe is what you pay for, so the damage is halved (see EXECUTION_DAMAGE_DIVISOR):
                 // at 1:1 this card dominated every other play and turned Debt into a free battery.
                 if (card.definition.tags.contains("execution_damage")) {
-                    val executed = state.debt / DebtConfig.EXECUTION_DAMAGE_DIVISOR
+                    val executed = state.debt / DebtConfig.EXECUTION_DAMAGE_DIVISOR + leverageTierBonus
                     for (t in targets) {
                         effects.add(Effect.Damage(t, executed))
                     }
@@ -112,8 +120,8 @@ class CardResolver(private val l10n: Localizer) {
                 // PLUS the flat leverage bonus, but deliberately does NOT wipe. The "keep the
                 // band" sibling of execution_damage (same place in the ATTACK branch, no wipe).
                 if (card.definition.tags.contains("debt_payoff")) {
-                    val payoff = state.debt / DebtConfig.DEBT_PAYOFF_DIVISOR
-                    val withLeverage = payoff + state.debt / DebtConfig.LEVERAGE_DIVISOR
+                    val payoff = DebtConfig.leveragePayoffBandCapped(state.debt)
+                    val withLeverage = payoff + state.debt / DebtConfig.LEVERAGE_DIVISOR + leverageTierBonus
                     for (t in targets) {
                         effects.add(Effect.Damage(t, withLeverage))
                     }
@@ -136,7 +144,7 @@ class CardResolver(private val l10n: Localizer) {
                         } else {
                             0
                         }
-                        val baseDamage = ((card.effectiveDamage + player.strength + leverageBonus + taggedScale) * if (player.weak > 0) 0.75 else 1.0).toInt()
+                        val baseDamage = ((card.effectiveDamage + player.strength + leverageBonus + taggedScale + leverageTierBonus) * if (player.weak > 0) 0.75 else 1.0).toInt()
                         val effectiveDamage = if (enemy.vulnerable > 0) (baseDamage * 1.5).toInt() else baseDamage
                         effects.add(Effect.Damage(t, effectiveDamage))
                         landedHits++
@@ -213,7 +221,7 @@ class CardResolver(private val l10n: Localizer) {
                 // NO repayment, NO wipe. The defensive "hold the band" option that keeps the
                 // Leverage damage intact (the cash-out sibling is refinanciar / refinance).
                 if (card.definition.tags.contains("debt_payoff")) {
-                    val held = state.debt / DebtConfig.DEBT_PAYOFF_DIVISOR
+                    val held = DebtConfig.leveragePayoffBandCapped(state.debt)
                     effects.add(Effect.Block(held))
                     logEntries.add(CombatLogEntry.create(l10n.format("log.debt_payoff_block", held), state.turnNumber))
                 }
