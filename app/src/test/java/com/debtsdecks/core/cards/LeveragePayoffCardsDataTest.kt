@@ -44,9 +44,9 @@ class LeveragePayoffCardsDataTest {
     // --- R1.6: reward pool 23 non-starter ---
 
     @Test
-    fun `reward pool grows to exactly 23 non-starter cards`() {
+    fun `reward pool grows to exactly 26 non-starter cards`() {
         val nonStarter = cards.filter { !it.tags.contains("starter") }
-        assertEquals(23, nonStarter.size)
+        assertEquals(26, nonStarter.size)
         // Starter count stays 4.
         assertEquals(4, cards.count { it.tags.contains("starter") })
     }
@@ -135,6 +135,31 @@ class LeveragePayoffCardsDataTest {
         assertEquals(6, fund.block)
         assertEquals(1, fund.draw)
         assertTrue(fund.tags.isEmpty())
+
+        // --- WU3 PRESSURE cards ---
+        val paydown = byId("paydown_strike")!!
+        assertEquals(CardType.ATTACK, paydown.type)
+        assertEquals(Rarity.COMMON, paydown.rarity)
+        assertEquals(1, paydown.cost)
+        assertEquals(4, paydown.damage)
+        assertEquals(3, paydown.debtRepay)
+        assertTrue(paydown.tags.containsAll(setOf("pressure", "paydown")))
+
+        val weak = byId("weak_pressure")!!
+        assertEquals(CardType.SKILL, weak.type)
+        assertEquals(Rarity.COMMON, weak.rarity)
+        assertEquals(1, weak.cost)
+        assertEquals(2, weak.weakApply)
+        assertEquals(1, weak.vulnerableApply)
+        assertTrue("pressure" in weak.tags)
+        assertEquals(TargetType.ENEMY, weak.targetType)
+
+        val escalator = byId("low_debt_escalator")!!
+        assertEquals(CardType.POWER, escalator.type)
+        assertEquals(Rarity.UNCOMMON, escalator.rarity)
+        assertEquals(1, escalator.cost)
+        assertTrue(escalator.tags.containsAll(setOf("pressure", "low_debt_bonus")))
+        assertEquals(TargetType.SELF, escalator.targetType)
     }
 
     // --- R1.5: rarity ladder visible ---

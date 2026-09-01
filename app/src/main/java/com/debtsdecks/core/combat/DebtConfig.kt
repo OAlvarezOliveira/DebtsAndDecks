@@ -107,6 +107,13 @@ object DebtConfig {
      *  distinct path deliberately left untouched by WU1 to avoid changing attack numbers. */
     const val DEBT_STRENGTH_DIVISOR: Int = 10
 
+    /**
+     * PRESSURE low-debt threshold for the end-of-turn escalator (WU3, T3.5/T3.6): a deck holding
+     * [low_debt_bonus] POWER cards grants +1 Strength per stack at end of turn while Debt stays
+     * strictly below this value. Design tuning table: "PRESSURE low-debt threshold | debt < 15".
+     */
+    const val PRESSURE_LOW_DEBT_THRESHOLD: Int = 15
+
     fun applyInterest(debt: Int): Int {
         if (debt <= 0) return debt
         val interest = ceil(debt * INTEREST_RATE).toInt()

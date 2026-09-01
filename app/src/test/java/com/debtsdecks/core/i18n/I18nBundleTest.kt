@@ -553,6 +553,36 @@ class I18nBundleTest {
         assertEquals("Gana 6 de Bloqueo. Roba 1 carta.", b.get("card.emergency_fund.description"))
     }
 
+    // --- WU3 PRESSURE cards (archetype-strategy-rework) ---
+
+    @Test
+    fun `English WU3 pressure cards name and description resolve`() {
+        val b = I18NBundle.createBundle(bundleBase, Locale.ENGLISH)
+        assertEquals("Paydown Strike", b.get("card.paydown_strike.name"))
+        assertEquals("Deal 4 damage. Repay 3 Debt.", b.get("card.paydown_strike.description"))
+        assertEquals("Pressure Weakener", b.get("card.weak_pressure.name"))
+        assertEquals("Apply 2 Weak. Apply 1 Vulnerable.", b.get("card.weak_pressure.description"))
+        assertEquals("Low-Debt Escalator", b.get("card.low_debt_escalator.name"))
+        assertEquals(
+            "At the end of each turn, gain 1 Strength if your Debt is below 15.",
+            b.get("card.low_debt_escalator.description")
+        )
+    }
+
+    @Test
+    fun `Spanish WU3 pressure cards name and description resolve with neutral thematic translations`() {
+        val b = I18NBundle.createBundle(bundleBase, Locale("es"))
+        assertEquals("Golpe de Pago", b.get("card.paydown_strike.name"))
+        assertEquals("Inflige 4 de daño. Paga 3 de Deuda.", b.get("card.paydown_strike.description"))
+        assertEquals("Presión Debilitante", b.get("card.weak_pressure.name"))
+        assertEquals("Aplica 2 de Debilidad. Aplica 1 de Vulnerable.", b.get("card.weak_pressure.description"))
+        assertEquals("Escalador de Baja Deuda", b.get("card.low_debt_escalator.name"))
+        assertEquals(
+            "Al final de cada turno, gana 1 de Fuerza si tu Deuda está por debajo de 15.",
+            b.get("card.low_debt_escalator.description")
+        )
+    }
+
     // --- C7 between-fight node keys ---
 
     @Test
