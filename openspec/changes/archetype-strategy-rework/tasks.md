@@ -60,11 +60,11 @@ Chain strategy: pending
 - [x] **T4.5 New intents.** `EnemyDefinition.kt` `IntentType` FORECLOSE/HEDGE + icon + `EnemyAI` + engine hook (AUDIT deferred — FV WIP, per RISK note). Dep: none. Accept: enemy-scaling "Intent Variety", "FORECLOSE forces decision".
 
 ## WU5: Reward Economy
-- **T5.1 Raise cap.** `RunManager.kt` companion `MAX_UPGRADES_PER_RUN` 2→4. Dep: none. Accept: reward-economy "Cap enforcement".
-- **T5.2 Upgrade cadence.** `RunManager.kt`. Dep: T5.1. Add `wins` counter; offer upgrades only when `wins%4==0`. Accept: "Upgrade at win 4", trap "upgrade every node".
-- **T5.3 Biased free pick.** `RunManager.kt` `enterNode`. Dep: none. Replace random `take(cardChoices)` with biased 3-choose-1; exclude starters. Accept: "Biased offer" (≥0.6), "No starters".
-- **T5.4 Sequence edits.** `assets/run/sequence.json`. Dep: none. Non-boss slots `cardChoices=3`, boss 0/1. Accept: "Run Length Unchanged" (8 slots).
-- **T5.5 Reuse offer fn.** `RunManager.kt` `archetypeBiasedOffer`. Dep: T5.3. Serve `rewardChoices` from same biased fn. Accept: reward-economy "Biased offer".
+- [x] **T5.1 Raise cap.** `RunManager.kt` companion `MAX_UPGRADES_PER_RUN` 2→4. Dep: none. Accept: reward-economy "Cap enforcement".
+- [x] **T5.2 Upgrade cadence.** `RunManager.kt`. Dep: T5.1. Add `wins` counter; offer upgrades only when `wins%4==0`. Accept: "Upgrade at win 4", trap "upgrade every node".
+- [x] **T5.3 Biased free pick.** `RunManager.kt` `enterNode`. Dep: none. Replace random `take(cardChoices)` with biased 3-choose-1; exclude starters. Accept: "Biased offer" (≥0.6), "No starters".
+- [x] **T5.4 Sequence edits.** `assets/run/sequence.json`. Dep: none. Non-boss slots `cardChoices=3`, boss 0/1. Accept: "Run Length Unchanged" (8 slots).
+- [x] **T5.5 Reuse offer fn.** `RunManager.kt` `archetypeBiasedOffer`. Dep: T5.3. Serve `rewardChoices` from same biased fn. Accept: reward-economy "Biased offer".
 
 ## WU6: HUD (read-only)
 - **T6.1 Expose archetype.** `RunManager.kt`. Dep: none. `val dominantArchetype: Archetype get()=playerArchetype(deck,cardRegistry)`. Accept: debt-hud "Active Archetype Display".
