@@ -41,6 +41,10 @@ class CombatEngine(
 
     /** Per-combat flag (see [activateEscrowShield]) that halves Debt added from a shortfall while active. */
     private var escrowShieldActive: Boolean = false
+
+    /** Synergy tier (0..3) per archetype, computed from the starting deck at [startCombat] and
+     *  carried into [getState] for the HUD / resolver. Static per combat (deck composition). */
+    private var archetypeTiers: Map<Archetype, Int> = emptyMap()
             private enum class DebtSource { LEVY, OTHER }
 
         /**
@@ -126,6 +130,9 @@ class CombatEngine(
         debt = startingDebt
         escrowShieldActive = false
 
+        // Synergy tiers are a pure function of deck composition (no per-turn evaluation).
+        archetypeTiers = archetypeTiers(starterDeck, cardRegistry)
+
         // Start first turn
         beginTurn()
     }
@@ -149,7 +156,8 @@ class CombatEngine(
             log = log.toList(),
             turnNumber = turnNumber,
             debt = debt,
-            gold = gold
+            gold = gold,
+            archetypeTiers = archetypeTiers
         )
     }
 
