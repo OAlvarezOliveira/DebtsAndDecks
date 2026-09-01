@@ -77,6 +77,13 @@ class RunManager(
     val deckList: List<String> get() = deck
 
     /**
+     * The player's dominant archetype, derived from the current run deck via [playerArchetype].
+     * Read-only — powers the HUD's active-archetype label (WU6 T6.1). No state is read or written
+     * here, so the HUD consuming it stays strictly read-only (debt-hud spec: "HUD Is Read-Only").
+     */
+    val dominantArchetype: Archetype get() = playerArchetype(deck, cardRegistry)
+
+    /**
      * Current district, derived from the slot the run is on. Pure identity — carries no combat,
      * economy or reward value, so reading it never moves the balance gate (F2 R2.5). See R2.7.
      */

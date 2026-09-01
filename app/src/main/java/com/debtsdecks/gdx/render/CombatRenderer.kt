@@ -12,6 +12,7 @@ import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.I18NBundle
 import com.debtsdecks.core.cards.CardInstance
+import com.debtsdecks.core.combat.Archetype
 import com.debtsdecks.core.combat.DebtConfig
 import com.debtsdecks.core.combat.NodeConfig
 import com.debtsdecks.core.combat.RunManager
@@ -157,8 +158,8 @@ class CombatRenderer(private val bundle: I18NBundle) {
         // Enemy area
         drawEnemies(state.enemies, batch)
 
-        // Player area (HP, Block, Energy)
-        drawPlayer(state, batch)
+        // Player area (HP, Block, Energy, Debt HUD)
+        drawPlayer(state, run, batch)
 
         // Hand
         drawHand(state.hand, state.energy, state.debt, batch, state.currentTurn)
@@ -322,7 +323,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
      * itself sat mid-screen holding only an HP bar. Collecting them here frees the whole upper area
      * for the fight and keeps the readouts out of the hand's way.
      */
-    private fun drawPlayer(state: CombatState, batch: SpriteBatch) {
+    private fun drawPlayer(state: CombatState, run: RunManager, batch: SpriteBatch) {
         val panel = CombatLayout.playerPanel(worldWidth)
         val x = panel.x
         val y = panel.y
@@ -346,8 +347,17 @@ class CombatRenderer(private val bundle: I18NBundle) {
         cursor -= 24f
         val blockBarY = if (state.player.block > 0) (cursor - 18f).also { cursor = it - 24f } else null
         val debtY = cursor
-        cursor -= 22f
+        cursor -= 20f
+        val bandBarY = cursor - 12f // WU6: debt band bar (thin) sits directly below the debt text
+        cursor -= 24f
+        val archetypeY = cursor // WU6: active archetype label
+        cursor -= 20f
+        val riskY = cursor // WU6: risk counter (bleed + distance to execution)
+        cursor -= 18f
         val warningY = cursor
+
+        // WU6: immutable HUD view-model — the only thing the debt HUD reads. Never mutates state.
+        val hud = DebtHudModel.compute(state, run.dominantArchetype, state.archetypeTiers)
 
         panelBackdrop(x, y, w, h)
         drawHPBar(x + pad, hpBarY, barW, 14f, state.player.hpPercent, Color.RED, Color.GREEN)
@@ -357,6 +367,8 @@ class CombatRenderer(private val bundle: I18NBundle) {
             shapeRenderer.rect(x + pad, blockBarY, barW, 18f)
             shapeRenderer.end()
         }
+        // WU6: debt band bar (zones + current-debt marker + band-cap / break / bleed-floor ticks).
+        drawDebtBandBar(x + pad, bandBarY, barW, 12f, hud)
 
         val debtColor = when {
             state.debt >= DebtConfig.EXECUTION_THRESHOLD -> Color.RED
@@ -388,6 +400,43 @@ class CombatRenderer(private val bundle: I18NBundle) {
             smallFont.data.setScale(0.78f)
         }
 
+        // WU6: active archetype label — dominant archetype + its synergy tier, read-only from the
+        // run manager / combat state. Enum identifier is left untranslated, matching the turn-phase
+        // strip convention (see class KDoc on enum identifiers as internal data, not authored copy).
+        smallFont.color = ink300
+        smallFont.data.setScale(0.74f)
+        smallFont.draw(
+            batch,
+            bundle.format("hud.archetype", hud.dominantArchetype.name, hud.archetypeTier),
+            x + pad, archetypeY
+        )
+
+        // WU6: risk counter — per-turn bleed (interest) plus distance to the execution line. Shown
+        // once debt is in the actionable (>= bleed floor) range; the bar already conveys position
+        // at lower debt. Matches debt-hud spec scenario "Risk at moderate debt" (debt 35 -> "15 to
+        // execution").
+        if (hud.debt >= hud.debtBleedFloor) {
+            smallFont.color = when (hud.zone) {
+                DebtZone.EXECUTION -> Color.RED
+                DebtZone.PROXIMITY -> Color(1f, 0.45f, 0.1f, 1f)
+                else -> Color(1f, 0.6f, 0.1f, 1f)
+            }
+            smallFont.draw(
+                batch,
+                bundle.format("hud.risk_execution", hud.distanceToExecution),
+                x + pad, riskY
+            )
+        }
+        if (hud.debtBleed > 0) {
+            smallFont.color = Color(0.85f, 0.35f, 0.35f, 1f)
+            smallFont.draw(
+                batch,
+                bundle.format("hud.debt_bleed", hud.debtBleed),
+                x + pad + 150f, riskY
+            )
+        }
+        smallFont.data.setScale(0.78f)
+
         // Status effects stack up from the panel floor so a long list grows into the empty middle
         // instead of running off the bottom edge.
         smallFont.data.setScale(0.7f)
@@ -408,6 +457,74 @@ class CombatRenderer(private val bundle: I18NBundle) {
         smallFont.color = Color.WHITE
         smallFont.data.setScale(1f)
         batch.end()
+    }
+
+    /**
+     * WU6 debt band bar. A thin horizontal bar from 0 to [DebtHudData.executionThreshold] whose
+     * background is painted in the four danger zones (SAFE / DANGER / PROXIMITY / EXECUTION) so the
+     * scale is visible even at zero debt, overlaid by a bright fill up to the current debt so the
+     * player sees exactly where they sit. Tick marks at the bleed floor (22), break threshold (30),
+     * the LEVERAGE payoff band cap (40, brass), and the execution line (50) make the key boundaries
+     * explicit. Read-only: consumes [DebtHudData] and draws pixels only.
+     */
+    private fun drawDebtBandBar(x: Float, y: Float, w: Float, h: Float, hud: DebtHudData) {
+        val max = hud.executionThreshold.toFloat()
+        val safeColor = Color(0.25f, 0.7f, 0.35f, 1f)
+        val dangerColor = Color(1f, 0.6f, 0.1f, 1f)
+        val proximityColor = Color(1f, 0.45f, 0.1f, 1f)
+        val executionColor = Color.RED
+
+        val zoneColorAt: (Float) -> Color = { pos ->
+            when {
+                pos >= hud.executionThreshold -> executionColor
+                pos >= hud.breakThreshold -> proximityColor
+                pos >= hud.debtBleedFloor -> dangerColor
+                else -> safeColor
+            }
+        }
+
+        // Static zone background: one segment per threshold step, so the gradient scale is always
+        // visible. Drawn dim so the bright current-debt fill reads on top.
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        val zoneSteps = listOf(
+            0 to hud.debtBleedFloor,
+            hud.debtBleedFloor to hud.breakThreshold,
+            hud.breakThreshold to hud.executionThreshold
+        )
+        for ((from, to) in zoneSteps) {
+            val segX = x + w * (from.toFloat() / max)
+            val segW = w * ((to - from).toFloat() / max)
+            if (segW <= 0f) continue
+            shapeRenderer.setColor(darken(zoneColorAt(to.toFloat()), 0.45f))
+            shapeRenderer.rect(segX, y, segW, h)
+        }
+        // Current-debt fill: brighter zone color up to the player's actual debt (clamped at the
+        // execution line, which is the right edge of the bar).
+        val fillW = w * (hud.debt.coerceAtMost(hud.executionThreshold).toFloat() / max)
+        if (fillW > 0f) {
+            shapeRenderer.setColor(zoneColorAt(hud.debt.toFloat()))
+            shapeRenderer.rect(x, y, fillW, h)
+        }
+        shapeRenderer.end()
+
+        // Tick marks at the key boundaries: bleed floor, break, band cap (brass), execution.
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        fun tick(pos: Int, color: Color) {
+            if (pos <= 0 || pos >= hud.executionThreshold) return
+            val tx = x + w * (pos.toFloat() / max)
+            shapeRenderer.setColor(color)
+            shapeRenderer.rect(tx, y - 2f, 1.5f, h + 4f)
+        }
+        tick(hud.debtBleedFloor, Color.WHITE)
+        tick(hud.breakThreshold, Color.WHITE)
+        tick(hud.bandCap, brass500) // the LEVERAGE payoff band cap — distinct so the player sees it
+        shapeRenderer.end()
+
+        // Execution-line border at the right edge.
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.setColor(executionColor)
+        shapeRenderer.rect(x + w - 1.5f, y - 2f, 1.5f, h + 4f)
+        shapeRenderer.end()
     }
 
     /** Shared chrome for the two side panels: translucent fill plus a thin cool border. */

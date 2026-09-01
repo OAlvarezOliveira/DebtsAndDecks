@@ -35,6 +35,14 @@ object DebtConfig {
      */
     const val EXECUTION_THRESHOLD: Int = 50
 
+    /**
+     * Debt level that opens the "danger" zone on the HUD band bar (the per-turn bleed floor).
+     * Below this the bar reads SAFE; at or above it the HUD warns and the risk counter becomes
+     * actionable. Distinct from [BREAK_THRESHOLD]: the bleed floor is the first visual danger
+     * marker while the collector (forced encounter) triggers at the break. See debt-hud spec.
+     */
+    const val DEBT_BLEED_FLOOR: Int = 22
+
     /** Maximum fraction of a Gold reward that garnishment can redirect toward Debt repayment. */
     const val MAX_GARNISH_RATE: Double = 0.6
 
