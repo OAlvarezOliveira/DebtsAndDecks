@@ -71,7 +71,10 @@ class CombatRenderer(private val bundle: I18NBundle) {
     // gradient instead of crashing, same contract as the card art below.
     private val backgroundTextures: Map<String, Texture> = run {
         val m = mutableMapOf<String, Texture>()
-        for (id in listOf("bg_combat", "bg_reststop")) {
+        for (id in listOf(
+            "bg_combat", "bg_reststop",
+            "bg_district_slaughterhouse", "bg_district_casino", "bg_district_boardroom"
+        )) {
             try {
                 m[id] = loadTexture("art/backgrounds/$id.png")
             } catch (t: Throwable) {
@@ -195,6 +198,8 @@ class CombatRenderer(private val bundle: I18NBundle) {
         IntentType.BUFF -> Color(0.3f, 0.75f, 0.35f, 1f)
         IntentType.DEBUFF -> Color(0.6f, 0.3f, 0.85f, 1f)
         IntentType.LEVY -> Color(1f, 0.8f, 0.2f, 1f)
+        IntentType.FORECLOSE -> Color(0.9f, 0.35f, 0.1f, 1f)
+        IntentType.HEDGE -> Color(0.35f, 0.55f, 0.9f, 1f)
     }
 
     private fun cardTypeColor(type: CardType): Color = when (type) {
@@ -357,7 +362,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         }
 
         val debtColor = when {
-            state.debt >= DebtConfig.EXECUTION_THRESHOLD -> Color.RED
+            state.debt >= DebtConfig.ARREARS_THRESHOLD -> Color.RED
             state.debt >= DebtConfig.BREAK_THRESHOLD -> Color(1f, 0.6f, 0.1f, 1f) // amber
             else -> ink100
         }
@@ -375,11 +380,12 @@ class CombatRenderer(private val bundle: I18NBundle) {
         }
 
         // R9: Debt/Gold flagged at both thresholds — amber at BREAK (the collector is coming),
-        // hard red plus an explicit warning past EXECUTION, where any debt-raising action is
-        // instant death (the interest tick is exempt). NEW-5 playtest: the zone was invisible.
+        // hard red plus an explicit warning at ARREARS_THRESHOLD, where the En Mora lock arms:
+        // interest freezes and the player has one escape charge for the rest of the combat.
+        // NEW-5 playtest: the zone was invisible.
         smallFont.color = debtColor
         smallFont.draw(batch, bundle.format("hud.debt_gold", state.debt, state.gold), x + pad, debtY)
-        if (state.debt >= DebtConfig.EXECUTION_THRESHOLD) {
+        if (state.debt >= DebtConfig.ARREARS_THRESHOLD) {
             smallFont.color = Color.RED
             smallFont.data.setScale(0.66f)
             smallFont.draw(batch, bundle.get("hud.execution_warning"), x + pad, warningY, barW, Align.left, true)
@@ -733,7 +739,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
                 drawNodeButton(1, bundle.get("node.button.repay"), run.gold > 0 && run.debt > 0, batch)
                 drawNodeButton(2, bundle.get("node.button.buy"), run.gold >= buyCost, batch)
                 drawNodeButton(3, bundle.get("node.button.remove"), run.gold >= removeCost, batch)
-                val affordableLoan = run.debt + loanDebt <= DebtConfig.EXECUTION_THRESHOLD
+                val affordableLoan = run.debt + loanDebt <= DebtConfig.DEBT_SCALE_ANCHOR
                 drawNodeButton(4, bundle.get("node.button.loan"), affordableLoan, batch)
                 // card-upgrades R9: 6th action — flat upgrade, capped, gold-gated.
                 val upgradeEnabled = run.gold >= NodeConfig.UPGRADE_BASE &&

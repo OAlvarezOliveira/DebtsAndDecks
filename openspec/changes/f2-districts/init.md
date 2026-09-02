@@ -1,35 +1,55 @@
 # sdd-verify — init
 
 **Change:** `f2-districts` (PR2 — `feat(ui): district identity`)
-**Task in scope:** Section 7 — Render (wire `RunManager.currentDistrict` end-to-end).
-**Sub-tasks:** 7.1, 7.2, 7.3, 7.4 only.
-**Out of scope (explicit):** 4.x (design system), 5.x (art/asset generation), and every task outside section 7. PR2's spec delta (R2.7–R2.9) already exists in `specs/run-structure/spec.md`; archiving/sync-to-main is deferred until PR2 ships (matches the PR1 merge-then-archive precedent).
+**Task in scope (this run):** Section 4 — Design system, first. **Sub-tasks:** 4.1, 4.2.
+**Out of scope (explicit):** 5.x (art/asset generation), 7.x (render — handled in a prior run, see below), and every task outside section 4. PR2's spec delta (R2.7–R2.9) already exists in `specs/run-structure/spec.md`; archiving/sync-to-main is deferred until PR2 ships (matches the PR1 merge-then-archive precedent).
+
+> **Prior run note.** A previous `sdd-verify` run on this change closed tasks 7.1–7.4 (Render) on
+> branch `feat/f2-districts-runmanager`. Its artifacts (`apply-progress.md`, `verify-report.md`,
+> `sync-report.md`, `archive-report.md`) are still in this folder and remain authoritative for that
+> scope. This run is a *different* sub-scope (design system), so `init.md` is re-authored for 4.1–4.2
+> and `apply-progress.md` is **appended** (not overwritten) so the 7.x evidence survives.
 
 ## Context gathered
 
-- `proposal.md` — PR2 = backgrounds, names on screen, i18n, `docs/DESIGN-SYSTEM.md`. Empty by design: PR1 (`6b50164`) carried model + data + zero-delta proof only.
-- `design.md` — `RunManager` gains `currentDistrict` (read-only, derived from `slots[slotIndex].districtId`); combat + node renderers select the background from it; text placement goes through `HandLayout`/`CombatLayout`, no fixed 1280 coordinate; `RunManager.Phase` MUST stay `{ COMBAT, NODE, VICTORY, DEFEAT }`.
-- `specs/run-structure/spec.md` — R2.7: district identity visible on entering + on node screen; title position derives from viewport width, no fixed 1280 coordinate. R2.6: no new phase.
-- `tasks.md` — 7.1/7.2/7.3/7.4 unchecked; 7.5 already done (phase machine unchanged, 5 `when(phase)` sites, 3 exhaustive). 6.1–6.3 (i18n district keys) shipped in PR1.
+- `proposal.md` — PR2 = backgrounds, names on screen, i18n, `docs/DESIGN-SYSTEM.md`. The design-system
+  half of PR2 is exactly tasks 4.1/4.2: extract the ZIP's tokens (palette, type scale, spacing, the
+  district-card treatment) into a tracked `docs/DESIGN-SYSTEM.md`, scoping to what F2 actually uses.
+- `design.md` — "Design system extraction": the decisions inside the ZIP become text (hex values, type
+  scale, spacing rhythm, district title-card treatment) in `docs/DESIGN-SYSTEM.md`, with the ZIP cited as
+  provenance. Scoped to what F2 needs; do not transcribe the whole system, do not invent unused tokens.
+- `tasks.md` — 4.1 / 4.2 are **unchecked**; 4.1 carried a "input not in the repository" blocker because
+  `Arts/` is gitignored and a fresh clone cannot reach the ZIP. That blocker is resolved *this run*: the
+  orchestrator extracted and verified the ZIP this session and supplied the exact token values, so no
+  token is invented. 7.1–7.5 are already done (prior run). 5.1–5.4 (art) remain unchecked and **out of
+  scope here**.
 
-## Code map (files this task touches)
+## Source of truth for values (this run)
 
-- `core/combat/RunManager.kt` — add `currentDistrict` + `isDistrictEntrance` (7.1, 7.3 trigger).
-- `core/model/District.kt` — add `backgroundKey()` (7.2, pure + testable, no data change).
-- `gdx/render/CombatLayout.kt` — add `districtTitle(worldWidth)` (7.4).
-- `gdx/render/CombatRenderer.kt` — draw `currentDistrict.backgroundKey()` as background (7.2); draw district title card on entrance + node screen (7.3). `render` gains `run` param.
-- `gdx/screens/GameScreen.kt` — pass `runManager` into `renderer.render(...)`.
-- `di/Module.kt` — bind `List<District>`; pass to `RunManager`.
-- Tests: `RunManagerTest.kt` (7.1), `DistrictTest.kt` (7.2), new `DistrictTitleLayoutTest.kt` (7.4).
+The orchestrator provided the exact extracted values (do NOT re-open or re-scan the ZIP). Provenance ZIP:
+
+```
+/home/oscardev/DebtsAndDecks/Arts/Debts & Decks Design System.zip
+```
+
+Mapped to kit files: `tokens/colors.css` (palette), `tokens/typography.css` (type scale),
+`tokens/effects.css` (spacing/radius/effects). The district title-card treatment is **not** a kit
+pattern — the kit's `_ds_manifest.json` lists only GameCard, CombatLog, HUDPanel, IntentBadge, StatBar,
+Button, and brand/color guideline cards (zero hits for `district` or `title-card`). The title-card
+recommendation is therefore this document's own, composed from general tokens.
 
 ## Constraints
 
-- Strict TDD (RED → GREEN). 7.4 explicitly requires a RED-then-GREEN layout test.
-- No `RunManager.Phase` change; no balance-affecting code (zero-delta gate holds by construction).
-- Do not edit PR1 tests (`DataLoaderDistrictTest`, the 5-arg `RunManager(...)` call sites) — `RunManager.districts` defaults to `emptyList()` so they compile unchanged; production wiring passes the real catalog.
+- Tracked output only: no ZIP binary is committed. `docs/DESIGN-SYSTEM.md` must be **tracked**
+  (`git ls-files docs/DESIGN-SYSTEM.md` non-empty after staging) — that is task 4.2's verification.
+- Scope to F2's two usages: (a) district backdrop rendering, (b) district name/descriptor title display
+  (tasks 7.1–7.3). Do not pull in tokens F2 does not use.
+- Cite the ZIP path as provenance for every Palette/Type/Spacing value.
+- Do **not** touch tasks 5.x or any file outside this scope. Do **not** commit.
 
 ## Environment
 
-- Gradle 8.11.1, offline cache warm, Android SDK at `/home/oscardev/Android/Sdk`.
-- Baseline green: `DistrictTest` + `RunManagerTest` build & pass (`testDebugUnitTest`).
-- Render code needs LibGDX GL; only pure helpers (layout, `backgroundKey`, `currentDistrict`) get unit tests. Pixel output is not headlessly verifiable — 7.2/7.3 are proven by the pure helpers + the layout test + the wiring (review).
+- Working tree currently clean on `feat/fv-verbs-foreclose-hedge`; the f2-districts openspec folder is
+  tracked on this branch. This run adds `docs/DESIGN-SYSTEM.md` (staged, not committed) and edits
+  `tasks.md` + `apply-progress.md`.
+- No code/test change in this run (doc extraction only) → no Gradle run required for verification.

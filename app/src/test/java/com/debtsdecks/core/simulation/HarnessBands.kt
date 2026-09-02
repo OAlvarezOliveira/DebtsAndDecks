@@ -4,10 +4,10 @@ import com.debtsdecks.core.combat.DebtConfig
 
 /**
  * Scale-free balance bands. Every debt threshold here is a FRACTION OF
- * [DebtConfig.EXECUTION_THRESHOLD] — the death line — because that is the only debt number
+ * [DebtConfig.DEBT_SCALE_ANCHOR] — the death line — because that is the only debt number
  * the design guarantees to keep meaning the same thing across a re-scale.
  *
- * At EXECUTION_THRESHOLD = 50 these resolve to the historical absolutes: 25.0, 45.0, 35, 45, 25.
+ * At DEBT_SCALE_ANCHOR = 50 these resolve to the historical absolutes: 25.0, 45.0, 35, 45, 25.
  * If they ever stop doing so at 50, this refactor was wrong.
  *
  * The thresholds are derived live ([get] rather than constructor values) so a spike that mutates
@@ -49,13 +49,13 @@ object HarnessBands {
     )
 
     /** Debt thresholds against the current execution line, re-resolved on every access. */
-    val leverageBandLow: Double  get() = resolve(DebtConfig.EXECUTION_THRESHOLD).leverageBandLow
-    val leverageBandHigh: Double get() = resolve(DebtConfig.EXECUTION_THRESHOLD).leverageBandHigh
-    val wonPeakMin: Double       get() = resolve(DebtConfig.EXECUTION_THRESHOLD).wonPeakMin
-    val leverageTarget: Int      get() = resolve(DebtConfig.EXECUTION_THRESHOLD).leverageTarget
-    val safeAfterLoan: Int       get() = resolve(DebtConfig.EXECUTION_THRESHOLD).safeAfterLoan
-    val repayBand: Int           get() = resolve(DebtConfig.EXECUTION_THRESHOLD).repayBand
+    val leverageBandLow: Double  get() = resolve(DebtConfig.DEBT_SCALE_ANCHOR).leverageBandLow
+    val leverageBandHigh: Double get() = resolve(DebtConfig.DEBT_SCALE_ANCHOR).leverageBandHigh
+    val wonPeakMin: Double       get() = resolve(DebtConfig.DEBT_SCALE_ANCHOR).wonPeakMin
+    val leverageTarget: Int      get() = resolve(DebtConfig.DEBT_SCALE_ANCHOR).leverageTarget
+    val safeAfterLoan: Int       get() = resolve(DebtConfig.DEBT_SCALE_ANCHOR).safeAfterLoan
+    val repayBand: Int           get() = resolve(DebtConfig.DEBT_SCALE_ANCHOR).repayBand
 
     /** [debt] as a fraction of the current execution line — for readable failures at any scale. */
-    fun ratioOfExecution(debt: Double): Double = debt / DebtConfig.EXECUTION_THRESHOLD
+    fun ratioOfExecution(debt: Double): Double = debt / DebtConfig.DEBT_SCALE_ANCHOR
 }

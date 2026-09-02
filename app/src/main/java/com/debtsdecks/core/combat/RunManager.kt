@@ -171,11 +171,20 @@ class RunManager(
             return
         }
 
-        // Execution defeat: Debt crossed the threshold mid-combat, so `endCombat` fired while
-        // the player still has HP and enemies are still alive. HP-0 above covers life loss; this
-        // covers the Debt-driven loss (Debt-as-Leverage pivot), which must also end the run.
+        // Defensive: `endCombat` only fires on player death (handled above) or victory, so this
+        // branch is not expected to be reachable post-FV.E1, but stays as a guard against a future
+        // `endCombat(false)` caller that reaches COMBAT_END with the player still alive.
         val allEnemiesDead = state.enemies.all { it.hp <= 0 }
         if (!allEnemiesDead) {
+            phase = Phase.DEFEAT
+            return
+        }
+
+        // FV.E1 Gatillo B: the enemy is dead, but the player is still "En Mora" (the arrears lock
+        // never escaped this combat) — the outcome resolves as a defeat, not a victory. The engine
+        // has no persisted victory flag to override, so this is where the run outcome is actually
+        // decided (design D5).
+        if (state.inArrears) {
             phase = Phase.DEFEAT
             return
         }
@@ -270,7 +279,7 @@ class RunManager(
     fun takeLoan(): Boolean {
         val loanGold = NodeConfig.escalatedCost(NodeConfig.LOAN_GOLD_BASE, nodeIndex)
         val loanDebt = NodeConfig.escalatedCost(NodeConfig.LOAN_DEBT_BASE, nodeIndex)
-        if (debt + loanDebt > DebtConfig.EXECUTION_THRESHOLD) return false
+        if (debt + loanDebt > DebtConfig.DEBT_SCALE_ANCHOR) return false
         gold += loanGold
         debt += loanDebt
         if (!breakEncounterUsedThisRun && debt >= DebtConfig.BREAK_THRESHOLD) {

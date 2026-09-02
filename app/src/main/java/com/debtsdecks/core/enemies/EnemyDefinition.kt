@@ -42,7 +42,9 @@ enum class IntentType(val l10nKey: String, val iconName: String) {
     BUFF("intent.buff", "intent_buff"),
     DEBUFF("intent.debuff", "intent_debuff"),
     MULTI_ATTACK("intent.multi_attack", "intent_multi"),
-    LEVY("intent.levy", "intent_levy")
+    LEVY("intent.levy", "intent_levy"),
+    FORECLOSE("intent.foreclose", "intent_foreclose"),
+    HEDGE("intent.hedge", "intent_hedge")
 }
 
 enum class EnemyTier { NORMAL, ELITE, BOSS }

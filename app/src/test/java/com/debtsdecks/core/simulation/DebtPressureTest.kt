@@ -65,7 +65,7 @@ class DebtPressureTest {
     )
 
     /** Minimum share of defeats that Debt itself must cause for the axis to be load-bearing. */
-    private val EXECUTION_SHARE_FLOOR = 0.20
+    private val ARREARS_SHARE_FLOOR = 0.20
 
     /** Debt at the last node, over debt at its peak node. Below this the run DEFLATES as it goes. */
     private val LATE_OVER_PEAK_FLOOR = 0.90
@@ -97,7 +97,8 @@ class DebtPressureTest {
 
             if (run.phase == RunManager.Phase.VICTORY || run.phase == RunManager.Phase.DEFEAT) {
                 val isDefeat = run.phase == RunManager.Phase.DEFEAT
-                return Run(isDefeat, if (isDefeat) classifyDefeat(run.debt) else null, debtByNode)
+                val finalInArrears = engine.getState().inArrears
+                return Run(isDefeat, if (isDefeat) classifyDefeat(finalInArrears) else null, debtByNode)
             }
         }
         error("seed $seed max-actions")
@@ -110,14 +111,14 @@ class DebtPressureTest {
     fun `Debt causes a material share of defeats`() {
         val runs = sweep()
         val defeats = runs.filter { it.defeated }
-        val byExecution = defeats.count { it.cause == DefeatCause.EXECUTION }
-        val share = byExecution.toDouble() / defeats.size
+        val byArrears = defeats.count { it.cause == DefeatCause.ARREARS }
+        val share = byArrears.toDouble() / defeats.size
 
         assertTrue(
-            share >= EXECUTION_SHARE_FLOOR,
-            "Debt is decorative: only $byExecution of ${defeats.size} defeats " +
+            share >= ARREARS_SHARE_FLOOR,
+            "Debt is decorative: only $byArrears of ${defeats.size} defeats " +
                 "(${"%.1f".format(java.util.Locale.US, share * 100)}%) were caused by Debt itself, " +
-                "below the ${"%.0f".format(java.util.Locale.US, EXECUTION_SHARE_FLOOR * 100)}% floor. " +
+                "below the ${"%.0f".format(java.util.Locale.US, ARREARS_SHARE_FLOOR * 100)}% floor. " +
                 "Everything else died to HP loss, which any deck-builder has."
         )
     }
@@ -148,10 +149,10 @@ class DebtPressureTest {
     @Test
     fun `the execution line stays above the break threshold`() {
         // Guard for the re-scale: the collector must arrive before death, or the leverage band
-        // has no room to be played (see DebtConfig.EXECUTION_THRESHOLD).
+        // has no room to be played (see DebtConfig.DEBT_SCALE_ANCHOR).
         assertTrue(
-            DebtConfig.EXECUTION_THRESHOLD > DebtConfig.BREAK_THRESHOLD,
-            "EXECUTION_THRESHOLD (${DebtConfig.EXECUTION_THRESHOLD}) must stay above " +
+            DebtConfig.DEBT_SCALE_ANCHOR > DebtConfig.BREAK_THRESHOLD,
+            "DEBT_SCALE_ANCHOR (${DebtConfig.DEBT_SCALE_ANCHOR}) must stay above " +
                 "BREAK_THRESHOLD (${DebtConfig.BREAK_THRESHOLD})"
         )
     }

@@ -16,7 +16,13 @@ data class CombatState(
     val log: List<CombatLogEntry>,
     val turnNumber: Int = 1,
     val debt: Int = 0,
-    val gold: Int = 0
+    val gold: Int = 0,
+    /** FV.E1 "En Mora" arrears lock: true while the debt >= [com.debtsdecks.core.combat.DebtConfig.ARREARS_THRESHOLD]
+     *  charge is armed for this combat (see [CombatEngine.getState]). */
+    val inArrears: Boolean = false,
+    /** One-shot charge: true once the arrears lock has armed at least once this combat, even
+     *  after [inArrears] clears (debt == 0) — it never re-arms within the same combat. */
+    val arrearsUsedThisCombat: Boolean = false
 )
 
 enum class TurnPhase {

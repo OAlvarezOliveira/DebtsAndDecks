@@ -4,6 +4,8 @@ import com.debtsdecks.core.i18n.Localizer
 import com.debtsdecks.core.enemies.IntentType.ATTACK
 import com.debtsdecks.core.enemies.IntentType.BUFF
 import com.debtsdecks.core.enemies.IntentType.DEBUFF
+import com.debtsdecks.core.enemies.IntentType.FORECLOSE
+import com.debtsdecks.core.enemies.IntentType.HEDGE
 import com.debtsdecks.core.enemies.IntentType.LEVY
 import com.debtsdecks.core.enemies.IntentType.MULTI_ATTACK
 import com.debtsdecks.core.model.CombatLogEntry
@@ -51,6 +53,8 @@ class EnemyInstance(
             DEBUFF -> l10n.format(key, intent.param)
             MULTI_ATTACK -> l10n.format(key, intent.damage, intent.param)
             LEVY -> l10n.format(key, intent.param)
+            FORECLOSE -> l10n.format(key, intent.param, intent.damage)
+            HEDGE -> l10n.format(key)
         }
     }
 
@@ -114,7 +118,9 @@ class EnemyInstance(
     }
 
     fun endTurnReset() {
-        block = 0
+        // FV deliverable 1: enemy Block survives to the player's next turn — HEDGE arms the enemy
+        // mid-ENEMY_ACTION and the player must be able to attack THROUGH it. Spent by takeDamage
+        // like the player's own block.
         if (weak > 0) weak--
         if (vulnerable > 0) vulnerable--
     }
@@ -165,6 +171,14 @@ class EnemyAI(private val enemy: EnemyInstance, private val l10n: Localizer) {
             LEVY -> {
                 // Engine owns the debt levy (applied in CombatEngine.endPlayerTurn);
                 // EnemyAI only advances the pattern, no combat effect.
+            }
+            FORECLOSE -> {
+                // Engine-owned (reads the player's Debt, only the engine holds it):
+                // CombatEngine.endPlayerTurn applies the seizure.
+            }
+            HEDGE -> {
+                // Engine-owned: the block is debt-scaled at resolution, in
+                // CombatEngine.endPlayerTurn.
             }
             MULTI_ATTACK -> {
                 repeat(intent.param) {

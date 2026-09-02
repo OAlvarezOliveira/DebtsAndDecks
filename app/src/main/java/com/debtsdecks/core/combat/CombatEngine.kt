@@ -41,28 +41,69 @@ class CombatEngine(
 
     /** Per-combat flag (see [activateEscrowShield]) that halves Debt added from a shortfall while active. */
     private var escrowShieldActive: Boolean = false
-            private enum class DebtSource { LEVY, OTHER }
 
-        /**
-         * Adds [amount] Debt, clamped to [DebtConfig.INTEREST_CAP], then checks Execution
-         * (Debt > EXECUTION_THRESHOLD). Returns true when Execution tripped — the caller MUST
-         * endCombat(victory = false) and stop. All in-combat debt increases (Credit-shortfall
-         * borrow, enemy LEVY, card AddDebt) route through this helper; the per-turn interest
-         * tick in beginTurn is deliberately excluded (Decision B).
-         */
-        private fun addDebt(amount: Int, source: DebtSource = DebtSource.OTHER): Boolean {
-            debt = minOf(debt + amount, DebtConfig.INTEREST_CAP)
-            if (debt > DebtConfig.EXECUTION_THRESHOLD) {
-                val key = if (source == DebtSource.LEVY) "log.debt_execution_levy" else "log.debt_execution"
-                log.add(CombatLogEntry.create(l10n.get(key), turnNumber))
-                return true
-            }
-            return false
-        }
+    /**
+     * FV.E1 "En Mora" arrears lock (see [addDebt]/[armArrearsIfCrossed]): true while the debt
+     * charge is armed for the current combat. [CombatEngine.beginTurn]'s interest tick and
+     * [RunManager]'s Gatillo B outcome check both read this. Reset in [startCombat].
+     */
+    private var inArrears: Boolean = false
 
-        private var levyExecution = false
+    /**
+     * One-shot charge: true once [inArrears] has armed at least once this combat, even after it
+     * clears (debt reaches 0) — the lock never re-arms within the same combat (design Q2).
+     */
+    private var arrearsUsedThisCombat: Boolean = false
 
-        private val cardResolver = CardResolver(l10n)
+    /**
+     * FV calibration instrumentation: how many times FORECLOSE took the seizure branch
+     * (player Debt at/above the announced threshold) since this engine was created. The
+     * simulator creates one engine per run, so the count accumulates across the whole run.
+     */
+    var forecloseSeizureCount: Int = 0
+        private set
+
+    /**
+     * FV.E1 instrumentation: how many times the "En Mora" arrears lock has armed since this
+     * engine was created (mirrors [forecloseSeizureCount]'s per-run accumulation pattern).
+     */
+    var arrearsArmedCount: Int = 0
+        private set
+
+    private enum class DebtSource { LEVY, OTHER }
+
+    /**
+     * Adds [amount] Debt, clamped to [DebtConfig.INTEREST_CAP], then arms the "En Mora" arrears
+     * lock the first time Debt reaches [DebtConfig.ARREARS_THRESHOLD] this combat (see
+     * [armArrearsIfCrossed]). All in-combat debt increases (Credit-shortfall borrow, enemy LEVY,
+     * card AddDebt) route through this helper; the per-turn interest tick in beginTurn is
+     * deliberately excluded (Decision B) and instead frozen while the lock is armed.
+     */
+    private fun addDebt(amount: Int, source: DebtSource = DebtSource.OTHER) {
+        debt = minOf(debt + amount, DebtConfig.INTEREST_CAP)
+        armArrearsIfCrossed(source)
+    }
+
+    /**
+     * Arms the FV.E1 "En Mora" lock the first time [debt] reaches [DebtConfig.ARREARS_THRESHOLD]
+     * in this combat. No-ops once [arrearsUsedThisCombat] is already true — the player is immune
+     * to re-arming for the rest of the combat, even after escaping (design Q2).
+     */
+    private fun armArrearsIfCrossed(source: DebtSource) {
+        if (arrearsUsedThisCombat || debt < DebtConfig.ARREARS_THRESHOLD) return
+        inArrears = true
+        arrearsUsedThisCombat = true
+        arrearsArmedCount++
+        val key = if (source == DebtSource.LEVY) "log.arrears_locked_levy" else "log.arrears_locked"
+        log.add(CombatLogEntry.create(l10n.get(key), turnNumber))
+    }
+
+    /** Clears the arrears lock once Debt returns to zero — the only exit rule (design D4). */
+    private fun clearArrearsIfEscaped() {
+        inArrears = inArrears && debt > 0
+    }
+
+    private val cardResolver = CardResolver(l10n)
     private var enemyAIs: Map<String, EnemyAI> = emptyMap()
 
     val HAND_SIZE = 5
@@ -125,6 +166,12 @@ class CombatEngine(
         gold = startingGold
         debt = startingDebt
         escrowShieldActive = false
+        // FV.E1: reset per-combat lock state. arrearsArmedCount is intentionally NOT reset here —
+        // it mirrors forecloseSeizureCount's accumulate-across-the-whole-run pattern (design.md
+        // "Harness Policy Contract" instrumentation note), since the simulator creates one engine
+        // per run and both counters are read once at run end.
+        inArrears = false
+        arrearsUsedThisCombat = false
 
         // Start first turn
         beginTurn()
@@ -149,7 +196,9 @@ class CombatEngine(
             log = log.toList(),
             turnNumber = turnNumber,
             debt = debt,
-            gold = gold
+            gold = gold,
+            inArrears = inArrears,
+            arrearsUsedThisCombat = arrearsUsedThisCombat
         )
     }
 
@@ -200,10 +249,7 @@ class CombatEngine(
             energy -= (card.cost - rawShortfall)
             if (rawShortfall > 0) {
                 val actualBorrow = if (escrowShieldActive) (rawShortfall + 1) / 2 else rawShortfall
-                if (addDebt(actualBorrow)) {
-                    endCombat(victory = false)
-                    return PlayResult(true, "Defeat!")
-                }
+                addDebt(actualBorrow)
             }
         }
 
@@ -267,8 +313,32 @@ class CombatEngine(
             // never fire. The compiler now refuses to let that happen.
             when (intent.type) {
                 IntentType.LEVY -> {
-                    if (addDebt(intent.param, DebtSource.LEVY)) { levyExecution = true }
+                    addDebt(intent.param, DebtSource.LEVY)
                     enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_levy", intent.param), turnNumber))
+                }
+                IntentType.FORECLOSE -> {
+                    // FV deliverable 1: engine-owned intent (reads the player's Debt, which only
+                    // the engine holds). The creditor ALWAYS calls in the debt — the seizure is
+                    // run-ending at/above the announced threshold (FV §2 "run-ending, per balance"),
+                    // and a standing fee below it, so the verb's turn is never free (a purely
+                    // conditional seizure let the shark give away its turn 1 and E1 collapsed).
+                    if (debt >= intent.param) {
+                        forecloseSeizureCount++
+                        player.takeDamage(player.hp) // outright seizure: the insolvent debtor is foreclosed
+                        enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_foreclose", intent.param), turnNumber))
+                    } else {
+                        val fee = player.takeDamage(intent.damage)
+                        enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_foreclose_fee", intent.damage, fee, intent.param), turnNumber))
+                    }
+                }
+                IntentType.HEDGE -> {
+                    // FV deliverable 1: engine-owned mirror of the player's own leverage bonus —
+                    // the enemy gains block equal to floor(debt / hedgeParam). The divisor is
+                    // data-driven (intent.param), so balance tunes how much engine it co-opts.
+                    // "Your own engine arms the enemy."
+                    val hedged = debt / (intent.param.takeIf { it > 0 } ?: DebtConfig.LEVERAGE_DIVISOR)
+                    enemy.gainBlock(hedged)
+                    enemyLog.add(CombatLogEntry.create(l10n.format("log.intent_hedge", hedged), turnNumber))
                 }
                 IntentType.ATTACK,
                 IntentType.BUFF,
@@ -279,13 +349,6 @@ class CombatEngine(
             enemyLog.addAll(ai.executeIntent(player, enemies, turnNumber))
         }
         log.addAll(enemyLog)
-
-            // Execution defeat from an enemy LEVY intent (mid-enemy-turn debt crossing).
-            if (levyExecution) {
-                endCombat(victory = false)
-                levyExecution = false
-                return TurnResult(true, "Defeat!")
-            }
 
         // Check win condition (poison may have finished off the last enemy)
         if (enemies.all { it.isDead() }) {
@@ -320,14 +383,15 @@ class CombatEngine(
         val regenBefore = player.regen
         player.tickTurnStart()
 
-        // Per-turn Debt economy: compounding interest only. Execution (Debt > threshold) is
-            // deliberately NOT checked at turn start — inheriting high Debt from a won combat must
-            // not auto-defeat before the player acts; danger comes from accumulating in-combat
-            // (borrow/LEVY/card), which routes through addDebt(). Decision B; threshold raised to 50
-            // in decision A so the leverage range stays playable.
-        
-        debt = DebtConfig.applyInterest(debt)
-        if (debt > 0) log.add(CombatLogEntry.create(l10n.format("log.debt_interest", debt), turnNumber))
+        // Per-turn Debt economy: compounding interest only. The arrears lock is deliberately NOT
+        // armed here — inheriting high Debt from a won combat must not auto-arm before the player
+        // acts; danger comes from accumulating in-combat (borrow/LEVY/card), which routes through
+        // addDebt() (design D2). FV.E1: while the lock is armed, the passive interest tick freezes
+        // entirely — only active in-combat debt increases (addDebt) still apply.
+        if (!inArrears) {
+            debt = DebtConfig.applyInterest(debt)
+            if (debt > 0) log.add(CombatLogEntry.create(l10n.format("log.debt_interest", debt), turnNumber))
+        }
         if (poisonBefore > 0) log.add(CombatLogEntry.create(l10n.format("log.poison_damage_player", poisonBefore), turnNumber))
         if (regenBefore > 0) log.add(CombatLogEntry.create(l10n.format("log.regen_heal_player", regenBefore), turnNumber))
         if (player.isDead()) {
@@ -407,12 +471,14 @@ class CombatEngine(
                 }
                 is CardResolver.Effect.RepayDebt -> {
                     debt = maxOf(0, debt - effect.amount)
+                    clearArrearsIfEscaped()
                 }
                 is CardResolver.Effect.GainGold -> {
                     gold += effect.amount
                 }
                 is CardResolver.Effect.WipeDebt -> {
                     debt = 0
+                    clearArrearsIfEscaped()
                 }
                 is CardResolver.Effect.EscrowShieldActivate -> {
                     activateEscrowShield()
@@ -420,10 +486,7 @@ class CombatEngine(
                 is CardResolver.Effect.AddDebt -> {
                     // Debt added directly to the player; capped, and never escrow-halved (the
                     // escrow only shields Credit-shortfall borrowing, handled in playCard).
-                    if (addDebt(effect.amount)) {
-                        endCombat(victory = false)
-                        return
-                    }
+                    addDebt(effect.amount)
                 }
                 is CardResolver.Effect.GainCredit -> {
                     energy = minOf(energy + effect.amount, MAX_ENERGY_CAP)

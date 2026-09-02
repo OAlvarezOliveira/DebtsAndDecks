@@ -2,7 +2,7 @@
   {
     "id": "thug",
     "name": "enemy.thug.name",
-    "hp": 22,
+    "hp": 24,
     "intentPattern": [
       {
         "type": "ATTACK",
@@ -27,8 +27,13 @@
   {
     "id": "loan_shark",
     "name": "enemy.loan_shark.name",
-    "hp": 36,
+    "hp": 40,
     "intentPattern": [
+      {
+        "type": "FORECLOSE",
+        "damage": 9,
+        "param": 27
+      },
       {
         "type": "ATTACK",
         "damage": 9
@@ -62,11 +67,15 @@
   {
     "id": "collector",
     "name": "enemy.collector.name",
-    "hp": 52,
+    "hp": 57,
     "intentPattern": [
       {
         "type": "ATTACK",
         "damage": 12
+      },
+      {
+        "type": "HEDGE",
+        "param": 4
       },
       {
         "type": "MULTI_ATTACK",

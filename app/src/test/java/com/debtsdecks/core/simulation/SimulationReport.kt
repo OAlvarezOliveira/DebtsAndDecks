@@ -10,6 +10,12 @@ data class SimulationReport(
     val avgHpAtVictory: Double,
     val avgTurnsPerCombat: Double,
     val defeatsByEncounter: Map<String, Int>,
+    /** FV.E1 instrumentation: total arrears-lock arms summed across every run in the sweep
+     *  (mirrors [SimulationResult.arrearsArmed]'s per-run accumulation pattern). */
+    val totalArrearsArmed: Int = 0,
+    /** Fraction of runs in the sweep that armed the lock at least once — the "fire-rate > 0
+     *  per policy" signal required by the arrears-lock spec's Empirical Balance Validation. */
+    val arrearsFireRate: Double = 0.0,
 ) {
     companion object {
         fun from(results: List<SimulationResult>): SimulationReport {
@@ -27,7 +33,12 @@ data class SimulationReport(
                 .groupingBy { it }
                 .eachCount()
                 .toSortedMap()
-            return SimulationReport(winRate, avgPeakDebt, avgHpAtVictory, avgTurnsPerCombat, defeatsByEncounter)
+            val totalArrearsArmed = results.sumOf { it.arrearsArmed }
+            val arrearsFireRate = results.count { it.arrearsArmed > 0 }.toDouble() / results.size
+            return SimulationReport(
+                winRate, avgPeakDebt, avgHpAtVictory, avgTurnsPerCombat, defeatsByEncounter,
+                totalArrearsArmed, arrearsFireRate,
+            )
         }
     }
 
@@ -41,6 +52,7 @@ data class SimulationReport(
         appendLine("  as fraction:     %.3f of execution line".format(peakDebtRatio))
         appendLine("Avg HP at victory: %.1f".format(avgHpAtVictory))
         appendLine("Avg turns/combat:  %.1f".format(avgTurnsPerCombat))
+        appendLine("Arrears armed:     $totalArrearsArmed total | fire rate ${(arrearsFireRate * 100).let { "%.1f".format(it) }}%")
         appendLine("Defeats by encounter:")
         if (defeatsByEncounter.isEmpty()) {
             appendLine("  (none)")
