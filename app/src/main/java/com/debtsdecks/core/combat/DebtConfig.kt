@@ -124,4 +124,18 @@ object DebtConfig {
         val rate = min(MAX_GARNISH_RATE, ramp)
         return floor(rawGold * rate).toInt()
     }
+
+    /**
+     * Band-capped LEVERAGE payoff component of a `debt_payoff` card:
+     * `floor(min(debt, [LEVERAGE_PAYOFF_BAND_CAP]) / [DEBT_PAYOFF_DIVISOR])`.
+     *
+     * Above the band cap the marginal payoff is frozen, so parking Debt at EXECUTION-1 (49) yields
+     * the SAME payoff component as sitting exactly at the cap (40) — the WU2 exploit guard against
+     * the "keep the band" over-leverage loop. The [LEVERAGE_PAYOFF_DIMINISHING_DIVISOR] constant is
+     * the tuning surface for a softer diminishing curve; the locked band-cap decision uses the hard
+     * freeze (orchestrator-specified) to make the EXECUTION-1 equality exact rather than merely
+     * reduced.
+     */
+    fun leveragePayoffBandCapped(debt: Int): Int =
+        min(debt, LEVERAGE_PAYOFF_BAND_CAP) / DEBT_PAYOFF_DIVISOR
 }
