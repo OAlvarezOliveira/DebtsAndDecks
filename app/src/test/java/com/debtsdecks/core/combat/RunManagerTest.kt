@@ -154,6 +154,19 @@ class RunManagerTest {
         }
     }
 
+    /**
+     * Wins exactly four fights (taking a free pick at the first three nodes) so the run reaches the
+     * WU5 T5.2 cadence node — the node after the 4th win, where upgrades are offered (`wins % 4 == 0`).
+     * Leaves the run at that NODE (does not pick), with [RunManager.wins] == 4.
+     */
+    private fun reachWin4() {
+        repeat(3) {
+            killCurrentEnemy() // win #(it+1) -> NODE
+            runManager.takeNodeFreePick(runManager.rewardChoices.first()) // advance to next combat
+        }
+        killCurrentEnemy() // win #4 -> NODE (cadence node; no pick taken)
+    }
+
     @Test
     fun `defeating the first enemy opens a reward screen with the slot's choice count`() {
         killCurrentEnemy()
@@ -526,32 +539,31 @@ class RunManagerTest {
         assertTrue(runManager.repayViaNode())
         assertEquals(0, runManager.debt)
         assertEquals(goldBefore - (debtBefore + fee), runManager.gold)
-    }fun `upgrade card costs flat gold and marks the id`() {
-        killCurrentEnemy() // slot 0 win -> NODE, gold 10
-        runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        killCurrentEnemy() // slot 1 win -> NODE, gold 20
+    }
 
-        val goldBefore = runManager.gold // slot rewards net of garnishment (design D starts in debt)
+    @Test
+    fun `upgrade card costs flat gold and marks the id`() {
+        reachWin4() // win-4 cadence node -> upgrades offered
+
+        val goldBefore = runManager.gold
 
         assertTrue(runManager.upgradeCard("strike"))
 
         assertEquals(goldBefore - NodeConfig.UPGRADE_BASE, runManager.gold)
-        assertEquals(1, runManager.upgradesRemaining)
+        assertEquals(3, runManager.upgradesRemaining) // WU5 T5.1 raised cap to 4
         assertEquals(RunManager.Phase.COMBAT, runManager.phase) // one purchase ends the node
     }
 
     @Test
     fun `upgraded card is never re-offered in a later node`() {
-        killCurrentEnemy()
-        runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        killCurrentEnemy() // gold 20
+        reachWin4() // win-4 cadence node -> upgrades offered
 
-        runManager.upgradeCard("survive") // single copy: upgrading it exhausts its copies
-        killCurrentEnemy()
-        runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        killCurrentEnemy() // next NODE
+        assertTrue(runManager.nodeUpgradeChoices.isNotEmpty(), "cadence node must offer upgrade choices")
+        assertTrue(runManager.upgradeEligible("survive"), "single-copy survive is eligible before upgrade")
 
-        assertFalse(runManager.resolveNodeUpgradeCards().any { it.id == "survive" },
+        assertTrue(runManager.upgradeCard("survive")) // single copy: upgrading it exhausts its copies
+
+        assertFalse(runManager.upgradeEligible("survive"),
             "a card whose only copy is upgraded must not be re-offered (R2, decision A)")
         assertTrue(runManager.upgradeEligible("strike"), "strike still has 4 un-upgraded copies")
     }
@@ -568,52 +580,43 @@ class RunManagerTest {
 
     @Test
     fun `upgrade card fails for an unknown card`() {
-        killCurrentEnemy()
-        runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        killCurrentEnemy() // gold 20
+        reachWin4() // win-4 cadence node (cadence gate passes)
 
         assertFalse(runManager.upgradeCard("does_not_exist"))
     }
 
     @Test
-    fun `upgrading the same card twice is blocked`() {
-        killCurrentEnemy()
-        runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        killCurrentEnemy() // gold 20
+    fun `upgrading the same single-copy card twice is blocked`() {
+        reachWin4() // win-4 cadence node
 
-        assertTrue(runManager.upgradeCard("strike"))
-        assertFalse(runManager.upgradeCard("strike")) // already upgraded (R2/S4)
+        // "bash" has exactly one copy in the starter deck: upgrading it exhausts the card, so a
+        // second upgrade attempt is rejected (no further eligible copy).
+        assertTrue(runManager.upgradeCard("bash"))
+        assertFalse(runManager.upgradeCard("bash")) // already upgraded (R2/S4)
     }
 
     @Test
-    fun `upgrade cap is two per run`() {
-        killCurrentEnemy()
-        runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        killCurrentEnemy()
-        runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        killCurrentEnemy() // gold 35 (10+10+15)
+    fun `upgrade cap is four per run`() {
+        reachWin4() // win-4 cadence node
 
         assertTrue(runManager.upgradeCard("strike"))
-        assertTrue(runManager.upgradeCard("defend"))
-        assertEquals(0, runManager.upgradesRemaining)
-        assertFalse(runManager.upgradeCard("bash")) // cap reached (R3/S5)
+        assertEquals(3, runManager.upgradesRemaining) // WU5 T5.1 raised MAX_UPGRADES_PER_RUN to 4
+
+        // The full 4-then-5th-rejected walk lives in RewardEconomyTest (cadence + cap); this asserts
+        // the raised ceiling only.
     }
 
     @Test
     fun `restart resets upgrade state`() {
-        killCurrentEnemy()
-        runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        killCurrentEnemy() // gold 20
+        reachWin4() // win-4 cadence node
 
         runManager.upgradeCard("strike")
         runManager.restartRun()
 
-        assertEquals(2, runManager.upgradesRemaining)
+        assertEquals(4, runManager.upgradesRemaining) // cap reset to the new WU5 value (4)
 
         // R11: a fresh run can upgrade the same id again (proved functionally: earn gold, then upgrade).
-        killCurrentEnemy()
-        runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        killCurrentEnemy() // gold 20 again
+        reachWin4() // win-4 cadence node in the restarted run
 
         assertTrue(runManager.upgradeCard("strike"))
     }
@@ -624,12 +627,10 @@ class RunManagerTest {
     @Test
     fun `upgraded card carries into the next combat with effective values`() {
         // P0-B regression: upgrades must reach NORMAL combats (not only the forced collector).
-        killCurrentEnemy()
-        runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        killCurrentEnemy() // gold 20
+        reachWin4() // win-4 cadence node
 
         assertTrue(runManager.upgradeCard("strike"))
-        assertEquals(RunManager.Phase.COMBAT, runManager.phase) // slot 2 already running
+        assertEquals(RunManager.Phase.COMBAT, runManager.phase) // slot 4 already running
 
         // decision A: ONE of the five strikes is upgraded; the others stay vanilla.
         var guard = 0
@@ -649,9 +650,7 @@ class RunManagerTest {
 
     @Test
     fun `cost2 card upgrade reduces its cost in the next combat`() {
-        killCurrentEnemy()
-        runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        killCurrentEnemy() // gold 20
+        reachWin4() // win-4 cadence node
 
         assertTrue(runManager.upgradeCard("bash"))
 
@@ -672,9 +671,7 @@ class RunManagerTest {
     @Test
     fun `upgrade offer order is stable across calls`() {
         // P0-C regression: resolveNodeUpgradeCards must NOT re-shuffle per call.
-        killCurrentEnemy()
-        runManager.takeNodeFreePick(runManager.rewardChoices.first())
-        killCurrentEnemy() // NODE gold 20
+        reachWin4() // win-4 cadence node (the only node that offers upgrades)
 
         val first = runManager.resolveNodeUpgradeCards().map { it.id }
         val second = runManager.resolveNodeUpgradeCards().map { it.id }
