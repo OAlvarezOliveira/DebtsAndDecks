@@ -1,6 +1,7 @@
 package com.debtsdecks.core.combat
 
 import com.debtsdecks.core.cards.CardRegistry
+import kotlin.math.min
 
 /**
  * C7 between-fight-node archetype signal: which of the three legible archetypes the player's deck
@@ -40,4 +41,42 @@ fun playerArchetype(deck: List<String>, registry: CardRegistry): Archetype {
     return Archetype.entries
         .sortedWith(compareByDescending<Archetype> { scores.getValue(it) })
         .first()
+}
+
+/**
+ * Computes the synergy tier (0..[DebtConfig.ARCHETYPE_TIER_MAX]) per archetype from the current
+ * deck COMPOSITION (tag counts). Pure function over [deck] + [registry]; no state, no per-turn
+ * evaluation — tiers are static per node/deck and recomputed at node entry / combat start.
+ *
+ * - LEVERAGE / LIQUIDITY: count cards that carry any economy tag of that archetype.
+ * - PRESSURE: counts ONLY cards explicitly tagged `"pressure"`. Plain non-economy cards (no
+ *   economy tag) DO signal PRESSURE inside [playerArchetype] for tie-breaking, but they MUST NOT
+ *   advance the PRESSURE tier — only dedicated PRESSURE-tagged cards do (archetype-synergy spec
+ *   trap: "plain non-economy ≠ PRESSURE tier").
+ *
+ * Formula: tier = min(ARCHETYPE_TIER_MAX, floor(tagCount / ARCHETYPE_TIER_TAGS_PER_TIER)).
+ * Examples: 3 LEVERAGE cards -> floor(3/2)=1; 5 LIQUIDITY -> 2; 1 card -> 0; 6 -> 3 (capped).
+ */
+fun archetypeTiers(deck: List<String>, registry: CardRegistry): Map<Archetype, Int> {
+    // Seed every archetype at 0 so the result is a complete map (a deck with no LEVERAGE cards
+    // returns LEVERAGE=0, never a missing key) — consumers read tiers[t] without null-guards.
+    val counts = mutableMapOf<Archetype, Int>().apply {
+        for (a in Archetype.entries) this[a] = 0
+    }
+    for (cardId in deck) {
+        val def = registry.get(cardId) ?: continue
+        val tags = def.tags
+        if (tags.any { it in LEVERAGE_TAGS }) {
+            counts[Archetype.LEVERAGE] = counts.getValue(Archetype.LEVERAGE) + 1
+        }
+        if (tags.any { it in LIQUIDITY_TAGS }) {
+            counts[Archetype.LIQUIDITY] = counts.getValue(Archetype.LIQUIDITY) + 1
+        }
+        if ("pressure" in tags) {
+            counts[Archetype.PRESSURE] = counts.getValue(Archetype.PRESSURE) + 1
+        }
+    }
+    return counts.mapValues { (_, count) ->
+        min(DebtConfig.ARCHETYPE_TIER_MAX, count / DebtConfig.ARCHETYPE_TIER_TAGS_PER_TIER)
+    }
 }

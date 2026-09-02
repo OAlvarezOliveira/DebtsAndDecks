@@ -185,7 +185,7 @@ class CardResolver(private val l10n: Localizer) {
                 // 1 Strength per 10 Debt, floor-rounded. Replaces the flat baseStrengthGain path
                 // entirely for tagged cards (a card is either flat-scaling or debt-scaling, never both).
                 if (card.definition.tags.contains("debt_scaling")) {
-                    val scaledAmount = state.debt / 10
+                    val scaledAmount = state.debt / DebtConfig.DEBT_STRENGTH_DIVISOR
                     if (scaledAmount > 0) {
                         effects.add(Effect.StrengthGain(player.hashCode().toString(), scaledAmount))
                         logEntries.add(

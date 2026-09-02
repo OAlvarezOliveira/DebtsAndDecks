@@ -80,6 +80,33 @@ object DebtConfig {
      * Applies one per-turn interest tick to [debt], clamped to [INTEREST_CAP].
      * No-ops (returns [debt] unchanged) when [debt] is already zero or negative.
      */
+    // --- Archetype-strategy-rework (WU1): synergy tier + leverage band-cap constants ---
+    // These are the design's LOCKED values; the band cap and diminishing divisor are validated
+    // against the headless sim harness (Engram #1405) before merge.
+
+    /** Tags of one archetype that advance its synergy tier. Every [ARCHETYPE_TIER_TAGS_PER_TIER]
+     *  economy-tagged cards of an archetype in the deck raises that archetype's tier by 1
+     *  (capped at [ARCHETYPE_TIER_MAX]). Thresholds fall out as 2/4/6 cards -> tier 1/2/3. */
+    const val ARCHETYPE_TIER_TAGS_PER_TIER: Int = 2
+
+    /** Maximum synergy tier any archetype can reach. */
+    const val ARCHETYPE_TIER_MAX: Int = 3
+
+    /** Debt level where LEVERAGE payoff enters diminishing returns (the band cap). Parking at
+     *  EXECUTION-1 yields less incremental power than playing in-band, killing the exploit. */
+    const val LEVERAGE_PAYOFF_BAND_CAP: Int = 40
+
+    /** Divisor M applied to Debt above [LEVERAGE_PAYOFF_BAND_CAP] in the band-capped payoff
+     *  (`floor(40 / N) + floor((debt - 40) / M)`). */
+    const val LEVERAGE_PAYOFF_DIMINISHING_DIVISOR: Int = 5
+
+    /** Named constant replacing the hardcoded `/10` in the `debt_scaling` SKILL strength path
+     *  (CardResolver line 188). Value preserved at 10 so current behavior is unchanged; the repo
+     *  rule is "named constant, not magic number" (see leverage-archetype spec).
+     *  NOTE: the ATTACK `debt_scaling` path keeps its own [DEBT_SCALING_ATTACK_DIVISOR] (8) — a
+     *  distinct path deliberately left untouched by WU1 to avoid changing attack numbers. */
+    const val DEBT_STRENGTH_DIVISOR: Int = 10
+
     fun applyInterest(debt: Int): Int {
         if (debt <= 0) return debt
         val interest = ceil(debt * INTEREST_RATE).toInt()
