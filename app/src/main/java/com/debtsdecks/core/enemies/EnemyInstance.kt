@@ -4,18 +4,37 @@ import com.debtsdecks.core.i18n.Localizer
 import com.debtsdecks.core.enemies.IntentType.ATTACK
 import com.debtsdecks.core.enemies.IntentType.BUFF
 import com.debtsdecks.core.enemies.IntentType.DEBUFF
+import com.debtsdecks.core.enemies.IntentType.FORECLOSE
+import com.debtsdecks.core.enemies.IntentType.HEDGE
 import com.debtsdecks.core.enemies.IntentType.LEVY
 import com.debtsdecks.core.enemies.IntentType.MULTI_ATTACK
 import com.debtsdecks.core.model.CombatLogEntry
 import com.debtsdecks.core.model.PlayerState
+import kotlin.math.round
 
 class EnemyInstance(
     val definition: EnemyDefinition,
     private val l10n: Localizer,
+    /** Act the combat runs in (1 = slaughterhouse, 2 = casino, 3 = boardroom). Picks the matching
+     *  [EnemyDefinition.actModifiers] entry; defaults to 1 so callers that do not thread an act get
+     *  the baseline (unscaled, if no act-1 modifier exists) enemy. */
+    act: Int = 1,
     val instanceId: String = java.util.UUID.randomUUID().toString()
 ) {
-    var hp: Int = definition.hp
-    var maxHp: Int = definition.hp
+    /** The per-act modifier in effect, or null when [definition] declares no modifier for [act]. */
+    private val modifier: ActModifier? = definition.actModifiers.firstOrNull { it.act == act }
+
+    /** Intent pattern with per-act DAMAGE scaling already applied (HP-Matters invariant: damage
+     *  scales together with HP). Non-damage params (e.g. HEDGE/FORCLOSE `param`) are untouched. */
+    private val scaledPattern: List<IntentStep> = definition.intentPattern.map { step ->
+        if (modifier != null && step.damage > 0) {
+            step.copy(damage = round(step.damage * modifier.damageMultiplier).toInt())
+        } else step
+    }
+
+    var hp: Int =
+        if (modifier != null) round(definition.hp * modifier.hpMultiplier).toInt() else definition.hp
+    var maxHp: Int = hp
     var block: Int = 0
     var strength: Int = 0
     var weak: Int = 0
@@ -31,7 +50,7 @@ class EnemyInstance(
         get() = definition.name
 
     fun currentIntent(): Intent {
-        val step = definition.intentPattern[patternIndex % definition.intentPattern.size]
+        val step = scaledPattern[patternIndex % scaledPattern.size]
         return Intent(step.type, step.damage, step.param)
     }
 
@@ -51,6 +70,8 @@ class EnemyInstance(
             DEBUFF -> l10n.format(key, intent.param)
             MULTI_ATTACK -> l10n.format(key, intent.damage, intent.param)
             LEVY -> l10n.format(key, intent.param)
+            FORECLOSE -> l10n.format(key, intent.param)
+            HEDGE -> l10n.format(key, intent.param)
         }
     }
 
@@ -165,6 +186,14 @@ class EnemyAI(private val enemy: EnemyInstance, private val l10n: Localizer) {
             LEVY -> {
                 // Engine owns the debt levy (applied in CombatEngine.endPlayerTurn);
                 // EnemyAI only advances the pattern, no combat effect.
+            }
+            FORECLOSE -> {
+                // Engine owns the FORECLOSE effect (Debt/HP, applied in CombatEngine.endPlayerTurn
+                // so it routes through the Debt cap/Execution check); EnemyAI only advances.
+            }
+            HEDGE -> {
+                enemy.gainBlock(intent.param)
+                log.add(CombatLogEntry.create(l10n.format("log.enemy_hedge", enemy.name, intent.param), turn))
             }
             MULTI_ATTACK -> {
                 repeat(intent.param) {
