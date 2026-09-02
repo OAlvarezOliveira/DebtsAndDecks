@@ -37,7 +37,7 @@ val coreModule = module {
     single<com.debtsdecks.core.model.RunSequence> { DataLoader.loadRunSequence(get()) }
     single<List<District>> { DataLoader.loadDistricts(get()) }
     single { CombatEngine(get(), get(), get()) }
-    single { RunManager(get(), get(), get(), get(), get(), get()) }
+    single { RunManager(get(), get(), DataLoader.loadEnemies(get()), get(), get(), DataLoader.loadDistricts(get())) }
 }
 
 val gdxModule = module {
