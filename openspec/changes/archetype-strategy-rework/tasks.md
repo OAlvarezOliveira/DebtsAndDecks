@@ -67,10 +67,10 @@ Chain strategy: pending
 - [x] **T5.5 Reuse offer fn.** `RunManager.kt` `archetypeBiasedOffer`. Dep: T5.3. Serve `rewardChoices` from same biased fn. Accept: reward-economy "Biased offer".
 
 ## WU6: HUD (read-only)
-- **T6.1 Expose archetype.** `RunManager.kt`. Dep: none. `val dominantArchetype: Archetype get()=playerArchetype(deck,cardRegistry)`. Accept: debt-hud "Active Archetype Display".
-- **T6.2 Debt band bar.** `gdx/render/CombatRenderer.kt` `drawPlayer()`. Dep: none. 4 zones via `DEBT_BLEED_FLOOR`/`BREAK_THRESHOLD`/`EXECUTION_THRESHOLD`. Accept: "Band reflects current debt" (35→danger).
-- **T6.3 Archetype + risk counter.** `CombatRenderer.drawPlayer()`. Dep: T6.1. Label `run.dominantArchetype`; risk `EXECUTION_THRESHOLD-state.debt` when debt>22. Accept: "Risk at moderate debt" (15 to execution).
-- **T6.4 Read-only proof.** Review. Dep: T6.2,T6.3. No mutation paths. Accept: "HUD removal is safe".
+- [x] **T6.1 Expose archetype.** `RunManager.kt`. Dep: none. `val dominantArchetype: Archetype get()=playerArchetype(deck,cardRegistry)`. Accept: debt-hud "Active Archetype Display".
+- [x] **T6.2 Debt band bar.** `gdx/render/CombatRenderer.kt` `drawPlayer()`. Dep: none. 4 zones via `DEBT_BLEED_FLOOR`/`BREAK_THRESHOLD`/`EXECUTION_THRESHOLD`. Accept: "Band reflects current debt" (35→danger).
+- [x] **T6.3 Archetype + risk counter.** `CombatRenderer.drawPlayer()`. Dep: T6.1. Label `run.dominantArchetype`; risk `EXECUTION_THRESHOLD-state.debt` when debt>22. Accept: "Risk at moderate debt" (15 to execution).
+- [x] **T6.4 Read-only proof.** Review. Dep: T6.2,T6.3. No mutation paths. Accept: "HUD removal is safe".
 
 ## WU7: Tuning + Sim Validation (harness #1405)
 - **T7.1 Build harness.** `app/src/test/java/.../simulation/`. Dep: WU1–6. No-op Localizer; read JSON via File; scripted policy. Accept: runs + terminates.

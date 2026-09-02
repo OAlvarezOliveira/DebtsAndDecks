@@ -2,7 +2,7 @@
 
 Artifact store: `both` (OpenSpec file + Engram topic `sdd/archetype-strategy-rework/apply-progress`).
 Mode: Standard (strict_tdd not active in init).
-Last updated: WU5 (Reward economy).
+Last updated: WU6 (HUD).
 
 ## Cumulative Task State (all WUs)
 
@@ -28,7 +28,10 @@ Last updated: WU5 (Reward economy).
 | T5.3 Biased free pick (reuse biased sampler) | WU5 | [x] complete |
 | T5.4 Sequence edits (non-boss=3, boss=1/0) | WU5 | [x] complete |
 | T5.5 Reuse offer fn (`archetypeBiasedOffer` serves `rewardChoices`) | WU5 | [x] complete |
-| T6.1–T6.4 HUD | WU6 | [ ] pending |
+| T6.1 Expose `dominantArchetype` | WU6 | [x] complete |
+| T6.2 Debt band bar (zones + ticks) | WU6 | [x] complete |
+| T6.3 Archetype label + risk counter | WU6 | [x] complete |
+| T6.4 Read-only proof (review) | WU6 | [x] complete (no mutation paths) |
 | T7.1–T7.6 Tuning + sim validation | WU7 | [ ] pending |
 | T8.1–T8.7 Tests | WU8 | [ ] pending |
 
@@ -73,6 +76,36 @@ Last updated: WU5 (Reward economy).
 
 - **Pre-existing WU7 harness failure remains:** `RunSimulationHarnessTest` H1.1 (greedy win-rate ∈ [0.35, 0.55]) still fails — documented as a WU7 balance-tuning target since WU4 (the test's own comment notes the sweep "currently wins ~0%"). WU5's sequence.json (3-choose-1 picks) shifts the economy but does not recover the band; that is WU7's job (T7.6). Not a WU5 defect.
 - No blockers. WU5 depends only on WU1–WU4 artifacts already present on `feat/asr-wu4-enemy-scaling`.
+
+---
+
+## WU6 Work Unit Evidence
+
+| Evidence | Value |
+|----------|-------|
+| Focused test command | `~/.gradle/wrapper/dists/gradle-8.11.1-bin/*/gradle-8.11.1/bin/gradle :app:testDebugUnitTest --tests "com.debtsdecks.gdx.render.DebtHudModelTest"` |
+| Focused test result | `DebtHudModelTest` (9 tests): reads debt + band/threshold constants from `CombatState`; zone transitions at SAFE/DANGER/PROXIMITY/EXECUTION boundaries (15/25/45/50/60); stale-value trap (debt 30 shows 30 after tick); risk distance-to-execution (35→15, 45→5); per-turn bleed = interest delta (35→6, 15→3, 0→0); archetype+tier passthrough — **all PASS**. |
+| Compile result | `:app:compileDebugKotlin` BUILD SUCCESSFUL; `:app:compileDebugUnitTestKotlin` BUILD SUCCESSFUL (whole test source set compiles). |
+| Runtime harness command/scenario | **N/A — HUD is visual**. The on-screen band bar / archetype label / risk counter are covered by **manual device review** (see Issues). The headless assertion is that the renderer's pure `DebtHudModel` reads the correct immutable `CombatState` fields; that is the `DebtHudModelTest` above. Stripping the HUD must not change combat outcomes (T6.4 read-only proof). |
+| Rollback boundary | Revert `DebtHudModel.kt` (new file), the `drawPlayer` signature change + band-bar/label/risk additions in `CombatRenderer.kt`, the `dominantArchetype` property in `RunManager.kt`, the `DEBT_BLEED_FLOOR` constant in `DebtConfig.kt`, the 3 new bundle keys (`hud.archetype`, `hud.risk_execution`, `hud.debt_bleed`) in `strings.properties` + `strings_es.properties`, and delete `DebtHudModelTest.kt`. All HUD changes are render-only; no combat logic, resolver, or data files are touched, so the rollback cannot affect any WU1–WU5 behavior. |
+
+### WU6 Implementation Notes
+
+- **T6.1 `dominantArchetype`**: added a read-only property on `RunManager` (`val dominantArchetype: Archetype get() = playerArchetype(deck, cardRegistry)`). Pure getter — no state read or written, so the HUD consuming it stays strictly read-only.
+- **T6.2 Debt band bar**: new `DebtHudModel` (pure, no GDX) computes the view-model; `CombatRenderer.drawDebtBandBar` paints a thin bar from 0→`EXECUTION_THRESHOLD`(50) with a static 4-zone background (green/amber/orange/red), a bright fill up to the current debt, and tick marks at `DEBT_BLEED_FLOOR`(22, white), `BREAK_THRESHOLD`(30, white), `LEVERAGE_PAYOFF_BAND_CAP`(40, brass — the band-cap marker), and an execution-line border at 50. Matches design.md §G zones (0–21 safe, 22–29 danger, 30–49 proximity, 50+ execution).
+- **T6.3 Archetype label + risk counter**: `drawPlayer` now calls `DebtHudModel.compute(state, run.dominantArchetype, state.archetypeTiers)` and draws `bundle.format("hud.archetype", archetype.name, tier)` (e.g. "Archetype: LEVERAGE T2" — enum name left untranslated, matching the turn-phase strip convention) and, when `debt >= DEBT_BLEED_FLOOR`, `bundle.format("hud.risk_execution", distanceToExecution)` (e.g. "15 to execution") plus a per-turn bleed line ("Bleed +6/turn" from `DebtConfig.applyInterest(debt) - debt`).
+- **T6.4 Read-only**: `drawPlayer` only reads `state` and `run.dominantArchetype` (a pure getter); `DebtHudModel.compute` is side-effect-free. No render path mutates `CombatState`/`RunManager`. HUD removal is therefore safe by construction.
+
+### WU6 Deviations
+
+1. **`DebtHudModel` is a new pure file, not inline in `CombatRenderer`.** The design.md §G implies the additions live in `drawPlayer()`. To satisfy the focused-test requirement (assert the HUD reads the correct `CombatState` fields without a LibGDX context) the data extraction is factored into a GDX-free `DebtHudModel` object + `DebtHudData`/`DebtZone` types; `CombatRenderer` only paints pixels from that model. This is a structural split, not a behavior change — the read source is still the immutable `CombatState` snapshot, exactly as the architecture requires.
+2. **`DEBT_BLEED_FLOOR = 22` added to `DebtConfig`** as a named constant (the spec references it but it was previously absent). The band-bar's first danger marker and the risk-counter's "show when actionable" threshold both read it, so the "named constant, not magic number" rule holds.
+3. **Risk counter shows both bleed and distance-to-execution.** Spec "Requirement: Risk Counter" asks for "distance to bleed floor (22) and execution line (50)". The band bar already visualizes the 22→50 scale with ticks; the text counter shows the execution distance (the actionable number from the spec's own scenarios) plus the per-turn bleed value, which is the explicit WU6 "What to implement" #3 requirement. No separate "N under bleed floor" text was added to avoid clutter; the bar conveys it.
+
+### WU6 Issues
+
+- **Manual HUD review REQUIRED**: because the HUD is pixel output, the headless `DebtHudModelTest` proves the *data* is correct but not the *visual* layout (bar position within the player panel, label/risk text legibility, color contrast). A device/emo pass is needed to confirm the band bar + archetype label + risk counter render without overlap and readable. This is the WU6 runtime-harness/review equivalent; it is tracked as a manual check, not a code defect.
+- No blockers. WU6 depends only on WU1–WU5 artifacts already present on `feat/asr-wu5-reward-economy` (CombatState.archetypeTiers, DebtConfig thresholds, RunManager.playerArchetype).
 
 ---
 
