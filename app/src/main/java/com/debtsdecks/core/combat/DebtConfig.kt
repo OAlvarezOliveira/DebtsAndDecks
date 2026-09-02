@@ -57,10 +57,20 @@ object DebtConfig {
     /** Flat leverage on ALL attacks: +floor(debt / N) per hit (the pivot's unconditional bonus). */
     const val LEVERAGE_DIVISOR: Int = 6
 
-    /** Divisor for `debt_payoff` cards (ATTACK damage or SKILL Block) = floor(debt / N).
-     *  Deliberately NO wipe and NO repayment: the "keep the band" sibling of the all-in
-     *  `execution_damage` wipe. */
-    const val DEBT_PAYOFF_DIVISOR: Int = 2
+    /**
+     * Divisor for `debt_payoff` cards (ATTACK damage or SKILL Block) = floor(debt / N), where the
+     * band cap ([LEVERAGE_PAYOFF_BAND_CAP]) already clamps the numerator to `min(debt, 40)`, so at
+     * the current WU7 tuning this is effectively `min(debt, 40)`.
+     *
+     * WU7 balance lever: `debt_payoff` cards (`asset_bubble` ATTACK, `collateral_hold` SKILL) carry a
+     * static `damage: 0` in assets, so the greedy simulation policy — which drafts rewards by the
+     * static `damage` field — ranks them last and effectively never drafts them, while the LEVERAGE
+     * policy ranks `debt_payoff` as its top draft priority. Their damage is computed from Debt at
+     * resolve time, which makes this divisor a LEVERAGE-only lever: unlike [LEVERAGE_DIVISOR] (a
+     * global scalar on every attack) or [DEBT_SCALING_ATTACK_DIVISOR] (whose only ATTACK carrier,
+     * `leverage_strike`, is also greedy's top draft pick). Set to 1 for WU7.
+     */
+    const val DEBT_PAYOFF_DIVISOR: Int = 1
 
     /**
      * Divisor for `execution_damage` damage = floor(debt / N), paired WITH the full wipe.
@@ -72,6 +82,12 @@ object DebtConfig {
      * Sharing the divisor with `debt_payoff` makes the trade explicit: identical raw damage, but
      * `debt_payoff` adds the flat leverage bonus and keeps the engine hot, while this one resets
      * the pressure and exhausts.
+     *
+     * KNOWN DESIGN DEBT (WU7): this constant intentionally stays at 2 while [DEBT_PAYOFF_DIVISOR]
+     * moved to 1. That breaks the "shared divisor" pairing above — `debt_payoff` now deals roughly
+     * DOUBLE the raw damage of `execution_damage` AND does not wipe, so the `ejecucion` card is now
+     * strictly dominated. This is a follow-up to re-derive; do NOT "fix" it here and do NOT change
+     * this constant's value.
      */
     const val EXECUTION_DAMAGE_DIVISOR: Int = 2
 
@@ -117,10 +133,41 @@ object DebtConfig {
 
     /**
      * PRESSURE low-debt threshold for the end-of-turn escalator (WU3, T3.5/T3.6): a deck holding
-     * [low_debt_bonus] POWER cards grants +1 Strength per stack at end of turn while Debt stays
-     * strictly below this value. Design tuning table: "PRESSURE low-debt threshold | debt < 15".
+     * `low_debt_bonus` POWER cards grants +1 Strength per stack at end of turn while Debt stays
+     * strictly below this value.
+     *
+     * WU7 re-derivation (T7.6): the T7.4 sweep measured PRESSURE 13.5pp below LEVERAGE because the
+     * escalator is dead weight for most of a PRESSURE run. PRESSURE's harness-measured peak Debt is
+     * ~31.6, so a threshold pinned to the bleed floor (22) leaves the trigger OFF on the turns
+     * PRESSURE actually plays — and PRESSURE has no `debt_payoff` card, so the escalator's
+     * compounding Strength is its ONLY damage-scaling identity. Aligning the threshold to PRESSURE's
+     * real operating band (~30) lets it fire where PRESSURE lives, restoring T7.4 parity without
+     * touching the global [LEVERAGE_DIVISOR] or the LEVERAGE-specific [DEBT_PAYOFF_DIVISOR].
+     *
+     * This is a PRESSURE-only lever by construction: the only `low_debt_bonus` carrier is a POWER
+     * with `damage: 0`, so the greedy policy (drafts by the static damage field) and the LEVERAGE
+     * policy (prioritises `debt_payoff`/`debt_scaling`) both rank it last, while the PRESSURE policy
+     * ranks any `pressure`-tagged card first.
+     *
+     * The player-facing card copy quotes this number, so `card.low_debt_escalator.description` in
+     * every locale bundle must be updated whenever it changes.
      */
-    const val PRESSURE_LOW_DEBT_THRESHOLD: Int = 15
+    const val PRESSURE_LOW_DEBT_THRESHOLD: Int = 30
+
+    /**
+     * WU7 (T7.6) PRESSURE-tier-damage re-derivation: PRESSURE-tagged attacks gain an extra
+     * `floor(debt / N)` damage component, mirroring the debt-scaling identity that makes LEVERAGE
+     * attacks hit hard — except PRESSURE has NO `debt_payoff` card (its only ATTACK, `paydown_strike`,
+     * repays Debt and so cannot double as a burst), so without this it has no early-game damage
+     * identity and loses the DPS race to the collector before its end-of-turn low-debt escalator can
+     * compound (measured 13.5pp below LEVERAGE in the T7.4 sweep). The divisor is PRESSURE-specific:
+     * only `pressure`-tagged attacks read it, so LEVERAGE and the greedy baseline are untouched.
+     * Set to 2 for WU7 — much steeper than [LEVERAGE_DIVISOR] (6) and even than the LEVERAGE
+     * `debt_payoff` curve, because PRESSURE's only ATTACK (`paydown_strike`) doubles as a Debt repay
+     * and so has low base damage; it needs a steep debt curve to reach T7.4 parity (within 10pp of
+     * LEVERAGE in the 200-seed sweep) without overshooting LEVERAGE.
+     */
+    const val PRESSURE_DEBT_SCALING_DIVISOR: Int = 2
 
     fun applyInterest(debt: Int): Int {
         if (debt <= 0) return debt

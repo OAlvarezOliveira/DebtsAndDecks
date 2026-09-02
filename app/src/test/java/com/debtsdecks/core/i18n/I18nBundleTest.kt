@@ -564,7 +564,7 @@ class I18nBundleTest {
         assertEquals("Apply 2 Weak. Apply 1 Vulnerable.", b.get("card.weak_pressure.description"))
         assertEquals("Low-Debt Escalator", b.get("card.low_debt_escalator.name"))
         assertEquals(
-            "At the end of each turn, gain 1 Strength if your Debt is below 15.",
+            "At the end of each turn, gain 1 Strength if your Debt is below 30.",
             b.get("card.low_debt_escalator.description")
         )
     }
@@ -578,7 +578,7 @@ class I18nBundleTest {
         assertEquals("Aplica 2 de Debilidad. Aplica 1 de Vulnerable.", b.get("card.weak_pressure.description"))
         assertEquals("Escalador de Baja Deuda", b.get("card.low_debt_escalator.name"))
         assertEquals(
-            "Al final de cada turno, gana 1 de Fuerza si tu Deuda está por debajo de 15.",
+            "Al final de cada turno, gana 1 de Fuerza si tu Deuda está por debajo de 30.",
             b.get("card.low_debt_escalator.description")
         )
     }

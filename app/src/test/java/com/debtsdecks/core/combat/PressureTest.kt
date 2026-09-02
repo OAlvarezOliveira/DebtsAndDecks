@@ -159,11 +159,11 @@ class PressureTest {
 
     @Test
     fun `paydown strike deals base damage plus the repaid debt and repays it`() {
-        // debt 15 -> unconditional leverage floor(15/6)=2, paydown bonus min(3,15)=3.
-        // Total damage = 4 + 2 + 3 = 9 (the spec's simplified "4+3=7" omits the leverage term
-        // that every attack already carries; see WU3 deviations). Repay amount = card debtRepay = 3.
+        // debt 15 -> unconditional leverage floor(15/6)=2, paydown bonus min(3,15)=3, and the WU7
+        // PRESSURE debt-scale floor(15/2)=7 (DebtConfig.PRESSURE_DEBT_SCALING_DIVISOR; paydown_strike
+        // is pressure-tagged). Total = 4 + 2 + 3 + 7 = 16. Repay amount = card debtRepay = 3.
         val r = resolve(paydownDef(), debt = 15)
-        assertEquals(9, r.effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount)
+        assertEquals(16, r.effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount)
         assertEquals(1, r.effects.filterIsInstance<CardResolver.Effect.RepayDebt>().size)
         assertEquals(3, r.effects.filterIsInstance<CardResolver.Effect.RepayDebt>().single().amount)
     }
@@ -180,9 +180,10 @@ class PressureTest {
 
     @Test
     fun `paydown bonus is clamped to available debt`() {
-        // debt 2 -> leverage floor(2/6)=0, paydown bonus min(3,2)=2 -> damage = 4 + 2 = 6.
+        // debt 2 -> leverage floor(2/6)=0, paydown bonus min(3,2)=2, PRESSURE debt-scale floor(2/2)=1
+        // -> damage = 4 + 0 + 2 + 1 = 7.
         val r = resolve(paydownDef(), debt = 2)
-        assertEquals(6, r.effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount)
+        assertEquals(7, r.effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount)
         assertEquals(3, r.effects.filterIsInstance<CardResolver.Effect.RepayDebt>().single().amount)
     }
 
@@ -190,7 +191,8 @@ class PressureTest {
 
     private val escalatorDef = CardDefinition(
         id = "low_debt_escalator", name = "Low-Debt Escalator", type = CardType.POWER, cost = 1,
-        targetType = TargetType.SELF, description = "End of turn: +1 Strength if Debt < 15.",
+        targetType = TargetType.SELF,
+        description = "End of turn: +1 Strength if Debt < PRESSURE_LOW_DEBT_THRESHOLD.",
         rarity = Rarity.UNCOMMON, tags = setOf("pressure", "low_debt_bonus")
     )
 
@@ -213,7 +215,7 @@ class PressureTest {
 
     @Test
     fun `low-debt escalator grants strength at end of turn when debt is below the threshold`() {
-        val engine = engineWithEscalator(startingDebt = 0) // 0 < 15
+        val engine = engineWithEscalator(startingDebt = 0) // 0 < PRESSURE_LOW_DEBT_THRESHOLD
         val card = engine.getState().hand.first { it.cardId == "low_debt_escalator" }
         assertTrue(engine.playCard(card.id, null).success)
         assertEquals(0, engine.getState().player.strength) // not yet — only at end of turn
@@ -224,7 +226,8 @@ class PressureTest {
 
     @Test
     fun `low-debt escalator does not grant strength when debt is at or above the threshold`() {
-        val engine = engineWithEscalator(startingDebt = 30) // 30 >= 15
+        // 30 plus the encounter-boundary interest tick stays clear of the threshold.
+        val engine = engineWithEscalator(startingDebt = 30) // >= PRESSURE_LOW_DEBT_THRESHOLD
         val card = engine.getState().hand.first { it.cardId == "low_debt_escalator" }
         assertTrue(engine.playCard(card.id, null).success)
 

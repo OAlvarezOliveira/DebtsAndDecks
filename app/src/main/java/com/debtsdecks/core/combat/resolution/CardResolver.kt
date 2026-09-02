@@ -85,6 +85,9 @@ class CardResolver(private val l10n: Localizer) {
         val pressureTier = state.archetypeTiers[Archetype.PRESSURE] ?: 0
         val isPressureTagged = card.definition.tags.contains("pressure")
         val pressureTierBonus = if (isPressureTagged) pressureTier else 0
+        // WU7 (T7.6) PRESSURE-tier-damage re-derivation: a debt-scaled component on PRESSURE attacks
+        // (see DebtConfig.PRESSURE_DEBT_SCALING_DIVISOR). Zero for non-PRESSURE cards.
+        val pressureDebtScale = if (isPressureTagged) state.debt / DebtConfig.PRESSURE_DEBT_SCALING_DIVISOR else 0
 
         when (card.type) {
             com.debtsdecks.core.model.CardType.ATTACK -> {
@@ -161,7 +164,17 @@ class CardResolver(private val l10n: Localizer) {
                         } else {
                             0
                         }
-                        var dmg = card.effectiveDamage + player.strength + leverageBonus + taggedScale + leverageTierBonus + paydownBonus
+                        // WU7 (T7.6) tier-damage re-derivation: PRESSURE-tagged attacks gain a
+                        // debt-scaled damage component (`pressureDebtScale`, DebtConfig
+                        // PRESSURE_DEBT_SCALING_DIVISOR), the missing early-game damage identity that
+                        // lets PRESSURE keep pace with LEVERAGE in the T7.4 parity sweep. PRESSURE has
+                        // no `debt_payoff` card (its only ATTACK, `paydown_strike`, repays Debt and so
+                        // cannot double as a burst), so without this it lost the DPS race to the
+                        // collector before its end-of-turn low-debt escalator could compound — measured
+                        // 13.5pp below LEVERAGE. Gated to `pressure` tags, so LEVERAGE and the greedy
+                        // baseline are untouched. The flat `+tier` is intentionally NOT added here (that
+                        // would alter the WU3 T3.2 accepted tier behavior); only the debt curve is new.
+                        var dmg = card.effectiveDamage + player.strength + leverageBonus + taggedScale + leverageTierBonus + paydownBonus + pressureDebtScale
                         // WU3 (T3.2): PRESSURE-tagged attacks at tier 2+ deal +20% damage when the
                         // enemy is below half its max HP (a PRESSURE archetype attack bonus, gated to
                         // pressure-tagged cards like the weak/vuln escalation below).
