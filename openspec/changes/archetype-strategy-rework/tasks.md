@@ -44,13 +44,13 @@ Chain strategy: pending
 - [x] **T2.3 Leverage tier damage.** `CardResolver.kt` ATTACK branch. Dep: T1.4. `+tier` flat damage per attack (stacks `floor(debt/LEVERAGE_DIVISOR)`). Accept: synergy "Tier stacks with base leverage" (debt24,tier2→6).
 
 ## WU3: Pressure Cards + Synergy
-- **T3.1 PRESSURE status tier.** `CardResolver.kt` weak/vuln apply. Dep: T1.4. PRESSURE-tagged cards get `+tier` weak/vuln. Accept: synergy "Status escalation" (weak1→2 @tier1).
-- **T3.2 PRESSURE low-HP dmg.** `CardResolver.kt` ATTACK branch. Dep: T1.4. T2+ → +20% dmg when enemy HP<50%. Accept: synergy PRESSURE tier bonus.
-- **T3.3 `paydown_strike`.** `assets/cards/all.json`. Dep: T3.1. ATTACK,"pressure","paydown"; dmg=`baseDamage+debtRepaid`, repays debt. Accept: pressure "Paydown scales" (4+3=7), "Zero debt fallback".
-- **T3.4 `weak_pressure`.** `cards/all.json`. Dep: T3.1. SKILL,"pressure"; weakApply2,vulnerableApply1. Accept: pressure "Weak/Vulnerable Stackers".
-- **T3.5 `low_debt_escalator`.** `cards/all.json`. Dep: T3.6. POWER,"pressure","low_debt_bonus". Accept: pressure "Trigger at low debt"/"No trigger high debt".
-- **T3.6 End-of-turn POWER hook.** `CombatEngine.kt`. Dep: T1.4. Apply `low_debt_bonus` when `debt<15` at turn end. Accept: pressure escalator scenarios.
-- **T3.7 `audit_punish`.** `cards/all.json` + resolver tag-disable. Dep: FV verb mechanism (PR #22 WIP — RISK). POWER,"pressure","audit"; enemy BUFF/EMPOWER→vulnerable2. Accept: pressure "AUDIT-Punish".
+- [x] **T3.1 PRESSURE status tier.** `CardResolver.kt` weak/vuln apply. Dep: T1.4. PRESSURE-tagged cards get `+tier` weak/vuln. Accept: synergy "Status escalation" (weak1→2 @tier1).
+- [x] **T3.2 PRESSURE low-HP dmg.** `CardResolver.kt` ATTACK branch. Dep: T1.4. T2+ → +20% dmg when enemy HP<50%. Accept: synergy PRESSURE tier bonus.
+- [x] **T3.3 `paydown_strike`.** `assets/cards/all.json`. Dep: T3.1. ATTACK,"pressure","paydown"; dmg=`baseDamage+debtRepaid`, repays debt. Accept: pressure "Paydown scales" (4+3=7), "Zero debt fallback".
+- [x] **T3.4 `weak_pressure`.** `cards/all.json`. Dep: T3.1. SKILL,"pressure"; weakApply2,vulnerableApply1. Accept: pressure "Weak/Vulnerable Stackers".
+- [x] **T3.5 `low_debt_escalator`.** `cards/all.json`. Dep: T3.6. POWER,"pressure","low_debt_bonus". Accept: pressure "Trigger at low debt"/"No trigger high debt".
+- [x] **T3.6 End-of-turn POWER hook.** `CombatEngine.kt`. Dep: T1.4. Apply `low_debt_bonus` when `debt<15` at turn end. Accept: pressure escalator scenarios.
+- [ ] **T3.7 `audit_punish`.** `cards/all.json` + resolver tag-disable. Dep: FV verb mechanism (PR #22 WIP — RISK). POWER,"pressure","audit"; enemy BUFF/EMPOWER→vulnerable2. Accept: pressure "AUDIT-Punish". DEFERRED: depends on PR #22 AUDIT verb (unmerged WIP).
 
 ## WU4: Enemy Scaling + Intents
 - **T4.1 ActModifier model.** `core/enemies/EnemyDefinition.kt`. Dep: none. Add `ActModifier(act,hpMultiplier,damageMultiplier)` + `actModifiers` field. Accept: enemy-scaling "Data-Driven Scaling".

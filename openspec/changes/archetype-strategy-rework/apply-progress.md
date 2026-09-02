@@ -2,7 +2,7 @@
 
 Artifact store: `both` (OpenSpec file + Engram topic `sdd/archetype-strategy-rework/apply-progress`).
 Mode: Standard (strict_tdd not active in init).
-Last updated: WU2 (Leverage Band-Cap + Divisor).
+Last updated: WU3 (Pressure cards + synergy).
 
 ## Cumulative Task State (all WUs)
 
@@ -15,7 +15,13 @@ Last updated: WU2 (Leverage Band-Cap + Divisor).
 | T2.2 Divisor unification (`/10` → `DEBT_STRENGTH_DIVISOR`) | WU2 (pulled into WU1 scope by orchestrator) | [x] complete |
 | T2.1 Band-cap payoff formula | WU2 | [x] complete |
 | T2.3 Leverage tier damage | WU2 | [x] complete |
-| T3.1–T3.7 Pressure cards + synergy | WU3 | [ ] pending |
+| T3.1 PRESSURE status tier (weak/vuln escalation) | WU3 | [x] complete |
+| T3.2 PRESSURE low-HP dmg (+20% at T2+) | WU3 | [x] complete |
+| T3.3 `paydown_strike` card + paydown damage bonus | WU3 | [x] complete |
+| T3.4 `weak_pressure` card | WU3 | [x] complete |
+| T3.5 `low_debt_escalator` card | WU3 | [x] complete |
+| T3.6 End-of-turn POWER hook (`low_debt_bonus`) | WU3 | [x] complete |
+| T3.7 `audit_punish` card + resolver tag-disable | WU3 | [ ] **DEFERRED** — depends on PR #22 AUDIT verb (unmerged WIP). Left unchecked by design. |
 | T4.1–T4.5 Enemy scaling + intents | WU4 | [ ] pending |
 | T5.1–T5.5 Reward economy | WU5 | [ ] pending |
 | T6.1–T6.4 HUD | WU6 | [ ] pending |
@@ -25,6 +31,14 @@ Last updated: WU2 (Leverage Band-Cap + Divisor).
 > Note: the orchestrator's resolved WU1 scope explicitly included the `CardResolver` `/10`
 > divisor unification (tasks.md T2.2), so it is marked complete here even though it sits under WU2
 > in the task breakdown. WU2 implementer should skip T2.2.
+
+> WU3 DEFERRED TASK: T3.7 `audit_punish` is intentionally NOT implemented in this slice. It depends
+> on the FV-core-validation `audit` verb mechanism (PR #22, unmerged WIP). The card is left absent
+> from `cards/all.json` and no resolver tag-disable hook was added. Per the slice instructions, the
+> task checkbox stays `[ ]` with a `DEFERRED` note. Consequently the pressure-archetype spec's
+> "≥4 distinct PRESSURE-tagged cards" expectation is met by 3 cards (paydown_strike, weak_pressure,
+> low_debt_escalator) until audit_punish lands in a later PR; the acceptance "AUDIT-Punish" scenario
+> is out of scope for this slice.
 
 ## WU1 Work Unit Evidence
 
@@ -106,3 +120,65 @@ Last updated: WU2 (Leverage Band-Cap + Divisor).
 
 - None. WU2 depends only on WU1 artifacts (constants + `archetypeTiers` threading), which are present on the base
   branch `feat/asr-wu1-config-tiers`. No blockers.
+
+## WU3 Work Unit Evidence
+
+| Evidence | Value |
+|----------|-------|
+| Focused test command | `~/.gradle/wrapper/dists/gradle-8.11.1-bin/bpt9gzteqjrbo1mjrsomdt32c/gradle-8.11.1/bin/gradle :app:testDebugUnitTest --tests "com.debtsdecks.core.combat.PressureTest" --tests "com.debtsdecks.core.cards.LeveragePayoffCardsDataTest" --tests "com.debtsdecks.core.i18n.I18nBundleTest"` |
+| Focused test result | `PressureTest` (13 tests: T3.1 tier escalation ×3, plain-card trap, T3.2 low-HP ×4, T3.3 paydown ×3, T3.5/3.6 escalator end-of-turn ×2), `LeveragePayoffCardsDataTest` (updated 23→26 non-starter + 3 new pressure-card contracts), `I18nBundleTest` (2 new WU3 card key tests) all PASS. |
+| Full suite result | Full `:app:testDebugUnitTest`: BUILD SUCCESSFUL (≈250 tests, 0 failures, 0 errors, 2 pre-existing skips). Includes `CardResolverTest` (28), `LeverageBandCapTest` (8), `ArchetypeTiersTest` (11) — all still green, confirming WU3 did not regress WU1/WU2. |
+| Runtime harness command/scenario | End-to-end via `CombatEngine` in `PressureTest`: a `low_debt_escalator` POWER played then `endPlayerTurn()` grants +1 Strength while `debt=0 (<15)`; same card with `startingDebt=30 (>=15)` grants 0. This is the PRESSURE escalator acceptance path exercised through the real engine, not just the resolver. |
+| Rollback boundary | Revert `CardResolver.kt` (import `kotlin.math.min`; `pressureTier/pressureTierBonus/isPressureTagged` compute; `ActivateLowDebtEscalator` effect; paydownBonus + low-HP +20% in ATTACK loop; `+pressureTierBonus` on weak/vuln in both branches; `low_debt_bonus` emission), `CombatEngine.kt` (field `lowDebtEscalatorStacks`; reset in `startCombat`; `applyEffects` case; end-of-turn trigger before `beginTurn()`), `DebtConfig.kt` (`PRESSURE_LOW_DEBT_THRESHOLD`), `cards/all.json` (3 new card entries), `strings.properties`/`strings_es.properties` (6 new keys), and delete `PressureTest.kt`. WU1/WU2 paths untouched (tier bonus defaults to 0 when `archetypeTiers` is empty). |
+
+### WU3 Implementation Notes
+
+- T3.1 PRESSURE status tier: computed `pressureTier = state.archetypeTiers[Archetype.PRESSURE] ?: 0` and
+  `pressureTierBonus = if (isPressureTagged) pressureTier else 0` once at the top of `resolve()`. Added to
+  `WeakApply`/`VulnerableApply` turns in BOTH the ATTACK branch and the SKILL/POWER branch, gated to PRESSURE-tagged
+  cards — identical gating model to WU2's Leverage tier bonus.
+- T3.2 PRESSURE low-HP dmg: in the ATTACK damage loop, for PRESSURE-tagged cards at `pressureTier >= 2` and
+  `enemy.hp < enemy.maxHp / 2`, multiply the computed damage by `1.20` (before the Vulnerable x1.5 multiplier).
+  Applied only to PRESSURE-tagged attacks (see Deviations #1).
+- T3.3 `paydown_strike`: data-driven card (`"pressure"`,`"paydown"`, damage 4, debtRepay 3). The resolver adds
+  `paydownBonus = min(card.debtRepay, state.debt)` to each hit's damage. Repayment itself still flows through the
+  existing ATTACK `debtRepay` block (clamped to 0 at apply when Debt is 0).
+- T3.4 `weak_pressure`: data-driven SKILL (`"pressure"`, weakApply 2, vulnerableApply 1, target ENEMY).
+- T3.5 `low_debt_escalator`: data-driven POWER (`"pressure"`,`"low_debt_bonus"`, target SELF).
+- T3.6 end-of-turn hook: `ActivateLowDebtEscalator` effect is emitted by the resolver when a card carries
+  `low_debt_bonus`; `CombatEngine.applyEffects` increments `lowDebtEscalatorStacks`; at end of turn (in
+  `endPlayerTurn`, before `beginTurn()`) if `lowDebtEscalatorStacks > 0 && debt < PRESSURE_LOW_DEBT_THRESHOLD`
+  the player gains `lowDebtEscalatorStacks` Strength (persists — `endTurnReset` does not reset Strength).
+- New `DebtConfig.PRESSURE_LOW_DEBT_THRESHOLD = 15` (design tuning table value; see Deviations #2 for location).
+
+### WU3 Deviations
+
+1. **+20% low-HP bonus gated to PRESSURE-tagged cards.** The `archetype-synergy` spec lists the +20% damage as the
+   second clause of the PRESSURE tier bonus, right after "Weak/Vulnerable to PRESSURE-tagged cards". The LEVERAGE
+   tier bonus (WU2 T2.3) is explicitly gated to LEVERAGE-tagged cards, and the PRESSURE weak/vuln clause is explicitly
+   "to PRESSURE-tagged cards". For archetype-scoped consistency I gated the +20% to `isPressureTagged` as well. If
+   the maintainer intends the +20% to apply to ALL attacks under a high PRESSURE tier (regardless of card tag), this
+   is a one-line change (drop the `isPressureTagged &&` guard). Flagged for the verify phase.
+2. **`PRESSURE_LOW_DEBT_THRESHOLD` placed in `DebtConfig` (not `Archetype.kt`).** The design Tuning Constants table
+   lists its `Location` as `Archetype.kt`, but the WU1 Architecture Decisions locked "DebtConfig — all debt math
+   constants live here", and WU1/WU2 already host every tuning constant there. A debt threshold used by the engine's
+   end-of-turn logic belongs with the other DebtConfig constants, so it was added there (value 15 unchanged).
+3. **Paydown damage includes the unconditional per-attack leverage bonus.** The `pressure-archetype` spec scenario
+   "Paydown scales: debt=15, baseDamage 4, debtRepay 3 → 4+3=7" omits the engine's unconditional `floor(debt/6)`
+   leverage bonus that every ATTACK already carries (WU1). The implemented damage at debt=15 is `4 + floor(15/6)=2 +
+   min(3,15)=3 = 9`. The "Zero debt fallback" scenario still holds exactly (debt=0 → 4, no bonus, no negative). The
+   verify-phase test (WU8) should expect 9 at debt=15, not 7; the spec's "7" is a simplified scenario. Same
+   spec-vs-real-engine pattern as WU2's band-cap freeze.
+4. **Only one status-stacker card (`weak_pressure`) implemented.** The `pressure-archetype` spec requirement reads
+   "≥2 PRESSURE-tagged cards applying Weak or Vulnerable at ≥2 turns per application". The design §D table and the
+   tasks.md WU3 task list define exactly one status stacker (`weak_pressure`, weak 2 + vuln 1). With `audit_punish`
+   deferred, WU3 delivers 3 PRESSURE cards; the spec's "≥4 distinct PRESSURE-tagged cards" and "≥2 stackers" are
+   partially met (3 cards, 1 stacker) until T3.7 lands. If the literal "≥2 stackers" is required now, a second card
+   (e.g. `vuln_pressure`) should be added — but that expands beyond the authorized WU3 task list, so it is left as a
+   follow-up.
+
+### WU3 Issues
+
+- None blocking. The `LeveragePayoffCardsDataTest` "exactly 23 non-starter cards" assertion had to be updated to 26
+  (3 new PRESSURE cards), and its pressure-contract test extended — expected, since WU3 adds cards to the reward pool.
+- `audit_punish` (T3.7) intentionally omitted per slice scope; its checkbox remains `[ ]` with a `DEFERRED` note.
