@@ -70,7 +70,7 @@ class LeveragePayoffCardsDataTest {
         assertEquals(CardType.ATTACK, strike.type)
         assertEquals(Rarity.COMMON, strike.rarity)
         assertEquals(1, strike.cost)
-        assertEquals(5, strike.damage)
+        assertEquals(8, strike.damage)
         assertEquals(TargetType.ENEMY, strike.targetType)
         assertTrue("debt_scaling" in strike.tags)
 

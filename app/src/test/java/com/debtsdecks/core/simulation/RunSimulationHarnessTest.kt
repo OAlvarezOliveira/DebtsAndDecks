@@ -19,6 +19,10 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.round
+import com.debtsdecks.core.model.RunSequence
 
 class RunSimulationHarnessTest {
 
@@ -331,5 +335,53 @@ class RunSimulationHarnessTest {
         // And it must be printable (spec: prints the report).
         println()
         println(report.summary())
+    }
+
+    // --- WU7: T7.4 PRESSURE-archetype parity (harness band) ---
+
+    @Test
+    fun `T7-4 pressure archetype win rate within 10pp of leverage`() {
+        val pressureResults = runSweepWith(PressurePolicy)
+        val leverageResults = runSweepWith(LeveragePolicy)
+        val pressure = SimulationReport.from(pressureResults)
+        val leverage = SimulationReport.from(leverageResults)
+
+        println()
+        println("=== PRESSURE vs LEVERAGE parity (200 seeds each) ===")
+        println("Pressure -> win ${"%.1f".format(pressure.winRate * 100)}% | peak debt ${"%.1f".format(pressure.avgPeakDebt)}")
+        println("Leverage -> win ${"%.1f".format(leverage.winRate * 100)}% | peak debt ${"%.1f".format(leverage.avgPeakDebt)}")
+        println("Spread: ${"%.1f".format(abs(pressure.winRate - leverage.winRate) * 100)}pp")
+        println("Defeats pressure: ${pressure.defeatsByEncounter}")
+        println("Defeats leverage: ${leverage.defeatsByEncounter}")
+
+        assertTrue(
+            abs(pressure.winRate - leverage.winRate) <= 0.10,
+            "PRESSURE win rate ${"%.3f".format(pressure.winRate)} must be within 10pp of LEVERAGE " +
+                "${"%.3f".format(leverage.winRate)} (no archetype strictly dominant)",
+        )
+    }
+
+    // --- WU7: T7.5 hits-to-kill sanity (harness band) ---
+
+    @Test
+    fun `T7-5 avg hits-to-kill for 6-damage attack is at least 4`() {
+        val enemies = TestAssetLoader.loadEnemies().associateBy { it.id }
+        val sequence: RunSequence = TestAssetLoader.loadSequence()
+        val hits = sequence.slots.mapIndexed { slot, s ->
+            val def = enemies[s.enemyId] ?: error("unknown enemy ${s.enemyId}")
+            // Mirror RunManager.actForSlotIndex: slots 0-2 -> I, 3-5 -> II, 6-7 -> III.
+            val act = if (slot <= 2) 1 else if (slot <= 5) 2 else 3
+            val mod = def.actModifiers.firstOrNull { it.act == act }
+            val scaledHp = if (mod != null) round(def.hp * mod.hpMultiplier).toInt() else def.hp
+            ceil(scaledHp / 6.0).toInt()
+        }
+        val avg = hits.average()
+
+        println()
+        println("=== Hits-to-kill (6-dmg attack) per combat ===")
+        println("per-combat hits: $hits")
+        println("avg: ${"%.2f".format(avg)} (8 combats)")
+
+        assertTrue(avg >= 4.0, "avg hits-to-kill ${"%.2f".format(avg)} must be >= 4.0 across the 8 combats")
     }
 }

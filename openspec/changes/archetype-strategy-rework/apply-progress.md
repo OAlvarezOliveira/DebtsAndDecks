@@ -2,7 +2,7 @@
 
 Artifact store: `both` (OpenSpec file + Engram topic `sdd/archetype-strategy-rework/apply-progress`).
 Mode: Standard (strict_tdd not active in init).
-Last updated: WU6 (HUD).
+Last updated: WU7 (Tuning + sim validation).
 
 ## Cumulative Task State (all WUs)
 
@@ -32,7 +32,7 @@ Last updated: WU6 (HUD).
 | T6.2 Debt band bar (zones + ticks) | WU6 | [x] complete |
 | T6.3 Archetype label + risk counter | WU6 | [x] complete |
 | T6.4 Read-only proof (review) | WU6 | [x] complete (no mutation paths) |
-| T7.1–T7.6 Tuning + sim validation | WU7 | [ ] pending |
+| T7.1–T7.6 Tuning + sim validation | WU7 | [x] complete |
 | T8.1–T8.7 Tests | WU8 | [ ] pending |
 
 > Note: the orchestrator's resolved WU1 scope explicitly included the `CardResolver` `/10`
@@ -106,6 +106,34 @@ Last updated: WU6 (HUD).
 
 - **Manual HUD review REQUIRED**: because the HUD is pixel output, the headless `DebtHudModelTest` proves the *data* is correct but not the *visual* layout (bar position within the player panel, label/risk text legibility, color contrast). A device/emo pass is needed to confirm the band bar + archetype label + risk counter render without overlap and readable. This is the WU6 runtime-harness/review equivalent; it is tracked as a manual check, not a code defect.
 - No blockers. WU6 depends only on WU1–WU5 artifacts already present on `feat/asr-wu5-reward-economy` (CombatState.archetypeTiers, DebtConfig thresholds, RunManager.playerArchetype).
+
+---
+
+## WU7 Work Unit Evidence
+
+| Evidence | Value |
+|----------|-------|
+| Focused test command | `./gradlew :app:testDebugUnitTest --tests "com.debtsdecks.core.simulation.RunSimulationHarnessTest"` |
+| Focused test result | `RunSimulationHarnessTest` (15 tests): all GREEN. T7.2 greedy win **44.5%** ∈ [0.35,0.55]; T7.6 leverage **45.0%** (0.5pp above greedy, in band, <0.70); T7.4 PRESSURE **39.0%** vs LEVERAGE 45.0% = **6.0pp ≤ 10pp**; T7.5 hits-to-kill avg **8.75** ≥ 4.0 (per-combat [5,5,6,10,11,11,11,11]). |
+| Full suite result | `:app:testDebugUnitTest`: **281 completed, 0 failed, 2 skipped** (the 2 skipped are the deliberate `@Disabled` F2 gates in `DebtPressureTest`, left untouched per instruction). |
+| Runtime harness command/scenario | Headless 200-seed sweep via `RunSimulationHarnessTest` (`leverage policy comparison sweep`, `T7-4 pressure archetype win rate within 10pp of leverage`, `T7-5 avg hits-to-kill`). Deterministic (fixed seeds 0..199, seeded RNG). |
+| Rollback boundary | Revert `DebtConfig.kt` (`PRESSURE_LOW_DEBT_THRESHOLD` 30, new `PRESSURE_DEBT_SCALING_DIVISOR=2` + doc comment), `CardResolver.kt` (the `pressureDebtScale` term in the PRESSURE attack branch), `strings.properties`/`strings_es.properties` (`low_debt_escalator.description` "below 30"), `I18nBundleTest.kt` (the two `below 30` assertions), `PressureTest.kt` (paydown `debt 15`→16, `debt 2`→7 assertions), `LeveragePayoffCardsDataTest.kt` (`leverage_strike.damage` 5→8 stale assertion). The uncommitted WU7 edits (DEBT_PAYOFF_DIVISOR=1, EXECUTION_DAMAGE_DIVISOR note, ScriptedPolicy power-playing) and all WU1–WU6 code are untouched by this rollback. |
+
+### WU7 Implementation Notes
+
+- **Diagnosis**: the pre-existing uncommitted WU7 tuning edits (DEBT_PAYOFF_DIVISOR 2→1, PRESSURE_LOW_DEBT_THRESHOLD 15→22, ScriptedPolicy power-playing) already closed the leverage-vs-greedy gap (leverage 45.0% vs greedy 44.5%), but over-corrected: PRESSURE sat 13.5pp below LEVERAGE (29.0% vs 42.5%) because PRESSURE has **no `debt_payoff` card**, so its end-of-turn low-debt escalator (threshold 22) never fired on PRESSURE's operating debt (~31.6) and PRESSURE died to the collector (139/200 defeats) before any escalator Strength compounded. The escalator threshold 22→30, 30→40 all measured ~0 win-rate movement, confirming it is a dead lever for PRESSURE's early-game deficit.
+- **T7.6 fix (leverage-specific / pressure-interaction re-derivation, per the deferred-commit constraint)**: added a PRESSURE-only debt-scaled attack component `PRESSURE_DEBT_SCALING_DIVISOR=2` (`pressureDebtScale = floor(debt/2)` on `pressure`-tagged attacks in `CardResolver`). Gated to the `pressure` tag, so LEVERAGE and the greedy baseline are untouched, and the global `LEVERAGE_DIVISOR` was **NOT** bumped (the constraint's forbidden shortcut). The flat `+tier` was deliberately NOT added (that would alter the WU3 T3.2 accepted tier behavior); only the debt curve is new.
+- **Band-cap / threshold**: `PRESSURE_LOW_DEBT_THRESHOLD` retuned 22→30 (aligns the low-debt escalator with PRESSURE's actual operating debt and keeps the i18n in sync). The exploit guard `LEVERAGE_PAYOFF_BAND_CAP` hard-freeze at 40 is UNCHANGED, so T7.3 parking trap intact.
+- **Test updates (required by the re-derivation, not masked regressions)**: `PressureTest` paydown `debt 15`→16 and `debt 2`→7 (paydown_strike now debt-scales as a pressure card); `LeveragePayoffCardsDataTest` `leverage_strike.damage` 5→8 (pre-existing stale assertion vs committed JSON — fixed so the suite is green, out of T7.6 scope but necessary for a clean run).
+
+### WU7 Deviations
+
+1. **PRESSURE damage identity is now debt-scaled (design change from WU3).** WU3 specified PRESSURE's damage identity as weak/vuln escalation + T2+ low-HP multiplier; T7.6's parity requirement forced adding a `floor(debt/2)` component to PRESSURE attacks. This is authorized by the T7.6 constraint ("re-derive … pressure interaction / tier-damage") and keeps PRESSURE within 10pp of LEVERAGE, but it means PRESSURE is now also a debt-scaling archetype, not purely a status archetype.
+2. **`LeveragePayoffCardsDataTest` assertion fixed (5→8)** to match the committed `leverage_strike.damage=8` in `cards/all.json`. This was a pre-existing stale assertion (failing before T7.6), not introduced by this change; fixed only to deliver a green full suite.
+
+### WU7 Issues
+
+- None blocking. Harness GREEN, full suite 281/0/2. PRESSURE parity margin is 6.0pp (comfortable; deterministic sweep). Greedy also rose slightly (44.5%) because the greedy policy occasionally drafts `paydown_strike` (pressure-tagged) and now benefits from the same debt-scale — benign, still within band and within 5pp of leverage.
 
 ---
 

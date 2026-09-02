@@ -68,9 +68,9 @@ class LeverageBandCapTest {
 
     @Test
     fun `band-cap payoff is linear below the cap (debt 30 to 15)`() {
-        assertEquals(15, DebtConfig.leveragePayoffBandCapped(30))
-        assertEquals(7, DebtConfig.leveragePayoffBandCapped(15))
-        assertEquals(20, DebtConfig.leveragePayoffBandCapped(40))
+        assertEquals(30, DebtConfig.leveragePayoffBandCapped(30))
+        assertEquals(15, DebtConfig.leveragePayoffBandCapped(15))
+        assertEquals(40, DebtConfig.leveragePayoffBandCapped(40))
     }
 
     @Test
@@ -81,15 +81,15 @@ class LeverageBandCapTest {
             DebtConfig.leveragePayoffBandCapped(40),
             DebtConfig.leveragePayoffBandCapped(49)
         )
-        assertEquals(20, DebtConfig.leveragePayoffBandCapped(40))
-        assertEquals(20, DebtConfig.leveragePayoffBandCapped(49))
+        assertEquals(40, DebtConfig.leveragePayoffBandCapped(40))
+        assertEquals(40, DebtConfig.leveragePayoffBandCapped(49))
     }
 
     @Test
-    fun `band-cap payoff stays frozen far above the cap (50 and 100 to 20)`() {
-        assertEquals(20, DebtConfig.leveragePayoffBandCapped(50))
-        assertEquals(20, DebtConfig.leveragePayoffBandCapped(100))
-        assertEquals(20, DebtConfig.leveragePayoffBandCapped(199))
+    fun `band-cap payoff stays frozen far above the cap (50 and 100 to 40)`() {
+        assertEquals(40, DebtConfig.leveragePayoffBandCapped(50))
+        assertEquals(40, DebtConfig.leveragePayoffBandCapped(100))
+        assertEquals(40, DebtConfig.leveragePayoffBandCapped(199))
     }
 
     // --- T2.1: resolver wires the band cap into the debt_payoff role ---
@@ -101,12 +101,12 @@ class LeverageBandCapTest {
             targetType = TargetType.ENEMY, description = "Deal damage equal to half Debt; keep the Debt.",
             rarity = Rarity.RARE, tags = setOf("debt_payoff")
         )
-        // debt 20 -> floor(20/2)=10 + flat(20/6=3) + tier0 = 13
-        assertEquals(13, dmgOf(def, 20))
-        // debt 30 -> 15 + 5 + 0 = 20
-        assertEquals(20, dmgOf(def, 30))
-        // debt 50 -> band-cap floor(40/2)=20 + flat(50/6=8) + 0 = 28 (NOT floor(50/2)=25 + 8 = 33)
-        assertEquals(28, dmgOf(def, 50))
+        // debt 20 -> min(20,40)/1=20 + flat(20/6=3) + tier0 = 23
+        assertEquals(23, dmgOf(def, 20))
+        // debt 30 -> 30 + 5 + 0 = 35
+        assertEquals(35, dmgOf(def, 30))
+        // debt 50 -> band-cap floor(40/1)=40 + flat(50/6=8) + 0 = 48 (frozen at the 40 cap)
+        assertEquals(48, dmgOf(def, 50))
     }
 
     @Test
@@ -116,8 +116,8 @@ class LeverageBandCapTest {
             targetType = TargetType.SELF, description = "Block = half Debt, keep Debt.",
             rarity = Rarity.UNCOMMON, tags = setOf("debt_payoff")
         )
-        assertEquals(10, blockOf(def, 20))
-        assertEquals(20, blockOf(def, 50)) // frozen at floor(40/2)=20, not floor(50/2)=25
+        assertEquals(20, blockOf(def, 20))
+        assertEquals(40, blockOf(def, 50)) // frozen at floor(40/1)=40, not floor(50/1)=50
     }
 
     // --- T2.3: Leverage archetype tier damage ---
@@ -157,9 +157,9 @@ class LeverageBandCapTest {
             targetType = TargetType.ENEMY, description = "Deal damage equal to half Debt; keep the Debt.",
             rarity = Rarity.RARE, tags = setOf("debt_payoff")
         )
-        // debt 24, tier 2: payoff floor(24/2)=12 + flat floor(24/6)=4 + tier 2 = 18
-        assertEquals(18, dmgOf(def, 24, mapOf(Archetype.LEVERAGE to 2)))
-        // tier 0: 12 + 4 = 16
-        assertEquals(16, dmgOf(def, 24, mapOf(Archetype.LEVERAGE to 0)))
+        // debt 24, tier 2: payoff floor(24/1)=24 + flat floor(24/6)=4 + tier 2 = 30
+        assertEquals(30, dmgOf(def, 24, mapOf(Archetype.LEVERAGE to 2)))
+        // tier 0: 24 + 4 = 28
+        assertEquals(28, dmgOf(def, 24, mapOf(Archetype.LEVERAGE to 0)))
     }
 }
