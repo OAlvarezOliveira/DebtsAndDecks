@@ -118,5 +118,8 @@ exists to break**. Rollback is a single-branch revert on `fv-e1-leverage`.
 
 ## Open Questions
 
-- [ ] D1 contradicts `specs/debt-economy/spec.md` ("every reference MUST use 40"). Spec amendment
+- [x] D1 contradicts `specs/debt-economy/spec.md` ("every reference MUST use 40"). Spec amendment
       required before apply, or the E2 bands move and the measurement becomes uninterpretable.
+      Resolved: `specs/debt-economy/spec.md:29-31` explicitly supersedes the old blanket rule with
+      the `ARREARS_THRESHOLD`/`DEBT_SCALE_ANCHOR` split and the behavioral-vs-scale call-site
+      scenarios (lines 33-51).

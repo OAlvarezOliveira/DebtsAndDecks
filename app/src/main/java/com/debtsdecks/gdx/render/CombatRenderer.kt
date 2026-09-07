@@ -388,7 +388,7 @@ class CombatRenderer(private val bundle: I18NBundle) {
         if (state.debt >= DebtConfig.ARREARS_THRESHOLD) {
             smallFont.color = Color.RED
             smallFont.data.setScale(0.66f)
-            smallFont.draw(batch, bundle.get("hud.execution_warning"), x + pad, warningY, barW, Align.left, true)
+            smallFont.draw(batch, bundle.get("hud.arrears_warning"), x + pad, warningY, barW, Align.left, true)
             smallFont.data.setScale(0.78f)
         }
 
