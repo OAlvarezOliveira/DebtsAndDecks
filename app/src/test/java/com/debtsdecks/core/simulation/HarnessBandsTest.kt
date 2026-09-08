@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 
 /**
  * Scale-proof of [HarnessBands]. Task 1.1: the bands resolve to the expected absolutes at the
- * current `EXECUTION_THRESHOLD` — note leverageTarget is 41 (0.82), the WU7 tuning value, not the
+ * current `DEBT_SCALE_ANCHOR` — note leverageTarget is 41 (0.82), the WU7 tuning value, not the
  * pre-WU7 35. Task 1.3: the derivation is LIVE — a stubbed execution line
  * resolves to the expected ratios, which a class-load-frozen object would fail.
  */

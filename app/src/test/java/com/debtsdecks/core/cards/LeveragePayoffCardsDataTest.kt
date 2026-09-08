@@ -44,9 +44,12 @@ class LeveragePayoffCardsDataTest {
     // --- R1.6: reward pool 23 non-starter ---
 
     @Test
-    fun `reward pool grows to exactly 26 non-starter cards`() {
+    fun `reward pool grows to exactly 30 non-starter cards`() {
+        // 27 from FV.E1's card-pool-expansion (debt_settlement / emergency_payment /
+        // debt_restructuring / clean_slate) merged with develop's independent WU additions,
+        // none carrying the starter tag.
         val nonStarter = cards.filter { !it.tags.contains("starter") }
-        assertEquals(26, nonStarter.size)
+        assertEquals(30, nonStarter.size)
         // Starter count stays 4.
         assertEquals(4, cards.count { it.tags.contains("starter") })
     }

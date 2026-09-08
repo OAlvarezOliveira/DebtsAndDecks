@@ -20,6 +20,11 @@ data class SimulationResult(
     val hpAfterCombat: List<Int> = emptyList(),
     /** Enemy defId fought in each combat, aligned index-wise with [turnsPerCombat]. */
     val encounterIds: List<String?> = emptyList(),
+        /** FV instrumentation: how many times FORECLOSE seized during the run. */
+        val forecloseSeizures: Int = 0,
+        /** FV.E1 instrumentation: how many times the arrears lock armed during the run
+         *  (mirrors [forecloseSeizures]'s per-run accumulation pattern). */
+        val arrearsArmed: Int = 0,
 )
 
 /**
@@ -32,6 +37,7 @@ class RunSimulator(
     private val enemyDefinitions: List<EnemyDefinition>,
     private val l10n: Localizer = NoOpLocalizer,
     private val policy: RunPolicy = ScriptedPolicy,
+    private val sequence: com.debtsdecks.core.model.RunSequence = TestAssetLoader.loadSequence(),
 ) {
     /** Generous upper bound; any real 3-encounter run stays far below it. Guards runaways. */
     private val maxActionsPerRun = 500
@@ -39,7 +45,7 @@ class RunSimulator(
     fun simulate(seed: Long): SimulationResult {
         val rng = kotlin.random.Random(seed)
         val engine = CombatEngine(cardRegistry, l10n, rng)
-        val run = RunManager(engine, cardRegistry, enemyDefinitions, TestAssetLoader.loadSequence(), rng)
+        val run = RunManager(engine, cardRegistry, enemyDefinitions, sequence, rng)
         var actions = 0
         var peakDebt = 0
         val turnsPerCombat = mutableListOf<Int>()
@@ -94,7 +100,7 @@ class RunSimulator(
                     encounterIds.add(currentEncounterId(state))
                     return SimulationResult(
                         seed, RunOutcome.VICTORY, peakDebt, run.hp, turnsPerCombat, null, pickedRewardIds,
-                        hpAfterCombat, encounterIds,
+                        hpAfterCombat, encounterIds, engine.forecloseSeizureCount, engine.arrearsArmedCount,
                     )
                 }
                 RunManager.Phase.DEFEAT -> {
@@ -104,7 +110,7 @@ class RunSimulator(
                     encounterIds.add(defeatEncounterId)
                     return SimulationResult(
                         seed, RunOutcome.DEFEAT, peakDebt, 0, turnsPerCombat, defeatEncounterId, pickedRewardIds,
-                        hpAfterCombat, encounterIds,
+                        hpAfterCombat, encounterIds, engine.forecloseSeizureCount, engine.arrearsArmedCount,
                     )
                 }
             }

@@ -46,7 +46,7 @@ class DebtHudModelTest {
         assertEquals(DebtConfig.DEBT_BLEED_FLOOR, hud.debtBleedFloor)
         assertEquals(DebtConfig.BREAK_THRESHOLD, hud.breakThreshold)
         assertEquals(DebtConfig.LEVERAGE_PAYOFF_BAND_CAP, hud.bandCap)
-        assertEquals(DebtConfig.EXECUTION_THRESHOLD, hud.executionThreshold)
+        assertEquals(DebtConfig.DEBT_SCALE_ANCHOR, hud.executionThreshold)
     }
 
     @Test

@@ -2,7 +2,6 @@ package com.debtsdecks.core.simulation
 
 import com.debtsdecks.core.cards.CardRegistry
 import com.debtsdecks.core.combat.CombatEngine
-import com.debtsdecks.core.combat.DebtConfig
 import com.debtsdecks.core.combat.RunManager
 import com.debtsdecks.core.combat.playerArchetype
 import com.debtsdecks.core.model.TurnPhase
@@ -12,15 +11,15 @@ import org.junit.jupiter.api.Test
 import kotlin.random.Random
 
 /**
- * FV core-validation door (E1/E2): why a run died. [endDebt] at or above the execution line is
- * Death by Execution; anything below is ordinary HP loss. The cause must be countable per run,
- * not inferable from a worst-defeats top-5.
+ * FV core-validation door (E1/E2): why a run died. Still locked (`inArrears == true`) at combat
+ * end is Death by Arrears (Gatillo B); anything else is ordinary HP loss. The cause must be
+ * countable per run, not inferable from a worst-defeats top-5.
  */
-enum class DefeatCause { EXECUTION, HP_ZERO }
+enum class DefeatCause { ARREARS, HP_ZERO }
 
-/** [endDebt] >= the execution line is [DefeatCause.EXECUTION]; otherwise HP reached zero first. */
-fun classifyDefeat(endDebt: Int): DefeatCause =
-    if (endDebt >= DebtConfig.EXECUTION_THRESHOLD) DefeatCause.EXECUTION else DefeatCause.HP_ZERO
+/** `inArrears == true` at combat end is [DefeatCause.ARREARS]; otherwise HP reached zero first. */
+fun classifyDefeat(inArrears: Boolean): DefeatCause =
+    if (inArrears) DefeatCause.ARREARS else DefeatCause.HP_ZERO
 
 /**
  * Playtest-via-sim observation harness (test-source, deterministic, no asserts beyond health).
@@ -105,7 +104,7 @@ class RunObservationTest {
                     seed, run.phase.name, nodes.size /* = fights won ✓ (1 per non-boss, 8 total)*/,
                     peakDebt, run.debt, run.gold, run.hp,
                     if (isDefeat) st.enemies.firstOrNull { it.hp > 0 }?.defId else null,
-                    if (isDefeat) classifyDefeat(run.debt) else null,
+                    if (isDefeat) classifyDefeat(st.inArrears) else null,
                     if (isDefeat) currentSlot + 1 else null,
                     run.deckSize, nodes
                 )
@@ -182,10 +181,9 @@ class RunObservationTest {
     }
 
     @Test
-    fun `defeat cause follows the execution threshold`() {
-        assertEquals(DefeatCause.HP_ZERO, classifyDefeat(DebtConfig.EXECUTION_THRESHOLD - 1))
-        assertEquals(DefeatCause.EXECUTION, classifyDefeat(DebtConfig.EXECUTION_THRESHOLD))
-        assertEquals(DefeatCause.EXECUTION, classifyDefeat(DebtConfig.EXECUTION_THRESHOLD + 1))
+    fun `defeat cause follows the arrears lock state`() {
+        assertEquals(DefeatCause.HP_ZERO, classifyDefeat(inArrears = false))
+        assertEquals(DefeatCause.ARREARS, classifyDefeat(inArrears = true))
     }
 
 }

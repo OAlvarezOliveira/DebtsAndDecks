@@ -70,8 +70,8 @@ class EnemyInstance(
             DEBUFF -> l10n.format(key, intent.param)
             MULTI_ATTACK -> l10n.format(key, intent.damage, intent.param)
             LEVY -> l10n.format(key, intent.param)
-            FORECLOSE -> l10n.format(key, intent.param)
-            HEDGE -> l10n.format(key, intent.param)
+            FORECLOSE -> l10n.format(key, intent.param, intent.damage)
+            HEDGE -> l10n.format(key)
         }
     }
 
@@ -135,7 +135,9 @@ class EnemyInstance(
     }
 
     fun endTurnReset() {
-        block = 0
+        // FV deliverable 1: enemy Block survives to the player's next turn — HEDGE arms the enemy
+        // mid-ENEMY_ACTION and the player must be able to attack THROUGH it. Spent by takeDamage
+        // like the player's own block.
         if (weak > 0) weak--
         if (vulnerable > 0) vulnerable--
     }
@@ -188,12 +190,12 @@ class EnemyAI(private val enemy: EnemyInstance, private val l10n: Localizer) {
                 // EnemyAI only advances the pattern, no combat effect.
             }
             FORECLOSE -> {
-                // Engine owns the FORECLOSE effect (Debt/HP, applied in CombatEngine.endPlayerTurn
-                // so it routes through the Debt cap/Execution check); EnemyAI only advances.
+                // Engine-owned (reads the player's Debt, only the engine holds it):
+                // CombatEngine.endPlayerTurn applies the seizure.
             }
             HEDGE -> {
-                enemy.gainBlock(intent.param)
-                log.add(CombatLogEntry.create(l10n.format("log.enemy_hedge", enemy.name, intent.param), turn))
+                // Engine-owned: the block is debt-scaled at resolution, in
+                // CombatEngine.endPlayerTurn.
             }
             MULTI_ATTACK -> {
                 repeat(intent.param) {

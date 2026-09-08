@@ -48,8 +48,20 @@ class DebtConfigTest {
     }
 
     @Test
-    fun `EXECUTION_THRESHOLD sits above BREAK_THRESHOLD for a playable leverage range`() {
-        assertTrue(DebtConfig.EXECUTION_THRESHOLD > DebtConfig.BREAK_THRESHOLD)
-        assertEquals(50, DebtConfig.EXECUTION_THRESHOLD)
+    fun `DEBT_SCALE_ANCHOR sits above BREAK_THRESHOLD for a playable leverage range`() {
+        assertTrue(DebtConfig.DEBT_SCALE_ANCHOR > DebtConfig.BREAK_THRESHOLD)
+        assertEquals(50, DebtConfig.DEBT_SCALE_ANCHOR)
+    }
+
+    @Test
+    fun `ARREARS_THRESHOLD is 40`() {
+        assertEquals(40, DebtConfig.ARREARS_THRESHOLD)
+    }
+
+    @Test
+    fun `ARREARS_THRESHOLD and DEBT_SCALE_ANCHOR stay distinct and positive`() {
+        assertTrue(DebtConfig.ARREARS_THRESHOLD > 0)
+        assertTrue(DebtConfig.DEBT_SCALE_ANCHOR > 0)
+        assertTrue(DebtConfig.DEBT_SCALE_ANCHOR != DebtConfig.ARREARS_THRESHOLD)
     }
 }

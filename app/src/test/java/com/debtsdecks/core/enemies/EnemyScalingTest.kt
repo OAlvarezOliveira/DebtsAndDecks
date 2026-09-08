@@ -94,45 +94,45 @@ class EnemyScalingTest {
     }
 
     @Test
-    fun `HEDGE intent grants Block via EnemyAI`() {
-        val enemy = EnemyInstance(
-            EnemyDefinition(
+    fun `HEDGE intent grants engine-owned debt-scaled Block on endPlayerTurn`() {
+        engine.startCombat(
+            listOf(EnemyDefinition(
                 id = "hedger", name = "Hedger", hp = 10,
                 intentPattern = listOf(IntentStep(IntentType.HEDGE, param = 8)),
                 rewards = EnemyRewards(gold = 0, cardChoices = 0)
-            ),
-            testLocalizer()
+            )),
+            listOf("strike", "strike", "strike", "strike", "strike"),
+            startingDebt = 40
         )
-        val ai = EnemyAI(enemy, testLocalizer())
-        val log = ai.executeIntent(PlayerState(), listOf(enemy), 1)
-        assertEquals(8, enemy.block)
-        assertTrue(log.isNotEmpty())
-        assertEquals(IntentType.HEDGE, enemy.currentIntent().type) // advanced past HEDGE
+        engine.endPlayerTurn()
+        // Engine-owned (CombatEngine.endPlayerTurn): block = debt / intent.param = 40 / 8.
+        assertEquals(5, engine.getState().enemies.first().block)
     }
 
     @Test
-    fun `FORECLOSE with existing Debt adds Debt through the engine`() {
+    fun `FORECLOSE at or above the threshold seizes outright through the engine`() {
         engine.startCombat(
             listOf(EnemyDefinition(
                 id = "forecloser", name = "Forecloser", hp = 50,
-                intentPattern = listOf(IntentStep(IntentType.FORECLOSE, param = 10)),
+                intentPattern = listOf(IntentStep(IntentType.FORECLOSE, damage = 5, param = 10)),
                 rewards = EnemyRewards(gold = 0, cardChoices = 0)
             )),
             listOf("strike", "strike", "strike", "strike", "strike"),
             startingDebt = 20
         )
-        val before = engine.getState().debt
+        assertEquals(0, engine.forecloseSeizureCount)
         engine.endPlayerTurn()
-        // FORECLOSE adds 10; the next turn-start interest tick compounds it.
-        assertEquals(DebtConfig.applyInterest(before + 10), engine.getState().debt)
+        // debt (20) >= param (10): outright seizure, takes all remaining HP.
+        assertEquals(1, engine.forecloseSeizureCount)
+        assertEquals(0, engine.getState().player.hp)
     }
 
     @Test
-    fun `FORECLOSE without Debt deals direct HP damage`() {
+    fun `FORECLOSE below the threshold charges the standing fee through the engine`() {
         engine.startCombat(
             listOf(EnemyDefinition(
                 id = "forecloser", name = "Forecloser", hp = 50,
-                intentPattern = listOf(IntentStep(IntentType.FORECLOSE, param = 10)),
+                intentPattern = listOf(IntentStep(IntentType.FORECLOSE, damage = 5, param = 10)),
                 rewards = EnemyRewards(gold = 0, cardChoices = 0)
             )),
             listOf("strike", "strike", "strike", "strike", "strike"),
@@ -140,6 +140,8 @@ class EnemyScalingTest {
         )
         val before = engine.getState().player.hp
         engine.endPlayerTurn()
+        // debt (0) < param (10): standing fee, direct HP damage equal to intent.damage.
         assertEquals(before - 5, engine.getState().player.hp)
+        assertEquals(0, engine.forecloseSeizureCount)
     }
 }

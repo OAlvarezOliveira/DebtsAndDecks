@@ -35,8 +35,13 @@
   {
     "id": "loan_shark",
     "name": "enemy.loan_shark.name",
-    "hp": 36,
+    "hp": 37,
     "intentPattern": [
+      {
+        "type": "FORECLOSE",
+        "damage": 9,
+        "param": 27
+      },
       {
         "type": "ATTACK",
         "damage": 9
@@ -83,6 +88,10 @@
       {
         "type": "ATTACK",
         "damage": 12
+      },
+      {
+        "type": "HEDGE",
+        "param": 4
       },
       {
         "type": "MULTI_ATTACK",

@@ -59,12 +59,7 @@ enum class IntentType(val l10nKey: String, val iconName: String) {
     DEBUFF("intent.debuff", "intent_debuff"),
     MULTI_ATTACK("intent.multi_attack", "intent_multi"),
     LEVY("intent.levy", "intent_levy"),
-    /** Forces a debt payment or penalty: adds Debt when the player is already in debt, else deals HP
-     *  damage. The effect is engine-owned (mirrors LEVY) so it routes through the Debt cap/Execution
-     *  check; [EnemyAI] only advances the pattern. */
     FORECLOSE("intent.foreclose", "intent_foreclose"),
-    /** Reduces incoming damage for the turn by gaining Block (engine-independent, applied in
-     *  [EnemyAI]). */
     HEDGE("intent.hedge", "intent_hedge")
 }
 

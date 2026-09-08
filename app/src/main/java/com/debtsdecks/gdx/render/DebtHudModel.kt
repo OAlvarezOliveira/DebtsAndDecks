@@ -54,7 +54,7 @@ object DebtHudModel {
         val debt = state.debt
         val debtBleed = (DebtConfig.applyInterest(debt) - debt).coerceAtLeast(0)
         val zone = when {
-            debt >= DebtConfig.EXECUTION_THRESHOLD -> DebtZone.EXECUTION
+            debt >= DebtConfig.DEBT_SCALE_ANCHOR -> DebtZone.EXECUTION
             debt >= DebtConfig.BREAK_THRESHOLD -> DebtZone.PROXIMITY
             debt >= DebtConfig.DEBT_BLEED_FLOOR -> DebtZone.DANGER
             else -> DebtZone.SAFE
@@ -64,11 +64,11 @@ object DebtHudModel {
             debtBleedFloor = DebtConfig.DEBT_BLEED_FLOOR,
             breakThreshold = DebtConfig.BREAK_THRESHOLD,
             bandCap = DebtConfig.LEVERAGE_PAYOFF_BAND_CAP,
-            executionThreshold = DebtConfig.EXECUTION_THRESHOLD,
+            executionThreshold = DebtConfig.DEBT_SCALE_ANCHOR,
             dominantArchetype = dominantArchetype,
             archetypeTier = archetypeTiers[dominantArchetype] ?: 0,
             debtBleed = debtBleed,
-            distanceToExecution = (DebtConfig.EXECUTION_THRESHOLD - debt).coerceAtLeast(0),
+            distanceToExecution = (DebtConfig.DEBT_SCALE_ANCHOR - debt).coerceAtLeast(0),
             zone = zone
         )
     }

@@ -147,17 +147,25 @@ missing-file fallback stops painting the gradient.
 
 ## 4. Design system, first
 
-- [ ] 4.1 Extract from `Arts/Debts & Decks Design System.zip` into a tracked
+- [x] 4.1 Extract from `Arts/Debts & Decks Design System.zip` into a tracked
       `docs/DESIGN-SYSTEM.md`: palette, type scale, spacing, district title-card treatment.
       Scope it to what F2 uses. Cite the ZIP as provenance.
-      > **This input is not in the repository.** `git ls-files Arts/` returns nothing and
+      > **This input is not in the repository** — `git ls-files Arts/` returns nothing and
       > `.gitignore` excludes the whole directory, so a fresh clone cannot run this task at
-      > all — it depends on a file that exists only on the owner's machine. That is the exact
-      > condition the proposal calls out ("a style guide no other machine can read is not a
-      > style guide"), so the task is blocked on the owner producing the ZIP's contents, not
-      > on anything an implementer can do. Whoever picks up PR2 must ask for it first rather
-      > than inventing a palette and calling it extraction.
-- [ ] 4.2 Confirm it is tracked: `git ls-files docs/DESIGN-SYSTEM.md` is non-empty.
+      > all. The orchestrator extracted and verified the kit on the owner's machine this
+      > session, and the values were transcribed verbatim into `docs/DESIGN-SYSTEM.md`
+      > (provenance cites the exact ZIP path
+      > `/home/oscardev/DebtsAndDecks/Arts/Debts & Decks Design System.zip`).
+      > *Done 2026-08-29:* palette, type scale and spacing/radius/effects are copied as-is
+      > from `tokens/colors.css`, `tokens/typography.css` and `tokens/effects.css`; the
+      > district title-card treatment records that the kit defines **no** district pattern
+      > (zero matches for "district"/"title-card" in its `_ds_manifest.json`) and recommends
+      > a composed card from the general tokens — labelled explicitly as this document's own
+      > recommendation, not a value the ZIP specifies.
+- [x] 4.2 Confirm it is tracked: `git ls-files docs/DESIGN-SYSTEM.md` is non-empty.
+      *Verified 2026-08-29 after `git add docs/DESIGN-SYSTEM.md`:
+      `git ls-files docs/DESIGN-SYSTEM.md` → `docs/DESIGN-SYSTEM.md` (non-empty); the file is
+      5938 bytes (non-empty content).*
 
 ## 5. Art, with the pipeline fix applied first
 
