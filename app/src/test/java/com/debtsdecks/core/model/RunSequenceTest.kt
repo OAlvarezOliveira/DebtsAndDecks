@@ -35,9 +35,11 @@ class RunSequenceTest {
     }
 
     @Test
-    fun `rewarded slots sum to exactly eight card picks`() {
+    fun `rewarded slots sum to the WU5 3-choose-1 economy budget`() {
+        // WU5 T5.3/T5.4: every NON-BOSS slot offers 3 biased choices, boss (non-final) slots offer 1,
+        // the final boss offers 0. Non-boss slots = 0,1,3,4,6 (5 x 3 = 15); boss slots = 2,5 (2 x 1 = 2).
         val picks = sequence.slots.dropLast(1).sumOf { it.rewards.cardChoices }
-        assertEquals(8, picks)
+        assertEquals(17, picks)
     }
 
     @Test
@@ -49,6 +51,7 @@ class RunSequenceTest {
     fun `mid-boss stand-in slot is the collector at position seven`() {
         val midBoss = sequence.slots[6]
         assertEquals("collector", midBoss.enemyId)
-        assertEquals(1, midBoss.rewards.cardChoices)
+        // Slot 6 is a STREET (non-boss) node in the boardroom district, so WU5 T5.4 gives it 3 picks.
+        assertEquals(3, midBoss.rewards.cardChoices)
     }
 }

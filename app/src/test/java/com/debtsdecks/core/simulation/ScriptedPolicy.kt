@@ -43,6 +43,26 @@ object ScriptedPolicy : RunPolicy {
         // unplayable at Debt <= 0 — playing Ejecución at zero Debt deals 0 damage and can deadlock
         // the run loop. Filter to cards the current Debt actually allows.
         val playable = state.hand.filter { it.isPlayable(state.debt) }
+
+        // WU7 harness-validity fix: no policy could ever play a POWER card, so permanent effects
+        // never activated. The PRESSURE low-debt escalator was the visible casualty — PressurePolicy
+        // drafts every `pressure`-tagged card first, so it kept loading its deck with a POWER it
+        // could not play, and the T7.4 archetype-parity band was comparing LEVERAGE against a
+        // PRESSURE deck carrying dead cards. Powers are permanent and compound, so a competent
+        // player plays them as soon as energy allows.
+        //
+        // Deliberately restricted to `cost <= energy`: the shortfall/borrow path below exists to buy
+        // DAMAGE when nothing else is available. Taking on Debt for a card that deals none can push
+        // the run across the Execution line for no immediate return.
+        val powers = playable.filter { it.type == CardType.POWER && it.cost <= state.energy }
+        if (powers.isNotEmpty()) {
+            // Cheapest first, then cardId. NOT instanceId — that is a fresh UUID per instance and
+            // would make identical input answer differently (see the attack tie-break note below
+            // and HarnessDeterminismTest).
+            val power = powers.minWith(compareBy<CardInstance> { it.cost }.thenBy { it.cardId })
+            return CombatAction.Play(power.instanceId, null)
+        }
+
         val attacks = playable.filter { it.type == CardType.ATTACK }
         if (attacks.isEmpty()) return CombatAction.EndTurn
 

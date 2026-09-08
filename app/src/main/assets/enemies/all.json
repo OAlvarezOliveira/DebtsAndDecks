@@ -2,7 +2,7 @@
   {
     "id": "thug",
     "name": "enemy.thug.name",
-    "hp": 24,
+    "hp": 22,
     "intentPattern": [
       {
         "type": "ATTACK",
@@ -15,6 +15,10 @@
       {
         "type": "BUFF",
         "param": 3
+      },
+      {
+        "type": "FORECLOSE",
+        "param": 10
       }
     ],
     "rewards": {
@@ -22,12 +26,16 @@
       "cardChoices": 3
     },
     "tier": "NORMAL",
-    "tags": []
+    "tags": [],
+    "actModifiers": [
+      { "act": 1, "hpMultiplier": 1.36, "damageMultiplier": 1.0 },
+      { "act": 2, "hpMultiplier": 2.5, "damageMultiplier": 1.2 }
+    ]
   },
   {
     "id": "loan_shark",
     "name": "enemy.loan_shark.name",
-    "hp": 40,
+    "hp": 37,
     "intentPattern": [
       {
         "type": "FORECLOSE",
@@ -53,6 +61,10 @@
       {
         "type": "LEVY",
         "param": 4
+      },
+      {
+        "type": "HEDGE",
+        "param": 8
       }
     ],
     "rewards": {
@@ -62,12 +74,16 @@
     "tier": "ELITE",
     "tags": [
       "enrage_below_half"
+    ],
+    "actModifiers": [
+      { "act": 2, "hpMultiplier": 1.8, "damageMultiplier": 1.15 },
+      { "act": 3, "hpMultiplier": 2.5, "damageMultiplier": 1.2 }
     ]
   },
   {
     "id": "collector",
     "name": "enemy.collector.name",
-    "hp": 57,
+    "hp": 52,
     "intentPattern": [
       {
         "type": "ATTACK",
@@ -93,6 +109,10 @@
       {
         "type": "DEBUFF",
         "param": 2
+      },
+      {
+        "type": "HEDGE",
+        "param": 8
       }
     ],
     "rewards": {
@@ -102,6 +122,9 @@
     "tier": "BOSS",
     "tags": [
       "debuff_resist"
+    ],
+    "actModifiers": [
+      { "act": 3, "hpMultiplier": 1.25, "damageMultiplier": 1.0 }
     ]
   }
 ]

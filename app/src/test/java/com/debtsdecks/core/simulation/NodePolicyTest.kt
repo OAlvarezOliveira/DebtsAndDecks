@@ -64,25 +64,26 @@ class NodePolicyTest {
 
     @Test
     fun `ladder buys the upgrade first when gold and cap allow`() {
-        // Upgrade sits at position 3 (after cheap early shop + survival loan): reach a node where
-        // upgrading is the best affordance — late gold, no cheap shop slot, cap open.
-        val run = runAtNode(2) // upgrade sits FIRST in the ladder: gold 20 (10+10) >= 15 and cap open
+        // WU5 T5.2: upgrades are only valid on the cadence node after every 4th win. Reach win 4 so the
+        // ladder's top-priority upgrade actually lands; before WU5 any node offered it.
+        val run = runAtNode(4) // cadence node: gold (10+10+15+12) >= 15 and cap open
         val gold0 = run.gold
 
         NodePolicy.act(run, ScriptedPolicy)
 
         assertEquals(NodeConfig.UPGRADE_BASE, gold0 - run.gold, "ladder spends exactly the flat upgrade cost")
-        assertEquals(1, run.upgradesRemaining)
+        assertEquals(3, run.upgradesRemaining) // WU5 T5.1 raised MAX_UPGRADES_PER_RUN to 4
         assertEquals(RunManager.Phase.COMBAT, run.phase) // one purchase ends the node
     }
 
     @Test
     fun `ladder skips the upgrade when gold is below the flat base`() {
-        val run = runAtNode(1) // slot 0 thug = 10 gold < 15
+        // WU5 T5.2: at a non-cadence node (win 1) the upgrade is unavailable; the ladder falls through.
+        val run = runAtNode(1) // slot 0 thug = 10 gold < 15 (and not a cadence node)
 
         NodePolicy.act(run, ScriptedPolicy)
 
-        assertEquals(2, run.upgradesRemaining) // no upgrade bought
+        assertEquals(4, run.upgradesRemaining) // no upgrade bought (cap 4, untouched)
         assertEquals(RunManager.Phase.COMBAT, run.phase) // some other action ended the node
     }
 }

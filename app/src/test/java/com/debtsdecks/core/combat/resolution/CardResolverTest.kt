@@ -439,10 +439,10 @@ class CardResolverTest {
         )
         val card = CardInstance(def)
 
-        // debt 20 -> floor(20/2) + flat(20/6=3) = 10 + 3 = 13
+        // debt 20 -> floor(min(20,40)/1) + flat(20/6=3) = 20 + 3 = 23
         val r20 = resolver.resolve(card, "enemy-1", testState(debt = 20))
         val dmg20 = r20.effects.filterIsInstance<CardResolver.Effect.Damage>().single().amount
-        assertEquals(13, dmg20)
+        assertEquals(23, dmg20)
         assertFalse(r20.effects.any { it is CardResolver.Effect.WipeDebt })
 
         // debt 0 -> 0 damage, still no wipe
@@ -482,16 +482,16 @@ class CardResolverTest {
         )
         val card = CardInstance(def)
 
-        // debt 20 -> Block = floor(20/2) = 10
+        // debt 20 -> Block = floor(min(20,40)/1) = 20
         val r20 = resolver.resolve(card, null, testState(debt = 20))
         val block20 = r20.effects.filterIsInstance<CardResolver.Effect.Block>().single().amount
-        assertEquals(10, block20)
+        assertEquals(20, block20)
         assertFalse(r20.effects.any { it is CardResolver.Effect.RepayDebt })
         assertFalse(r20.effects.any { it is CardResolver.Effect.WipeDebt })
 
-        // debt 7 -> Block = floor(7/2) = 3
+        // debt 7 -> Block = floor(min(7,40)/1) = 7
         val r7 = resolver.resolve(card, null, testState(debt = 7))
-        assertEquals(3, r7.effects.filterIsInstance<CardResolver.Effect.Block>().single().amount)
+        assertEquals(7, r7.effects.filterIsInstance<CardResolver.Effect.Block>().single().amount)
     }
 
     @Test

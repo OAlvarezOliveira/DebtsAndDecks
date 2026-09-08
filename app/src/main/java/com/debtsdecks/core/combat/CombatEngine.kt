@@ -42,6 +42,14 @@ class CombatEngine(
     /** Per-combat flag (see [activateEscrowShield]) that halves Debt added from a shortfall while active. */
     private var escrowShieldActive: Boolean = false
 
+    /** Count of active PRESSURE `low_debt_bonus` POWER cards (WU3, T3.5/T3.6). Each end of turn
+     *  while Debt is below [DebtConfig.PRESSURE_LOW_DEBT_THRESHOLD] grants +stack Strength. */
+    private var lowDebtEscalatorStacks: Int = 0
+
+    /** Synergy tier (0..3) per archetype, computed from the starting deck at [startCombat] and
+     *  carried into [getState] for the HUD / resolver. Static per combat (deck composition). */
+    private var archetypeTiers: Map<Archetype, Int> = emptyMap()
+
     /**
      * FV.E1 "En Mora" arrears lock (see [addDebt]/[armArrearsIfCrossed]): true while the debt
      * charge is armed for the current combat. [CombatEngine.beginTurn]'s interest tick and
@@ -132,10 +140,13 @@ class CombatEngine(
         startingGold: Int = 0,
         startingDebt: Int = 0,
         startingHp: Int = PlayerState().maxHp,
-        upgradedCopiesById: Map<String, Int> = emptyMap()
+        upgradedCopiesById: Map<String, Int> = emptyMap(),
+        /** Act the combat runs in (1–3). Threaded from [RunManager] so the spawned [EnemyInstance]
+         *  applies the right per-act HP/damage scaling. Defaults to 1. */
+        act: Int = 1
     ) {
         // Create enemies
-        enemies = enemyDefinitions.map { EnemyInstance(it, l10n) }.toMutableList()
+        enemies = enemyDefinitions.map { EnemyInstance(it, l10n, act) }.toMutableList()
         enemyAIs = enemies.associateBy({ it.id }, { EnemyAI(it, l10n) })
 
         // Create player
@@ -172,6 +183,10 @@ class CombatEngine(
         // per run and both counters are read once at run end.
         inArrears = false
         arrearsUsedThisCombat = false
+        lowDebtEscalatorStacks = 0
+
+        // Synergy tiers are a pure function of deck composition (no per-turn evaluation).
+        archetypeTiers = archetypeTiers(starterDeck, cardRegistry)
 
         // Start first turn
         beginTurn()
@@ -198,7 +213,8 @@ class CombatEngine(
             debt = debt,
             gold = gold,
             inArrears = inArrears,
-            arrearsUsedThisCombat = arrearsUsedThisCombat
+            arrearsUsedThisCombat = arrearsUsedThisCombat,
+            archetypeTiers = archetypeTiers
         )
     }
 
@@ -369,6 +385,14 @@ class CombatEngine(
             enemy.endTurnReset()
         }
 
+        // WU3 (T3.6): PRESSURE low-debt escalator — at end of turn, if any escalator POWER is active
+        // and Debt is below the PRESSURE threshold, grant +1 Strength per stack (persists into the
+        // next turn; Strength is not reset by endTurnReset). Resets only at combat start.
+        if (lowDebtEscalatorStacks > 0 && debt < DebtConfig.PRESSURE_LOW_DEBT_THRESHOLD) {
+            player.gainStrength(lowDebtEscalatorStacks)
+            log.add(CombatLogEntry.create(l10n.format("log.low_debt_escalator_bonus", lowDebtEscalatorStacks), turnNumber))
+        }
+
         beginTurn()
 
         return TurnResult(true, "Turn ended")
@@ -482,6 +506,9 @@ class CombatEngine(
                 }
                 is CardResolver.Effect.EscrowShieldActivate -> {
                     activateEscrowShield()
+                }
+                is CardResolver.Effect.ActivateLowDebtEscalator -> {
+                    lowDebtEscalatorStacks++
                 }
                 is CardResolver.Effect.AddDebt -> {
                     // Debt added directly to the player; capped, and never escrow-halved (the

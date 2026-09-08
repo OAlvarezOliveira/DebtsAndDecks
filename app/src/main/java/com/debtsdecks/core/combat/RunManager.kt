@@ -20,6 +20,18 @@ import kotlin.random.Random
  * loan, all escalating with [NodeConfig]). Entering a node heals a flat amount. There is NO node
  * after the final boss (slot 8 → [Phase.VICTORY] directly).
  */
+/**
+ * Maps a 0-based run [slot] to its act/district number (1 = slaughterhouse slots 0–2,
+ * 2 = casino slots 3–5, 3 = boardroom slots 6–7). Pure function of the slot index, matching the
+ * `sequence.json` 3+3+2 district partition. Used to pick the per-act HP/damage modifier when
+ * spawning enemies. Internal so it can be unit-tested without constructing a [RunManager].
+ */
+internal fun actForSlotIndex(slot: Int): Int = when {
+    slot <= 2 -> 1
+    slot <= 5 -> 2
+    else -> 3
+}
+
 class RunManager(
     private val combatEngine: CombatEngine,
     private val cardRegistry: CardRegistry,
@@ -65,6 +77,13 @@ class RunManager(
     val deckList: List<String> get() = deck
 
     /**
+     * The player's dominant archetype, derived from the current run deck via [playerArchetype].
+     * Read-only — powers the HUD's active-archetype label (WU6 T6.1). No state is read or written
+     * here, so the HUD consuming it stays strictly read-only (debt-hud spec: "HUD Is Read-Only").
+     */
+    val dominantArchetype: Archetype get() = playerArchetype(deck, cardRegistry)
+
+    /**
      * Current district, derived from the slot the run is on. Pure identity — carries no combat,
      * economy or reward value, so reading it never moves the balance gate (F2 R2.5). See R2.7.
      */
@@ -107,6 +126,10 @@ class RunManager(
     fun upgradeCard(cardId: String): Boolean {
         if (cardId !in deck) return false
         if (!upgradeEligible(cardId)) return false
+        // WU5 T5.2: upgrades are only valid on the cadence node after every 4th win. A non-cadence
+        // node offers no upgrade choices (see [enterNode]), and this guard closes the loop so a direct
+        // call cannot bypass the "every 4 wins only" rule (reward-economy false-positive trap).
+        if (wins % 4 != 0) return false
         if (upgradesUsed >= MAX_UPGRADES_PER_RUN) return false
         if (gold < NodeConfig.UPGRADE_BASE) return false
         gold -= NodeConfig.UPGRADE_BASE
@@ -147,6 +170,12 @@ class RunManager(
 
     /** Upgrades purchased this run; hard-capped by [MAX_UPGRADES_PER_RUN] (R3). */
     private var upgradesUsed = 0
+
+    /**
+     * Count of fights won this run. Drives the WU5 T5.2 upgrade cadence: upgrades are offered
+     * only on the node after every 4th win (`wins % 4 == 0`). Reset to 0 per run in [beginRun].
+     */
+    private var wins = 0
 
     init {
         beginRun()
@@ -196,6 +225,7 @@ class RunManager(
         val garnished = DebtConfig.garnishAmount(rawGold, debt)
         debt -= garnished
         gold += rawGold - garnished
+        wins++ // WU5 T5.2: one win registered per defeated enemy
 
         if (slotIndex >= runSequence.slots.lastIndex) {
             phase = Phase.VICTORY // final boss: no node after it
@@ -209,15 +239,24 @@ class RunManager(
         // Flat heal as part of the "rest", capped at max HP.
         hp = minOf(PlayerState().maxHp, hp + NodeConfig.HEAL_AMOUNT)
 
-        rewardChoices = cardRegistry.all()
-            .filter { REWARD_EXCLUDED_TAGS.none { tag -> tag in it.tags } }
-            .shuffled(rng)
-            .take(freePickCount)
+        // WU5 T5.3 / T5.5: the free pick reuses the same archetype-biased sampler the shop already
+        // used, instead of a flat random `take`. `freePickCount` is the slot's cardChoices from
+        // sequence.json (3 for non-boss slots, 1 for boss slots, 0 for the final boss — which never
+        // reaches this method because the final boss goes straight to VICTORY).
+        rewardChoices = archetypeBiasedOffer(freePickCount)
         nodeShopChoices = archetypeBiasedOffer()
         nodeRemoveChoices = deck.shuffled(rng).take(NodeConfig.REMOVE_OFFER_SIZE)
-        nodeUpgradeChoices = deck.distinct().filter { upgradeEligible(it) }
-            .shuffled(rng)
-            .take(NodeConfig.REMOVE_OFFER_SIZE)
+        // WU5 T5.2: upgrades are offered only on the cadence node after every 4th win
+        // (`wins % 4 == 0`). In an 8-slot run ending in a boss this is exactly the node after
+        // win 4; the final boss (win 8) goes straight to VICTORY and never opens a node, so no
+        // upgrade can appear after it (T5.2 caveat). The cap itself is enforced in [upgradeCard].
+        nodeUpgradeChoices = if (wins % 4 == 0) {
+            deck.distinct().filter { upgradeEligible(it) }
+                .shuffled(rng)
+                .take(NodeConfig.REMOVE_OFFER_SIZE)
+        } else {
+            emptyList()
+        }
         phase = Phase.NODE
     }
 
@@ -290,8 +329,9 @@ class RunManager(
         return true
     }
 
-    /** Archetype-biased 3-card offer: weights pool cards by the detected deck archetype. */
-    private fun archetypeBiasedOffer(): List<CardDefinition> {
+    /** Archetype-biased offer of [offerSize] cards: weights pool cards by the detected deck archetype.
+     *  Reused for BOTH the node shop (default 3) and the WU5 T5.3/T5.5 free pick (slot cardChoices). */
+    internal fun archetypeBiasedOffer(offerSize: Int = NodeConfig.SHOP_OFFER_SIZE): List<CardDefinition> {
         val pool = cardRegistry.all().filter { REWARD_EXCLUDED_TAGS.none { tag -> tag in it.tags } }
         val archetype = playerArchetype(deck, cardRegistry)
         val weighted = mutableListOf<CardDefinition>()
@@ -308,7 +348,7 @@ class RunManager(
         }
         return weighted.shuffled(rng)
             .distinctBy { it.id }
-            .take(NodeConfig.SHOP_OFFER_SIZE)
+            .take(offerSize)
     }
 
     private fun advanceToNextCombat() {
@@ -327,11 +367,12 @@ class RunManager(
                 gold,
                 debt,
                 hp,
-                upgradedCopiesById
+                upgradedCopiesById,
+                actForSlotIndex(slotIndex)
             )
         } else {
             slotIndex++
-            combatEngine.startCombat(listOf(enemyById(runSequence.slots[slotIndex].enemyId)), deck, gold, debt, hp, upgradedCopiesById)
+            combatEngine.startCombat(listOf(enemyById(runSequence.slots[slotIndex].enemyId)), deck, gold, debt, hp, upgradedCopiesById, actForSlotIndex(slotIndex))
         }
     }
 
@@ -345,6 +386,7 @@ class RunManager(
         deck = CombatEngine.STARTER_DECK
         upgradedCopiesById.clear()
         upgradesUsed = 0
+        wins = 0
         rewardChoices = emptyList()
         nodeShopChoices = emptyList()
         nodeRemoveChoices = emptyList()
@@ -359,7 +401,8 @@ class RunManager(
             listOf(enemyById(runSequence.slots[slotIndex].enemyId)),
             deck,
             startingDebt = DebtConfig.STARTING_DEBT,
-            upgradedCopiesById = upgradedCopiesById
+            upgradedCopiesById = upgradedCopiesById,
+            act = actForSlotIndex(slotIndex)
         )
     }
 
@@ -367,7 +410,7 @@ class RunManager(
         enemyDefinitions.first { it.id == id }
 
     companion object {
-        private const val MAX_UPGRADES_PER_RUN: Int = 2
+        private const val MAX_UPGRADES_PER_RUN: Int = 4
         // Starter cards are already guaranteed in the deck, so they're excluded from rewards.
         private val REWARD_EXCLUDED_TAGS = setOf("starter")
     }

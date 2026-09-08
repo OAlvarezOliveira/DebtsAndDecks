@@ -1,6 +1,8 @@
 package com.debtsdecks.core.combat.resolution
 
 import com.debtsdecks.core.combat.DebtConfig
+import com.debtsdecks.core.combat.Archetype
+import com.debtsdecks.core.combat.isLeverageTagged
 import com.debtsdecks.core.i18n.Localizer
 import com.debtsdecks.core.cards.CardInstance
 import com.debtsdecks.core.model.CombatLogEntry
@@ -9,6 +11,7 @@ import com.debtsdecks.core.model.PlayerState
 import com.debtsdecks.core.model.EnemyState
 import com.debtsdecks.core.model.TargetType
 import kotlin.math.floor
+import kotlin.math.min
 
 /**
  * [l10n] was wired in this constructor in the combat-progression-and-i18n Phase 4a DI slice and
@@ -50,6 +53,10 @@ class CardResolver(private val l10n: Localizer) {
         data class AddDebt(val amount: Int) : Effect
         /** Grants [amount] Credit/energy for the current turn (e.g. Golden Credit). */
         data class GainCredit(val amount: Int) : Effect
+        /** Registers a PRESSURE low-debt escalator POWER (WU3, T3.5/T3.6) in the engine: at end of
+         *  each turn, while Debt stays below [DebtConfig.PRESSURE_LOW_DEBT_THRESHOLD], the player
+         *  gains +1 Strength per active stack. One effect per POWER played (stacks accumulate). */
+        object ActivateLowDebtEscalator : Effect
         /** Costs one card from the player's hand (exhausted) in exchange for value (e.g. Asset Auction). */
         object ExhaustFromHand : Effect
     }
@@ -70,6 +77,18 @@ class CardResolver(private val l10n: Localizer) {
         val player = state.player
         val enemies = state.enemies.associateBy { it.id }
 
+        // WU3 (T3.1/T3.2): PRESSURE synergy-tier bonus. Only PRESSURE-tagged cards receive the
+        // tier's weak/vulnerable escalation and (at tier 2+) the low-HP damage bonus — exactly as
+        // the LEVERAGE tier bonus is gated to LEVERAGE-tagged cards (WU2 T2.3). Plain non-economy
+        // cards signal PRESSURE inside playerArchetype() but do NOT advance the tier (Archetype
+        // trap), so they get no bonus here.
+        val pressureTier = state.archetypeTiers[Archetype.PRESSURE] ?: 0
+        val isPressureTagged = card.definition.tags.contains("pressure")
+        val pressureTierBonus = if (isPressureTagged) pressureTier else 0
+        // WU7 (T7.6) PRESSURE-tier-damage re-derivation: a debt-scaled component on PRESSURE attacks
+        // (see DebtConfig.PRESSURE_DEBT_SCALING_DIVISOR). Zero for non-PRESSURE cards.
+        val pressureDebtScale = if (isPressureTagged) state.debt / DebtConfig.PRESSURE_DEBT_SCALING_DIVISOR else 0
+
         when (card.type) {
             com.debtsdecks.core.model.CardType.ATTACK -> {
                 val targets: List<String> = if (card.targetType == TargetType.ALL_ENEMIES) {
@@ -85,11 +104,17 @@ class CardResolver(private val l10n: Localizer) {
                     )
                 }
 
+                // WU2 (T2.3): Leverage-tagged attacks gain a flat +tier damage bonus scaling with the
+                // player's current LEVERAGE synergy tier (carried in CombatState.archetypeTiers).
+                // Non-Leverage cards (no leverage tag) receive no tier bonus.
+                val leverageTier = state.archetypeTiers[Archetype.LEVERAGE] ?: 0
+                val leverageTierBonus = if (isLeverageTagged(card.definition.tags)) leverageTier else 0
+
                 // Liquidation — Ejecución: damage equal to HALF the current Debt, then wipes it all.
                 // The wipe is what you pay for, so the damage is halved (see EXECUTION_DAMAGE_DIVISOR):
                 // at 1:1 this card dominated every other play and turned Debt into a free battery.
                 if (card.definition.tags.contains("execution_damage")) {
-                    val executed = state.debt / DebtConfig.EXECUTION_DAMAGE_DIVISOR
+                    val executed = state.debt / DebtConfig.EXECUTION_DAMAGE_DIVISOR + leverageTierBonus
                     for (t in targets) {
                         effects.add(Effect.Damage(t, executed))
                     }
@@ -112,8 +137,8 @@ class CardResolver(private val l10n: Localizer) {
                 // PLUS the flat leverage bonus, but deliberately does NOT wipe. The "keep the
                 // band" sibling of execution_damage (same place in the ATTACK branch, no wipe).
                 if (card.definition.tags.contains("debt_payoff")) {
-                    val payoff = state.debt / DebtConfig.DEBT_PAYOFF_DIVISOR
-                    val withLeverage = payoff + state.debt / DebtConfig.LEVERAGE_DIVISOR
+                    val payoff = DebtConfig.leveragePayoffBandCapped(state.debt)
+                    val withLeverage = payoff + state.debt / DebtConfig.LEVERAGE_DIVISOR + leverageTierBonus
                     for (t in targets) {
                         effects.add(Effect.Damage(t, withLeverage))
                     }
@@ -123,6 +148,9 @@ class CardResolver(private val l10n: Localizer) {
 
                 val repeatCount = if (card.definition.tags.contains("x_cost")) xValue else maxOf(1, card.baseHits)
                 var landedHits = 0
+                // WU3 (T3.3): paydown cards add the actually-repaid Debt amount to damage
+                // (clamped to the available Debt — at 0 Debt the bonus is 0, no negative).
+                val paydownBonus = if (card.definition.tags.contains("paydown")) min(card.definition.debtRepay, state.debt) else 0
                 repeat(repeatCount) {
                     for (t in targets) {
                         val enemy = enemies[t] ?: continue
@@ -136,8 +164,23 @@ class CardResolver(private val l10n: Localizer) {
                         } else {
                             0
                         }
-                        val baseDamage = ((card.effectiveDamage + player.strength + leverageBonus + taggedScale) * if (player.weak > 0) 0.75 else 1.0).toInt()
-                        val effectiveDamage = if (enemy.vulnerable > 0) (baseDamage * 1.5).toInt() else baseDamage
+                        // WU7 (T7.6) tier-damage re-derivation: PRESSURE-tagged attacks gain a
+                        // debt-scaled damage component (`pressureDebtScale`, DebtConfig
+                        // PRESSURE_DEBT_SCALING_DIVISOR), the missing early-game damage identity that
+                        // lets PRESSURE keep pace with LEVERAGE in the T7.4 parity sweep. PRESSURE has
+                        // no `debt_payoff` card (its only ATTACK, `paydown_strike`, repays Debt and so
+                        // cannot double as a burst), so without this it lost the DPS race to the
+                        // collector before its end-of-turn low-debt escalator could compound — measured
+                        // 13.5pp below LEVERAGE. Gated to `pressure` tags, so LEVERAGE and the greedy
+                        // baseline are untouched. The flat `+tier` is intentionally NOT added here (that
+                        // would alter the WU3 T3.2 accepted tier behavior); only the debt curve is new.
+                        var dmg = card.effectiveDamage + player.strength + leverageBonus + taggedScale + leverageTierBonus + paydownBonus + pressureDebtScale
+                        // WU3 (T3.2): PRESSURE-tagged attacks at tier 2+ deal +20% damage when the
+                        // enemy is below half its max HP (a PRESSURE archetype attack bonus, gated to
+                        // pressure-tagged cards like the weak/vuln escalation below).
+                        if (player.weak > 0) dmg = (dmg * 0.75).toInt()
+                        if (isPressureTagged && pressureTier >= 2 && enemy.hp < enemy.maxHp / 2) dmg = (dmg * 1.20).toInt()
+                        val effectiveDamage = if (enemy.vulnerable > 0) (dmg * 1.5).toInt() else dmg
                         effects.add(Effect.Damage(t, effectiveDamage))
                         landedHits++
                     }
@@ -160,12 +203,12 @@ class CardResolver(private val l10n: Localizer) {
                 }
 
                 if (card.baseWeakApply > 0) {
-                    targets.forEach { effects.add(Effect.WeakApply(it, card.baseWeakApply)) }
-                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_weak", card.baseWeakApply), state.turnNumber))
+                    targets.forEach { effects.add(Effect.WeakApply(it, card.baseWeakApply + pressureTierBonus)) }
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_weak", card.baseWeakApply + pressureTierBonus), state.turnNumber))
                 }
                 if (card.baseVulnerableApply > 0) {
-                    targets.forEach { effects.add(Effect.VulnerableApply(it, card.baseVulnerableApply)) }
-                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_vulnerable", card.baseVulnerableApply), state.turnNumber))
+                    targets.forEach { effects.add(Effect.VulnerableApply(it, card.baseVulnerableApply + pressureTierBonus)) }
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_vulnerable", card.baseVulnerableApply + pressureTierBonus), state.turnNumber))
                 }
                 if (card.basePoisonApply > 0) {
                     targets.forEach { effects.add(Effect.PoisonApply(it, card.basePoisonApply)) }
@@ -185,7 +228,7 @@ class CardResolver(private val l10n: Localizer) {
                 // 1 Strength per 10 Debt, floor-rounded. Replaces the flat baseStrengthGain path
                 // entirely for tagged cards (a card is either flat-scaling or debt-scaling, never both).
                 if (card.definition.tags.contains("debt_scaling")) {
-                    val scaledAmount = state.debt / 10
+                    val scaledAmount = state.debt / DebtConfig.DEBT_STRENGTH_DIVISOR
                     if (scaledAmount > 0) {
                         effects.add(Effect.StrengthGain(player.hashCode().toString(), scaledAmount))
                         logEntries.add(
@@ -213,7 +256,7 @@ class CardResolver(private val l10n: Localizer) {
                 // NO repayment, NO wipe. The defensive "hold the band" option that keeps the
                 // Leverage damage intact (the cash-out sibling is refinanciar / refinance).
                 if (card.definition.tags.contains("debt_payoff")) {
-                    val held = state.debt / DebtConfig.DEBT_PAYOFF_DIVISOR
+                    val held = DebtConfig.leveragePayoffBandCapped(state.debt)
                     effects.add(Effect.Block(held))
                     logEntries.add(CombatLogEntry.create(l10n.format("log.debt_payoff_block", held), state.turnNumber))
                 }
@@ -233,12 +276,12 @@ class CardResolver(private val l10n: Localizer) {
                     logEntries.add(CombatLogEntry.create(l10n.format("log.gained_regen", card.baseRegenGain), state.turnNumber))
                 }
                 if (card.baseWeakApply > 0 && targetId != null) {
-                    effects.add(Effect.WeakApply(targetId, card.baseWeakApply))
-                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_weak", card.baseWeakApply), state.turnNumber))
+                    effects.add(Effect.WeakApply(targetId, card.baseWeakApply + pressureTierBonus))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_weak", card.baseWeakApply + pressureTierBonus), state.turnNumber))
                 }
                 if (card.baseVulnerableApply > 0 && targetId != null) {
-                    effects.add(Effect.VulnerableApply(targetId, card.baseVulnerableApply))
-                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_vulnerable", card.baseVulnerableApply), state.turnNumber))
+                    effects.add(Effect.VulnerableApply(targetId, card.baseVulnerableApply + pressureTierBonus))
+                    logEntries.add(CombatLogEntry.create(l10n.format("log.applied_vulnerable", card.baseVulnerableApply + pressureTierBonus), state.turnNumber))
                 }
                 if (card.basePoisonApply > 0 && targetId != null) {
                     effects.add(Effect.PoisonApply(targetId, card.basePoisonApply))
@@ -291,6 +334,12 @@ class CardResolver(private val l10n: Localizer) {
         if (card.definition.tags.contains("escrow_shield_activate")) {
             effects.add(Effect.EscrowShieldActivate)
             logEntries.add(CombatLogEntry.create(l10n.get("log.escrow_shield_active"), state.turnNumber))
+        }
+        // WU3 (T3.5/T3.6): a POWER tagged `low_debt_bonus` registers an end-of-turn trigger in the
+        // engine (grants +1 Strength/turn while Debt stays below the threshold). One stack per play.
+        if (card.definition.tags.contains("low_debt_bonus")) {
+            effects.add(Effect.ActivateLowDebtEscalator)
+            logEntries.add(CombatLogEntry.create(l10n.get("log.low_debt_escalator_active"), state.turnNumber))
         }
 
         if (card.definition.tags.contains("exhaust")) {

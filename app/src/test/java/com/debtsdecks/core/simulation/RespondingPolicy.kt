@@ -106,7 +106,8 @@ object RespondingPolicy : RunPolicy {
                 .filter { it.isPlayable(state.debt) && it.definition.debtRepay > 0 }
                 .maxByOrNull { it.definition.debtRepay }
             if (repay != null) {
-                return ScriptedPolicy.CombatAction.Play(repay.instanceId, null)
+                val target = if (repay.targetType == TargetType.ENEMY) ScriptedPolicy.enemyTargetId(state) else null
+                return ScriptedPolicy.CombatAction.Play(repay.instanceId, target)
             }
         }
 
